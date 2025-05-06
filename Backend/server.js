@@ -9,7 +9,7 @@ app.get("/api/hello", (req, res) => {
   res.json({ message: "Hello from backend!" });
 });
 
-const PORT = 3000;
+const PORT = 3005;
 app.listen(PORT, () => {
   console.log(`Backend server running at http://localhost:${PORT}`);
 });
