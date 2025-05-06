@@ -1,15 +1,10 @@
-const express = require("express");
-const cors = require("cors");
+const app = require("./app");
+const dotenv = require("dotenv");
 
-const app = express();
-app.use(cors());
-app.use(express.json());
+dotenv.config();
 
-app.get("/api/hello", (req, res) => {
-  res.json({ message: "Hello from backend!" });
-});
+const PORT = process.env.PORT || 3005;
 
-const PORT = 3005;
 app.listen(PORT, () => {
-  console.log(`Backend server running at http://localhost:${PORT}`);
+  console.log(`🚀 Server is running at http://localhost:${PORT}`);
 });
