@@ -3,8 +3,8 @@
     <h2>Đăng nhập</h2>
 
     <div class="social-login">
-      <button class="btn social"><img src="../assets/images/google.png" height="32" width="32" style="margin-right: 5px"> Tiếp tục với Google</button>
-      <button class="btn social"><img src="../assets/images/facebook.png"  height="32" width="32" style="margin-right: 5px"> Tiếp tục với Facebook</button>
+      <button class="btn social"><img src="../assets/images/google.png" height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Google</button>
+      <button class="btn social"><img src="../assets/images/facebook.png"  height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Facebook</button>
     </div>
 
     <div class="divider">
@@ -62,7 +62,7 @@ export default {
   border-radius: 8px;
   font-family: "Open Sans", sans-serif;
   width: 50vw;
-  height: 80vh;
+  height: auto;
 }
 
 a {
@@ -82,7 +82,7 @@ h2 {
   width: 100%;
   border: 1px solid #ccc;
   border-radius: 30px;
-  padding: 10px;
+  padding: 5px;
   background: white;
 }
 
