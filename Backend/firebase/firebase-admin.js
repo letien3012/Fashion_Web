@@ -1,10 +1,17 @@
 const admin = require("firebase-admin");
 
-// Khởi tạo Firebase Admin SDK
+const serviceAccount = require("../firebase.json");
+
 admin.initializeApp({
-  credential: admin.credential.applicationDefault(),
+  credential: admin.credential.cert(serviceAccount),
+
+  storageBucket: "fashionshopweb.firebasestorage.app",
 });
 
 const db = admin.firestore();
 
-module.exports = { admin, db };
+const auth = admin.auth();
+
+const bucket = admin.storage().bucket();
+
+module.exports = { admin, db, auth, bucket };
