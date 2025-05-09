@@ -1,4 +1,13 @@
+import AdminLogin from '../views/admin/AdminLogin.vue';
+import AdminDashboard from '../views/admin/Dashboard.vue';
+
 const adminRoutes = [
+  {
+    path: '/admin/login',
+    name: 'AdminLogin',
+    component: AdminLogin,
+    meta: { requiresAuth: false }
+  },
   {
     path: '/admin',
     component: () => import('../views/admin/AdminLayout.vue'),
@@ -8,15 +17,9 @@ const adminRoutes = [
         redirect: '/admin/dashboard'
       },
       {
-        path: 'login',
-        name: 'AdminLogin',
-        component: () => import('../views/admin/AdminLogin.vue'),
-        meta: { requiresAuth: false }
-      },
-      {
         path: 'dashboard',
         name: 'AdminDashboard',
-        component: () => import('../views/admin/Dashboard.vue'),
+        component: AdminDashboard,
         meta: { requiresAuth: true, requiresAdmin: true }
       },
       {
@@ -27,6 +30,6 @@ const adminRoutes = [
       }
     ]
   }
-]
+];
 
-export default adminRoutes
+export default adminRoutes;

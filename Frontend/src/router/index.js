@@ -14,29 +14,7 @@ const routes = [
     name: "Register", 
     component: Register 
   },
-  {
-    path: '/admin',
-    component: () => import('../views/admin/AdminLayout.vue'),
-    children: [
-      {
-        path: '',
-        redirect: '/admin/dashboard'  // Redirect đến dashboard
-      },
-      {
-        path: 'login',
-        name: 'AdminLogin',
-        component: () => import('../views/admin/AdminLogin.vue'),
-        meta: { requiresAuth: false }
-      },
-      {
-        path: 'dashboard',
-        name: 'AdminDashboard',
-        component: () => import('../views/admin/Dashboard.vue'),
-        meta: { requiresAuth: true, requiresAdmin: true }
-      }
-    ]
-  },
-  ...adminRoutes // Chỉ giữ lại phần import admin routes
+  ...adminRoutes
 ];
 
 const router = createRouter({
@@ -52,7 +30,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !isAuthenticated) {
     next('/admin/login')
   } else if (to.meta.requiresAdmin && !isAdmin) {
-    next('/')
+    next('/admin/login')
   } else {
     next()
   }

@@ -52,21 +52,26 @@ export default {
     async handleLogin() {
       this.loading = true;
       try {
+        console.log('Đang gửi request đăng nhập...');
         const response = await axios.post('http://localhost:3005/api/employees/login', {
           email: this.email,
           password: this.password
         });
+        console.log('Response từ server:', response.data);
 
         if (response.data.employee && response.data.token) {
           localStorage.setItem('employee', JSON.stringify(response.data.employee));
           localStorage.setItem('token', response.data.token);
+          localStorage.setItem('isAdmin', 'true');
           axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
           this.$router.push('/admin/dashboard');
         } else {
+          console.error('Phản hồi không hợp lệ:', response.data);
           alert('Phản hồi không hợp lệ từ máy chủ');
         }
       } catch (error) {
-        console.error('Đăng nhập thất bại:', error);
+        console.error('Lỗi đăng nhập:', error);
+        console.error('Chi tiết lỗi:', error.response?.data);
         alert(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
       } finally {
         this.loading = false;
@@ -82,6 +87,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #f5f5f5;
 }
 
 .login-container {
