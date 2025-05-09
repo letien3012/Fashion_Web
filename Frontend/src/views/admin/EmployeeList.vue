@@ -22,9 +22,9 @@
         <tbody>
           <tr v-for="employee in employees" :key="employee.id">
             <td>{{ employee.id }}</td>
-            <td>{{ employee.name }}</td>
+            <td>{{ employee.fullname }}</td>
             <td>{{ employee.email }}</td>
-            <td>{{ employee.position }}</td>
+            <td>{{ employee.role }}</td>
             <td>
               <span :class="['status', employee.status]">
                 {{ employee.status === 'active' ? 'Đang làm việc' : 'Đã nghỉ' }}
@@ -50,7 +50,7 @@
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
             <label>Họ tên</label>
-            <input v-model="formData.name" type="text" required>
+            <input v-model="formData.fullname" type="text" required>
           </div>
           <div class="form-group">
             <label>Email</label>
@@ -62,7 +62,10 @@
           </div>
           <div class="form-group">
             <label>Vị trí</label>
-            <input v-model="formData.position" type="text" required>
+            <select v-model="formData.role">
+              <option value="admin">Admin</option>
+              <option value="staff">Nhân viên</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Trạng thái</label>
@@ -92,10 +95,10 @@ export default {
       showAddModal: false,
       isEditing: false,
       formData: {
-        name: '',
+        fullname: '',
         email: '',
         password: '',
-        position: '',
+        role: 'staff',
         status: 'active'
       }
     }
@@ -103,22 +106,64 @@ export default {
   methods: {
     async fetchEmployees() {
       try {
-        const response = await axios.get('http://localhost:3000/api/employees');
-        this.employees = response.data;
+        const token = localStorage.getItem('token');
+        if (!token) {
+          console.error('No token found');
+          alert('Vui lòng đăng nhập để tiếp tục');
+          this.$router.push('/admin/login');
+          return;
+        }
+
+        const response = await axios.get('http://localhost:3005/api/employees/', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (response.data && response.data.data) {
+          this.employees = response.data.data;
+          console.log('Employees loaded:', this.employees.length);
+        } else {
+          console.error('Invalid response format:', response.data);
+          alert('Dữ liệu trả về không đúng định dạng');
+        }
       } catch (error) {
-        console.error('Error fetching employees:', error);
+        console.error('Full error object:', error);
+        console.error('Error response:', error.response);
+        console.error('Error message:', error.message);
+        
+        if (error.response) {
+          console.error('Error status:', error.response.status);
+          console.error('Error data:', error.response.data);
+        }
+        
+        if (error.response?.status === 401) {
+          alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại');
+          this.$router.push('/admin/login');
+        } else if (error.response?.status === 404) {
+          alert('Không tìm thấy API endpoint');
+        } else if (error.code === 'ECONNREFUSED') {
+          alert('Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối');
+        } else {
+          alert('Không thể tải danh sách nhân viên. Vui lòng thử lại sau.');
+        }
       }
     },
     editEmployee(employee) {
       this.isEditing = true;
       this.formData = { ...employee };
-      this.formData.password = '';
+      this.formData.password = '';  // Don't pre-fill password for editing
       this.showAddModal = true;
     },
     async confirmDelete(employee) {
       if (confirm('Bạn có chắc muốn xóa nhân viên này?')) {
         try {
-          await axios.delete(`http://localhost:3000/api/employees/${employee.id}`);
+          const token = localStorage.getItem('token');
+          await axios.delete(`http://localhost:3005/api/employees/${employee.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
           this.fetchEmployees();
         } catch (error) {
           console.error('Error deleting employee:', error);
@@ -127,15 +172,24 @@ export default {
     },
     async handleSubmit() {
       try {
+        const token = localStorage.getItem('token');
         const data = { ...this.formData };
         if (this.isEditing && !data.password) {
           delete data.password;
         }
 
         if (this.isEditing) {
-          await axios.put(`http://localhost:3000/api/employees/${this.formData.id}`, data);
+          await axios.put(`http://localhost:3005/api/employees/${this.formData.id}`, data, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
         } else {
-          await axios.post('http://localhost:3000/api/employees', data);
+          await axios.post('http://localhost:3005/api/employees/', data, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
         }
         this.closeModal();
         this.fetchEmployees();
@@ -150,10 +204,10 @@ export default {
     },
     resetForm() {
       this.formData = {
-        name: '',
+        fullname: '',
         email: '',
         password: '',
-        position: '',
+        role: 'staff',
         status: 'active'
       };
     }
@@ -201,7 +255,7 @@ export default {
 
 .table-container {
   background: white;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   overflow: hidden;
 }
@@ -224,10 +278,9 @@ th {
 }
 
 .status {
-  padding: 6px 12px;
-  border-radius: 20px;
+  padding: 4px 8px;
+  border-radius: 4px;
   font-size: 14px;
-  font-weight: 500;
 }
 
 .status.active {
@@ -250,25 +303,16 @@ th {
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  transition: all 0.3s ease;
 }
 
 .edit-btn {
-  background-color: #2196F3;
+  background-color: #2196f3;
   color: white;
-}
-
-.edit-btn:hover {
-  background-color: #1976D2;
 }
 
 .delete-btn {
   background-color: #f44336;
   color: white;
-}
-
-.delete-btn:hover {
-  background-color: #d32f2f;
 }
 
 .modal {
@@ -281,22 +325,14 @@ th {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
 }
 
 .modal-content {
   background: white;
   padding: 24px;
-  border-radius: 12px;
+  border-radius: 8px;
   width: 100%;
   max-width: 500px;
-}
-
-.modal-content h3 {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 24px;
-  color: #333;
 }
 
 .form-group {
@@ -307,77 +343,37 @@ th {
   display: block;
   margin-bottom: 8px;
   font-weight: 500;
-  color: #333;
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 12px;
+  padding: 8px;
   border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 16px;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: #2196F3;
-  outline: none;
+  border-radius: 4px;
 }
 
 .modal-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 8px;
   margin-top: 24px;
 }
 
 .modal-actions button {
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
   cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s ease;
 }
 
 .modal-actions button[type="submit"] {
   background-color: #4CAF50;
   color: white;
-  border: none;
-}
-
-.modal-actions button[type="submit"]:hover {
-  background-color: #45a049;
 }
 
 .modal-actions button[type="button"] {
   background-color: #f5f5f5;
-  border: 1px solid #ddd;
   color: #333;
 }
-
-.modal-actions button[type="button"]:hover {
-  background-color: #e0e0e0;
-}
-
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-
-  .add-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .table-container {
-    overflow-x: auto;
-  }
-
-  table {
-    min-width: 800px;
-  }
-}
-</style> 
+</style>

@@ -134,3 +134,15 @@ exports.resetPassword = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+exports.getAllEmployees = async (req, res) => {
+  try {
+    const employees = await Employee.getAllEmployees();
+    res.status(200).json({
+      message: "Employees retrieved successfully",
+      data: employees
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

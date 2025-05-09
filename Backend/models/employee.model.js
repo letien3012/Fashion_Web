@@ -103,6 +103,18 @@ class Employee {
       throw new Error(`Error fetching employee orders: ${error.message}`);
     }
   }
+
+  static async getAllEmployees() {
+    try {
+      const snapshot = await db.collection("employees").get();
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      throw new Error(`Error fetching employees: ${error.message}`);
+    }
+  }
 }
 
 module.exports = Employee;
