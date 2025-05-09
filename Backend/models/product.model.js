@@ -16,7 +16,7 @@ class Product {
     this.deletedAt = data.deletedAt || null;
   }
 
-  static validateVariant(variant) {
+  static async validateVariant(variant) {
     if (!variant.sku) {
       throw new Error("Variant SKU is required");
     }
@@ -26,6 +26,24 @@ class Product {
     if (typeof variant.quantity_sold !== 'number' || variant.quantity_sold < 0) {
       throw new Error("Variant quantity_sold must be a positive number");
     }
+    if (!variant.image) {
+      throw new Error("Variant image is required");
+    }
+
+    if (variant.attributeId1) {
+      const attribute1Doc = await db.collection("attributes").doc(variant.attributeId1).get();
+      if (!attribute1Doc.exists) {
+        throw new Error(`Attribute ID '${variant.attributeId1}' does not exist`);
+      }
+    }
+
+    if (variant.attributeId2) {
+      const attribute2Doc = await db.collection("attributes").doc(variant.attributeId2).get();
+      if (!attribute2Doc.exists) {
+        throw new Error(`Attribute ID '${variant.attributeId2}' does not exist`);
+      }
+    }
+
     return true;
   }
 
@@ -60,9 +78,9 @@ class Product {
   async save() {
     try {
       if (this.variants && this.variants.length > 0) {
-        this.variants.forEach(variant => {
-          Product.validateVariant(variant);
-        });
+        for (const variant of this.variants) {
+          await Product.validateVariant(variant);
+        }
       }
 
       const productData = {
@@ -90,9 +108,9 @@ class Product {
   static async update(id, data) {
     try {
       if (data.variants && data.variants.length > 0) {
-        data.variants.forEach(variant => {
-          Product.validateVariant(variant);
-        });
+        for (const variant of data.variants) {
+          await Product.validateVariant(variant);
+        }
       }
 
       const updateData = {
@@ -109,7 +127,7 @@ class Product {
 
   static async addVariant(productId, variant) {
     try {
-      Product.validateVariant(variant);
+      await Product.validateVariant(variant);
 
       const product = await this.getById(productId);
       const variants = product.variants || [];
@@ -128,7 +146,7 @@ class Product {
 
   static async updateVariant(productId, variantIndex, variant) {
     try {
-      Product.validateVariant(variant);
+      await Product.validateVariant(variant);
 
       const product = await this.getById(productId);
       const variants = product.variants || [];
@@ -147,6 +165,103 @@ class Product {
       return true;
     } catch (error) {
       throw new Error(`Error updating variant: ${error.message}`);
+    }
+  }
+
+  static async findVariantIndexBySku(productId, sku) {
+    try {
+      const product = await this.getById(productId);
+      const variants = product.variants || [];
+      
+      const index = variants.findIndex(variant => variant.sku === sku);
+      if (index === -1) {
+        throw new Error(`Variant with SKU '${sku}' not found`);
+      }
+
+      return index;
+    } catch (error) {
+      throw new Error(`Error finding variant index: ${error.message}`);
+    }
+  }
+
+  static async checkVariantQuantity(productId, variantIndex, quantity) {
+    try {
+      const product = await this.getById(productId);
+      const variants = product.variants || [];
+      
+      if (variantIndex >= variants.length) {
+        throw new Error("Variant index out of bounds");
+      }
+
+      const variant = variants[variantIndex];
+      const availableQuantity = variant.quantity - variant.quantity_sold;
+
+      if (availableQuantity < quantity) {
+        throw new Error(`Insufficient quantity. Available: ${availableQuantity}, Requested: ${quantity}`);
+      }
+
+      return {
+        success: true,
+        availableQuantity: availableQuantity,
+        variant: variant
+      };
+    } catch (error) {
+      throw new Error(`Error checking variant quantity: ${error.message}`);
+    }
+  }
+
+  static async updateVariantQuantity(productId, variantIndex, quantity) {
+    try {
+      const product = await this.getById(productId);
+      const variants = product.variants || [];
+      
+      if (variantIndex >= variants.length) {
+        throw new Error("Variant index out of bounds");
+      }
+
+      const variant = variants[variantIndex];
+      const availableQuantity = variant.quantity - variant.quantity_sold;
+
+      if (availableQuantity < quantity) {
+        throw new Error(`Insufficient quantity. Available: ${availableQuantity}, Requested: ${quantity}`);
+      }
+
+      variants[variantIndex].quantity_sold += quantity;
+
+      await db.collection("products").doc(productId).update({
+        variants: variants,
+        updatedAt: new Date()
+      });
+
+      return {
+        success: true,
+        message: "Quantity updated successfully",
+        newQuantitySold: variants[variantIndex].quantity_sold,
+        remainingQuantity: variants[variantIndex].quantity - variants[variantIndex].quantity_sold
+      };
+    } catch (error) {
+      throw new Error(`Error updating variant quantity: ${error.message}`);
+    }
+  }
+
+  static async checkAndUpdateVariantQuantity(productId, variantIndex, quantity) {
+    try {
+      const checkResult = await this.checkVariantQuantity(productId, variantIndex, quantity);
+      
+      if (!checkResult.success) {
+        throw new Error("Quantity check failed");
+      }
+
+      const updateResult = await this.updateVariantQuantity(productId, variantIndex, quantity);
+      
+      return {
+        success: true,
+        message: "Check and update successful",
+        checkResult,
+        updateResult
+      };
+    } catch (error) {
+      throw new Error(`Error in check and update: ${error.message}`);
     }
   }
 
