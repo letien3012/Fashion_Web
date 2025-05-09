@@ -11,7 +11,7 @@ class ImportReceipt {
   }
 
   // Validate import receipt detail
-  static validateDetail(detail) {
+  static async validateDetail(detail) {
     if (!detail.productId) {
       throw new Error("Product ID is required in detail");
     }
@@ -24,6 +24,32 @@ class ImportReceipt {
     if (typeof detail.quantity !== 'number' || detail.quantity <= 0) {
       throw new Error("Quantity must be a positive number");
     }
+
+    // Validate variant structure
+    const variant = detail.variant;
+    if (!variant.sku) {
+      throw new Error("Variant SKU is required");
+    }
+    if (!variant.image) {
+      throw new Error("Variant image is required");
+    }
+
+    // Kiểm tra attributeId1 nếu có
+    if (variant.attributeId1) {
+      const attribute1Doc = await db.collection("attributes").doc(variant.attributeId1).get();
+      if (!attribute1Doc.exists) {
+        throw new Error(`Attribute ID '${variant.attributeId1}' does not exist`);
+      }
+    }
+
+    // Kiểm tra attributeId2 nếu có
+    if (variant.attributeId2) {
+      const attribute2Doc = await db.collection("attributes").doc(variant.attributeId2).get();
+      if (!attribute2Doc.exists) {
+        throw new Error(`Attribute ID '${variant.attributeId2}' does not exist`);
+      }
+    }
+
     return true;
   }
 
@@ -195,7 +221,11 @@ class ImportReceipt {
           code: importReceipt.code,
           import_receipt_id: id,
           productId: detail.productId,
-          variant: detail.variant,
+          variant: {
+            ...detail.variant,
+            quantity: detail.quantity,  // Thêm trường quantity vào variant
+            quantity_sold: 0  // Khởi tạo quantity_sold = 0
+          },
           price: detail.price,
           quantity: detail.quantity,
           current_quantity: detail.quantity,

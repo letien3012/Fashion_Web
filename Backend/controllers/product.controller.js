@@ -171,4 +171,95 @@ exports.deleteVariant = async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
+};
+
+// Kiểm tra số lượng variant
+exports.checkVariantQuantity = async (req, res) => {
+  try {
+    const { productId, variantIndex } = req.params;
+    const { quantity } = req.body;
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ 
+        message: "Invalid quantity",
+        required: {
+          quantity: "Quantity must be a positive number"
+        }
+      });
+    }
+
+    const result = await Product.checkVariantQuantity(productId, parseInt(variantIndex), quantity);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Cập nhật số lượng variant
+exports.updateVariantQuantity = async (req, res) => {
+  try {
+    const { productId, variantIndex } = req.params;
+    const { quantity } = req.body;
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ 
+        message: "Invalid quantity",
+        required: {
+          quantity: "Quantity must be a positive number"
+        }
+      });
+    }
+
+    const result = await Product.updateVariantQuantity(productId, parseInt(variantIndex), quantity);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Kiểm tra và cập nhật số lượng variant
+exports.checkAndUpdateVariantQuantity = async (req, res) => {
+  try {
+    const { productId, variantIndex } = req.params;
+    const { quantity } = req.body;
+
+    if (!quantity || quantity <= 0) {
+      return res.status(400).json({ 
+        message: "Invalid quantity",
+        required: {
+          quantity: "Quantity must be a positive number"
+        }
+      });
+    }
+
+    const result = await Product.checkAndUpdateVariantQuantity(productId, parseInt(variantIndex), quantity);
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Tìm variant index bằng SKU
+exports.findVariantIndex = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const { sku } = req.body;
+
+    if (!sku) {
+      return res.status(400).json({ 
+        message: "SKU is required",
+        required: {
+          sku: "SKU is required"
+        }
+      });
+    }
+
+    const index = await Product.findVariantIndexBySku(productId, sku);
+    res.status(200).json({
+      success: true,
+      variantIndex: index
+    });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
 }; 
