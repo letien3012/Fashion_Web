@@ -1,30 +1,32 @@
-import { adminAuth } from '../middleware/adminAuth';
-import AdminLayout from '../views/admin/AdminLayout.vue';
-import AdminLogin from '../views/admin/AdminLogin.vue';
-import AdminDashboard from '../views/admin/Dashboard.vue';
-
 const adminRoutes = [
   {
-    path: '/admin/login',
-    name: 'AdminLogin',
-    component: AdminLogin
-  },
-  {
     path: '/admin',
-    component: AdminLayout,
-    beforeEnter: adminAuth,
+    component: () => import('../views/admin/AdminLayout.vue'),
     children: [
       {
         path: '',
         redirect: '/admin/dashboard'
       },
       {
+        path: 'login',
+        name: 'AdminLogin',
+        component: () => import('../views/admin/AdminLogin.vue'),
+        meta: { requiresAuth: false }
+      },
+      {
         path: 'dashboard',
         name: 'AdminDashboard',
-        component: AdminDashboard
+        component: () => import('../views/admin/Dashboard.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
+      },
+      {
+        path: 'employees',
+        name: 'EmployeeList',
+        component: () => import('../views/admin/EmployeeList.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true }
       }
     ]
   }
-];
+]
 
-export default adminRoutes;
+export default adminRoutes
