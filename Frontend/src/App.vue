@@ -7,8 +7,9 @@
 <style>
 #app {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  align-items: center;
+
   min-height: 100vh;
   background: linear-gradient(
       to bottom,
@@ -19,7 +20,7 @@
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  padding: 30px;
+  padding: 0px 30px;
   box-sizing: border-box;
 }
 </style>

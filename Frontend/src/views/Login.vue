@@ -1,33 +1,38 @@
 <template>
-  <div><Header></Header></div>
-  <div class="login-page">
-    <FormLogin />
+  <div class="login-container">
+    <Header />
+    <div class="login-page">
+      <FormLogin :loading="loading" @submit-login="handleLogin" />
+    </div>
   </div>
 </template>
 
 <script>
 import FormLogin from "../components/FormLogin.vue";
 import Header from "../components/Header.vue";
+import axios from "axios";
+import { toast } from "vue3-toastify";
+
 export default {
   name: "Login",
   components: {
-    FormLogin
+    FormLogin,
+    Header,
   },
   data() {
     return {
-      email: "",
-      password: "",
       loading: false,
     };
   },
   methods: {
-    async handleLogin() {
+    async handleLogin(loginData) {
       try {
         this.loading = true;
-        const response = await axios.post("http://localhost:3005/api/customers/login", {
-          email: this.email,
-          password: this.password,
-        });
+        console.log(loginData);
+        const response = await axios.post(
+          "http://localhost:3005/api/customers/login",
+          loginData
+        );
 
         if (response.data.token) {
           localStorage.setItem("token", response.data.token);
@@ -45,14 +50,17 @@ export default {
       }
     },
   },
-    FormLogin,
-    Header
-  };
+};
 </script>
 
 <style scoped>
+.login-container {
+  width: 100%;
+  min-height: 100vh;
+}
+
 .login-page {
-  margin: none;
+  margin: 20px auto;
   border-radius: 15px;
   display: flex;
   justify-content: center;

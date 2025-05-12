@@ -11,7 +11,7 @@
       <span>OR</span>
     </div>
 
-    <form @submit.prevent="handleLogin">
+    <form @submit.prevent="handleSubmit">
       <input type="email" placeholder="Email hoặc username" v-model="email" required />
       
       <div class="password-group">
@@ -20,17 +20,19 @@
       </div>
 
       <div class="remember-forgot">
-        <label ><input type="checkbox" v-model="rememberMe" style="width: auto;"> Ghi nhớ đăng nhập</label>
+        <label><input type="checkbox" v-model="rememberMe" style="width: auto;"> Ghi nhớ đăng nhập</label>
         <a href="/forgotpw">Quên mật khẩu?</a>
       </div>
 
-      <button type="submit" class="btn login">Đăng nhập</button>
+      <button type="submit" class="btn login" :disabled="loading">
+        {{ loading ? 'Đang đăng nhập...' : 'Đăng nhập' }}
+      </button>
     </form>
 
     <div class="signup-section">
       <p>Chưa có tài khoản?</p>
       <router-link to="/register">
-         <button class="btn signup" >Đăng ký</button>
+         <button class="btn signup">Đăng ký</button>
       </router-link>
     </div>
   </div>
@@ -38,6 +40,12 @@
 
 <script>
 export default {
+  props: {
+    loading: {
+      type: Boolean,
+      default: false
+    }
+  },
   data() {
     return {
       email: '',
@@ -47,8 +55,11 @@ export default {
     };
   },
   methods: {
-    handleLogin() {
-      alert(`Login with ${this.email}`);
+    handleSubmit() {
+      this.$emit('submit-login', {
+        email: this.email,
+        password: this.password
+      });
     },
     loginWithGoogle() {
       window.location.href = 'http://localhost:3005/api/auth/google';
@@ -146,6 +157,12 @@ input {
   background-color: #999;
   color: white;
   border: none;
+  cursor: pointer;
+}
+
+.btn.login:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 .signup-section {
@@ -159,5 +176,6 @@ input {
   padding: 10px;
   width: 100%;
   background: white;
+  cursor: pointer;
 }
 </style>
