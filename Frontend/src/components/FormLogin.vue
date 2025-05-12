@@ -3,7 +3,7 @@
     <h2>Đăng nhập</h2>
 
     <div class="social-login">
-      <button class="btn social"><img src="../assets/images/google.png" height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Google</button>
+      <button class="btn social" @click="loginWithGoogle"><img src="../assets/images/google.png" height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Google</button>
       <button class="btn social"><img src="../assets/images/facebook.png"  height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Facebook</button>
     </div>
 
@@ -20,8 +20,8 @@
       </div>
 
       <div class="remember-forgot">
-        <label><input type="checkbox" v-model="rememberMe"/> Ghi nhớ đăng nhập</label>
-        <a href="#">Quên mật khẩu?</a>
+        <label ><input type="checkbox" v-model="rememberMe" style="width: auto;"> Ghi nhớ đăng nhập</label>
+        <a href="/forgotpw">Quên mật khẩu?</a>
       </div>
 
       <button type="submit" class="btn login">Đăng nhập</button>
@@ -49,6 +49,9 @@ export default {
   methods: {
     handleLogin() {
       alert(`Login with ${this.email}`);
+    },
+    loginWithGoogle() {
+      window.location.href = 'http://localhost:3005/api/auth/google';
     }
   }
 };

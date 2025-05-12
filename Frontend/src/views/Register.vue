@@ -1,4 +1,5 @@
 <template>
+  <div><Header></Header></div>
   <div class="register-page">
     <FormRegister />
   </div>
@@ -6,10 +7,11 @@
 
 <script>
 import FormRegister from "../components/FormRegister.vue";
-
+import Header from "../components/Header.vue";
 export default {
   components: {
-    FormRegister
+    FormRegister,
+    Header
   }
 };
 </script>

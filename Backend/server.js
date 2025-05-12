@@ -8,10 +8,10 @@ const app = express();
 // Middleware
 // app.use(cors());
 const corsOptions = {
-  origin: 'http://localhost:5173', // Frontend Vite
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true // Chỉ bật nếu dùng cookies hoặc session
+  origin: "http://localhost:5173", // Frontend Vite
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true, // Chỉ bật nếu dùng cookies hoặc session
 };
 
 app.use(cors(corsOptions));
@@ -30,6 +30,7 @@ const supplierRoutes = require("./routes/supplier.route");
 const importReceiptRoutes = require("./routes/importReceipt.route");
 const cartRoutes = require("./routes/cart.route");
 const orderRoutes = require("./routes/order.route");
+const authRoutes = require("./routes/auth.route");
 
 app.use("/api/employees", employeeRoutes);
 app.use("/api/attributeCatalogues", attributeCatalogueRoutes);
@@ -41,13 +42,14 @@ app.use("/api/suppliers", supplierRoutes);
 app.use("/api/import-receipts", importReceiptRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/auth", authRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
     message: "Something went wrong!",
-    error: process.env.NODE_ENV === "development" ? err.message : undefined
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
   });
 });
 

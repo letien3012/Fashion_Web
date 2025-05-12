@@ -1,4 +1,5 @@
 <template>
+  <div><Header></Header></div>
   <div class="login-page">
     <FormLogin />
   </div>
@@ -6,10 +7,11 @@
 
 <script>
 import FormLogin from "../components/FormLogin.vue";
-
+import Header from "../components/Header.vue";
 export default {
   components: {
-    FormLogin
+    FormLogin,
+    Header
   }
 };
 </script>
@@ -21,7 +23,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 80vh;
+  height: auto;
   width: 50vw;
   background: #f7f7f7;
 }
