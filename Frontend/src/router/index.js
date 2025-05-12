@@ -1,39 +1,41 @@
 import { createRouter, createWebHistory } from "vue-router";
 import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
-import adminRoutes from './admin';
+import adminRoutes from "./admin";
+import ForgotPW from "../views/ForgotPW.vue";
 
 const routes = [
-  { 
-    path: "/", 
-    name: "Login", 
-    component: Login 
+  {
+    path: "/",
+    name: "Login",
+    component: Login,
   },
-  { 
-    path: "/register", 
-    name: "Register", 
-    component: Register 
+  {
+    path: "/register",
+    name: "Register",
+    component: Register,
   },
-  ...adminRoutes
+  { path: "/forgotpw", name: "ForgotPW", component: ForgotPW },
+  ...adminRoutes,
 ];
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes
+  routes,
 });
 
 // Navigation guard
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('token')
-  const isAdmin = localStorage.getItem('isAdmin') === 'true'
+  const isAuthenticated = localStorage.getItem("token");
+  const isAdmin = localStorage.getItem("isAdmin") === "true";
 
   if (to.meta.requiresAuth && !isAuthenticated) {
-    next('/admin/login')
+    next("/admin/login");
   } else if (to.meta.requiresAdmin && !isAdmin) {
-    next('/admin/login')
+    next("/admin/login");
   } else {
-    next()
+    next();
   }
-})
+});
 
 export default router;

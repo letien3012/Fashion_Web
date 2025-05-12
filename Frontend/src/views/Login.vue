@@ -1,4 +1,5 @@
 <template>
+  <div><Header></Header></div>
   <div class="login-page">
     <FormLogin />
   </div>
@@ -6,9 +7,7 @@
 
 <script>
 import FormLogin from "../components/FormLogin.vue";
-import axios from "axios";
-import { toast } from 'vue3-toastify';
-
+import Header from "../components/Header.vue";
 export default {
   name: "Login",
   components: {
@@ -46,7 +45,9 @@ export default {
       }
     },
   },
-};
+    FormLogin,
+    Header
+  };
 </script>
 
 <style scoped>
@@ -56,7 +57,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 80vh;
+  height: auto;
   width: 50vw;
   background: #f7f7f7;
 }
