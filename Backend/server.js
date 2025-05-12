@@ -3,7 +3,7 @@ const cors = require("cors");
 require("dotenv").config();
 require("./firebase/firebase-admin");
 
-const app = express();
+const app = require("./app");
 
 // Middleware
 // app.use(cors());
@@ -13,7 +13,6 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true, // Chỉ bật nếu dùng cookies hoặc session
 };
-
 app.use(cors(corsOptions));
 
 app.use(express.json());
