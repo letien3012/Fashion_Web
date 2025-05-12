@@ -1,6 +1,7 @@
 // /routes/authRoutes.js
 const express = require("express");
 const passport = require("passport");
+require("../config/passport");
 const router = express.Router();
 const { loginSuccess, logout } = require("../controllers/auth.controller");
 

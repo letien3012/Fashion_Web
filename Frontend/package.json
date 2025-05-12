@@ -18,6 +18,8 @@
     "bootstrap": "^5.3.6",
     "bootstrap-vue-next": "^0.29.1",
     "firebase": "^11.6.1",
+    "passport": "^0.7.0",
+    "passport-google-oidc": "^0.1.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.1"
   },
