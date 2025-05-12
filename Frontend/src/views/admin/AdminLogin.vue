@@ -38,6 +38,7 @@
 
 <script>
 import axios from 'axios';
+import { toast } from 'vue3-toastify';
 
 export default {
   name: 'AdminLogin',
@@ -50,29 +51,35 @@ export default {
   },
   methods: {
     async handleLogin() {
-      this.loading = true;
       try {
-        console.log('Đang gửi request đăng nhập...');
+        this.loading = true;
         const response = await axios.post('http://localhost:3005/api/employees/login', {
           email: this.email,
           password: this.password
         });
-        console.log('Response từ server:', response.data);
 
-        if (response.data.employee && response.data.token) {
-          localStorage.setItem('employee', JSON.stringify(response.data.employee));
+        if (response.data.token && response.data.employee) {
+          // Lưu token và thông tin employee
           localStorage.setItem('token', response.data.token);
+          localStorage.setItem('employee', JSON.stringify(response.data.employee));
           localStorage.setItem('isAdmin', 'true');
+          
+          // Cập nhật header mặc định cho axios
           axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-          this.$router.push('/admin/dashboard');
+          
+          toast.success('Đăng nhập thành công!');
+          
+          // Chuyển hướng sau khi đăng nhập thành công
+          await this.$router.push('/admin/dashboard');
         } else {
-          console.error('Phản hồi không hợp lệ:', response.data);
-          alert('Phản hồi không hợp lệ từ máy chủ');
+          toast.error('Thông tin đăng nhập không hợp lệ!');
         }
       } catch (error) {
-        console.error('Lỗi đăng nhập:', error);
-        console.error('Chi tiết lỗi:', error.response?.data);
-        alert(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
+        if (error.response?.status === 401) {
+          toast.error('Email hoặc mật khẩu không đúng!');
+        } else {
+          toast.error('Đăng nhập thất bại. Vui lòng thử lại sau!');
+        }
       } finally {
         this.loading = false;
       }

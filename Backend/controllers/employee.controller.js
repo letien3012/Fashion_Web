@@ -4,14 +4,49 @@ const { admin } = require("../firebase/firebase-admin");
 // Đăng ký tài khoản nhân viên mới
 exports.add = async (req, res) => {
   try {
-    const employee = new Employee(req.body);
+    const { email, password, fullname, role, address, image, publish } = req.body;
+
+    // Validate required fields
+    if (!email || !password || !fullname) {
+      return res.status(400).json({
+        success: false,
+        message: "Email, password and fullname are required"
+      });
+    }
+
+    // Check if email already exists
+    const existingEmployee = await Employee.getByEmail(email);
+    if (existingEmployee) {
+      return res.status(400).json({
+        success: false,
+        message: "Email already exists"
+      });
+    }
+
+    // Create new employee
+    const employee = new Employee({
+      email,
+      password,
+      fullname,
+      role: role || "staff",
+      address: address || "",
+      image,
+      publish: publish !== undefined ? publish : true
+    });
+
     const id = await employee.save();
+
     res.status(201).json({
+      success: true,
       message: "Employee added successfully",
-      id,
+      data: { id }
     });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error adding employee",
+      error: error.message
+    });
   }
 };
 
@@ -20,28 +55,52 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // Xác thực với Firebase Authentication
-    const userCredential = await admin.auth().getUserByEmail(email);
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email and password are required",
+      });
+    }
 
-    // Lấy thông tin bổ sung từ Firestore
-    const employee = await Employee.getById(userCredential.uid);
+    const employee = await Employee.getByEmail(email);
+    if (!employee) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
 
-    // Tạo custom token
-    const token = await admin.auth().createCustomToken(userCredential.uid);
+    // Check if employee is deleted
+    if (employee.deletedAt) {
+      return res.status(401).json({
+        success: false,
+        message: "This account has been deleted",
+      });
+    }
+
+    // Compare password
+    const isMatch = await Employee.comparePassword(password, employee.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid email or password",
+      });
+    }
+
+    // Remove password from response
+    const { password: _, ...employeeWithoutPassword } = employee;
 
     res.status(200).json({
+      success: true,
       message: "Login successful",
-      token,
-      employee: {
-        id: employee.id,
-        email: employee.email,
-        fullname: employee.fullname,
-        role: employee.role,
-      },
+      data: employeeWithoutPassword,
     });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(401).json({ message: "Invalid credentials" });
+    res.status(500).json({
+      success: false,
+      message: "Error logging in",
+      error: error.message,
+    });
   }
 };
 
@@ -58,10 +117,56 @@ exports.getEmployeeById = async (req, res) => {
 // Cập nhật thông tin nhân viên
 exports.updateEmployee = async (req, res) => {
   try {
-    await Employee.update(req.params.id, req.body);
-    res.status(200).json({ message: "Employee updated successfully" });
+    const { id } = req.params;
+    const { email, password, fullname, role, address, image, publish } = req.body;
+
+    // Check if employee exists
+    const existingEmployee = await Employee.getById(id);
+    if (!existingEmployee) {
+      return res.status(404).json({
+        success: false,
+        message: "Employee not found"
+      });
+    }
+
+    // If email is being changed, check if new email already exists
+    if (email && email !== existingEmployee.email) {
+      const emailExists = await Employee.getByEmail(email);
+      if (emailExists) {
+        return res.status(400).json({
+          success: false,
+          message: "Email already exists"
+        });
+      }
+    }
+
+    // Prepare update data
+    const updateData = {
+      email: email || existingEmployee.email,
+      fullname: fullname || existingEmployee.fullname,
+      role: role || existingEmployee.role,
+      address: address !== undefined ? address : existingEmployee.address,
+      image: image || existingEmployee.image,
+      publish: publish !== undefined ? publish : existingEmployee.publish
+    };
+
+    // Only update password if provided
+    if (password) {
+      updateData.password = password;
+    }
+
+    await Employee.update(id, updateData);
+
+    res.status(200).json({
+      success: true,
+      message: "Employee updated successfully"
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({
+      success: false,
+      message: "Error updating employee",
+      error: error.message
+    });
   }
 };
 

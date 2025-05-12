@@ -12,9 +12,11 @@
         <thead>
           <tr>
             <th>ID</th>
+            <th>Ảnh</th>
             <th>Họ tên</th>
             <th>Email</th>
             <th>Vị trí</th>
+            <th>Địa chỉ</th>
             <th>Trạng thái</th>
             <th>Thao tác</th>
           </tr>
@@ -22,12 +24,26 @@
         <tbody>
           <tr v-for="employee in employees" :key="employee.id">
             <td>{{ employee.id }}</td>
+            <td>
+              <img
+                :src="
+                  employee.image
+                    ? `http://localhost:3005${employee.image}`
+                    : '/default-avatar.png'
+                "
+                alt="Avatar"
+                style="width: 40px; height: 40px; border-radius: 50%"
+              />
+            </td>
             <td>{{ employee.fullname }}</td>
             <td>{{ employee.email }}</td>
             <td>{{ employee.role }}</td>
+            <td>{{ employee.address }}</td>
             <td>
-              <span :class="['status', employee.status]">
-                {{ employee.status === 'active' ? 'Đang làm việc' : 'Đã nghỉ' }}
+              <span
+                :class="['status', employee.publish ? 'active' : 'inactive']"
+              >
+                {{ employee.publish ? "Đang làm việc" : "Đã nghỉ" }}
               </span>
             </td>
             <td class="actions">
@@ -46,19 +62,23 @@
     <!-- Modal thêm/sửa nhân viên -->
     <div v-if="showAddModal" class="modal">
       <div class="modal-content">
-        <h3>{{ isEditing ? 'Sửa nhân viên' : 'Thêm nhân viên' }}</h3>
+        <h3>{{ isEditing ? "Sửa nhân viên" : "Thêm nhân viên" }}</h3>
         <form @submit.prevent="handleSubmit">
           <div class="form-group">
             <label>Họ tên</label>
-            <input v-model="formData.fullname" type="text" required>
+            <input v-model="formData.fullname" type="text" required />
           </div>
           <div class="form-group">
             <label>Email</label>
-            <input v-model="formData.email" type="email" required>
+            <input v-model="formData.email" type="email" required />
           </div>
           <div class="form-group">
             <label>Mật khẩu</label>
-            <input v-model="formData.password" type="password" :required="!isEditing">
+            <input
+              v-model="formData.password"
+              type="password"
+              :required="!isEditing"
+            />
           </div>
           <div class="form-group">
             <label>Vị trí</label>
@@ -68,15 +88,37 @@
             </select>
           </div>
           <div class="form-group">
+            <label>Địa chỉ</label>
+            <input v-model="formData.address" type="text" />
+          </div>
+          <div class="form-group">
+            <label>Ảnh đại diện</label>
+            <input
+              type="file"
+              accept="image/*"
+              @change="handleImageUpload"
+              ref="imageInput"
+            />
+            <img
+              v-if="formData.image"
+              :src="formData.image"
+              class="preview-image"
+              alt="Preview"
+            />
+            <div v-if="isEditing && formData.image" class="current-image-info">
+              <small>Ảnh hiện tại</small>
+            </div>
+          </div>
+          <div class="form-group">
             <label>Trạng thái</label>
-            <select v-model="formData.status">
-              <option value="active">Đang làm việc</option>
-              <option value="inactive">Đã nghỉ</option>
+            <select v-model="formData.publish">
+              <option :value="true">Đang làm việc</option>
+              <option :value="false">Đã nghỉ</option>
             </select>
           </div>
           <div class="modal-actions">
             <button type="button" @click="closeModal">Hủy</button>
-            <button type="submit">{{ isEditing ? 'Cập nhật' : 'Thêm' }}</button>
+            <button type="submit">{{ isEditing ? "Cập nhật" : "Thêm" }}</button>
           </div>
         </form>
       </div>
@@ -85,116 +127,146 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
+import Swal from 'sweetalert2';
+import { toast } from 'vue3-toastify';
+import 'vue3-toastify/dist/index.css';
 
 export default {
-  name: 'EmployeeList',
+  name: "EmployeeList",
   data() {
     return {
       employees: [],
       showAddModal: false,
       isEditing: false,
+      backendUrl: "http://localhost:3005",
       formData: {
-        fullname: '',
-        email: '',
-        password: '',
-        role: 'staff',
-        status: 'active'
-      }
-    }
+        fullname: "",
+        email: "",
+        password: "",
+        role: "staff",
+        publish: true,
+        address: "",
+        image: "",
+      },
+    };
   },
   methods: {
     async fetchEmployees() {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         if (!token) {
-          console.error('No token found');
-          alert('Vui lòng đăng nhập để tiếp tục');
-          this.$router.push('/admin/login');
+          toast.error("Vui lòng đăng nhập để tiếp tục");
+          this.$router.push("/admin/login");
           return;
         }
 
-        const response = await axios.get('http://localhost:3005/api/employees/', {
-          headers: {
-            'Authorization': `Bearer ${token}`
+        const response = await axios.get(
+          "http://localhost:3005/api/employees",
+          {
+            headers: { Authorization: `Bearer ${token}` },
           }
-        });
-        
+        );
+
         if (response.data && response.data.data) {
           this.employees = response.data.data;
-          console.log('Employees loaded:', this.employees.length);
         } else {
-          console.error('Invalid response format:', response.data);
-          alert('Dữ liệu trả về không đúng định dạng');
+          toast.error("Dữ liệu trả về không đúng định dạng");
         }
       } catch (error) {
-        console.error('Full error object:', error);
-        console.error('Error response:', error.response);
-        console.error('Error message:', error.message);
-        
-        if (error.response) {
-          console.error('Error status:', error.response.status);
-          console.error('Error data:', error.response.data);
-        }
-        
         if (error.response?.status === 401) {
-          alert('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại');
-          this.$router.push('/admin/login');
-        } else if (error.response?.status === 404) {
-          alert('Không tìm thấy API endpoint');
-        } else if (error.code === 'ECONNREFUSED') {
-          alert('Không thể kết nối đến server. Vui lòng kiểm tra lại kết nối');
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
         } else {
-          alert('Không thể tải danh sách nhân viên. Vui lòng thử lại sau.');
+          toast.error("Không thể tải danh sách nhân viên. Vui lòng thử lại sau.");
         }
       }
     },
     editEmployee(employee) {
       this.isEditing = true;
-      this.formData = { ...employee };
-      this.formData.password = '';  // Don't pre-fill password for editing
+      this.formData = { 
+        ...employee,
+        image: employee.image ? `http://localhost:3005${employee.image}` : '',
+        publish: employee.publish === undefined ? true : employee.publish
+      };
+      this.formData.password = ""; // Không hiển thị mật khẩu cũ
       this.showAddModal = true;
     },
     async confirmDelete(employee) {
-      if (confirm('Bạn có chắc muốn xóa nhân viên này?')) {
+      const result = await Swal.fire({
+        title: 'Xác nhận xóa',
+        text: `Bạn có chắc muốn xóa nhân viên ${employee.fullname}?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy'
+      });
+
+      if (result.isConfirmed) {
         try {
-          const token = localStorage.getItem('token');
-          await axios.delete(`http://localhost:3005/api/employees/${employee.id}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
+          const token = localStorage.getItem("token");
+          await axios.delete(
+            `http://localhost:3005/api/employees/delete/${employee.id}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
             }
-          });
+          );
+          toast.success("Đã xóa nhân viên thành công!");
           this.fetchEmployees();
         } catch (error) {
-          console.error('Error deleting employee:', error);
+          if (error.response?.status === 401) {
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+            this.$router.push("/admin/login");
+          } else {
+            toast.error("Không thể xóa nhân viên. Vui lòng thử lại sau.");
+          }
         }
       }
     },
     async handleSubmit() {
       try {
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem("token");
         const data = { ...this.formData };
+
         if (this.isEditing && !data.password) {
           delete data.password;
         }
 
+        // Handle image for update
         if (this.isEditing) {
-          await axios.put(`http://localhost:3005/api/employees/${this.formData.id}`, data, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-        } else {
-          await axios.post('http://localhost:3005/api/employees/', data, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
+          // If no new image is selected, keep the existing image
+          if (!data.image || data.image.startsWith('http://localhost:3005')) {
+            delete data.image; // Remove image field to keep existing one
+          }
         }
+
+        if (this.isEditing) {
+          await axios.put(
+            `http://localhost:3005/api/employees/update/${data.id}`,
+            data,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          toast.success("Cập nhật nhân viên thành công!");
+        } else {
+          await axios.post(`http://localhost:3005/api/employees/add`, data, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          toast.success("Thêm nhân viên thành công!");
+        }
+
         this.closeModal();
         this.fetchEmployees();
       } catch (error) {
-        console.error('Error saving employee:', error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else {
+          toast.error("Không thể lưu nhân viên. Vui lòng thử lại sau.");
+        }
       }
     },
     closeModal() {
@@ -204,18 +276,38 @@ export default {
     },
     resetForm() {
       this.formData = {
-        fullname: '',
-        email: '',
-        password: '',
-        role: 'staff',
-        status: 'active'
+        fullname: "",
+        email: "",
+        password: "",
+        role: "staff",
+        publish: true,
+        address: "",
+        image: "",
       };
-    }
+      if (this.$refs.imageInput) {
+        this.$refs.imageInput.value = "";
+      }
+    },
+    handleImageUpload(event) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          this.formData.image = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      }
+    },
+    getImageUrl(imagePath) {
+      if (!imagePath) return "/default-avatar.png";
+      if (imagePath.startsWith("data:")) return imagePath;
+      return `${this.backendUrl}${imagePath}`;
+    },
   },
   mounted() {
     this.fetchEmployees();
-  }
-}
+  },
+};
 </script>
 
 <style scoped>
@@ -237,7 +329,7 @@ export default {
 }
 
 .add-btn {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
   border: none;
   padding: 12px 24px;
@@ -256,7 +348,7 @@ export default {
 .table-container {
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -265,7 +357,8 @@ table {
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 16px;
   text-align: left;
   border-bottom: 1px solid #eee;
@@ -298,7 +391,8 @@ th {
   gap: 8px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
   padding: 8px;
   border: none;
   border-radius: 4px;
@@ -321,7 +415,7 @@ th {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0,0,0,0.5);
+  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -368,12 +462,40 @@ th {
 }
 
 .modal-actions button[type="submit"] {
-  background-color: #4CAF50;
+  background-color: #4caf50;
   color: white;
 }
 
 .modal-actions button[type="button"] {
   background-color: #f5f5f5;
   color: #333;
+}
+
+.current-image-info {
+  margin-top: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.preview-image {
+  max-width: 200px;
+  max-height: 200px;
+  margin-top: 10px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #ddd;
+}
+
+input[type="file"] {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+img {
+  object-fit: cover;
+  background-color: #f5f5f5;
 }
 </style>

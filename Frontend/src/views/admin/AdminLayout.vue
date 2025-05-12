@@ -49,6 +49,7 @@
 
 <script>
 import axios from 'axios';
+import { toast } from 'vue3-toastify';
 
 export default {
   name: 'AdminLayout',
@@ -72,10 +73,11 @@ export default {
       this.isSidebarCollapsed = !this.isSidebarCollapsed;
     },
     handleLogout() {
-      localStorage.removeItem('employee');
-      localStorage.removeItem('token');
-      delete axios.defaults.headers.common['Authorization'];
-      this.$router.push('/admin/login');
+      localStorage.removeItem("token");
+      localStorage.removeItem("employee");
+      localStorage.removeItem("isAdmin");
+      toast.success("Đăng xuất thành công!");
+      this.$router.push("/admin/login");
     }
   }
 }
