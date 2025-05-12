@@ -4,7 +4,7 @@
 
     <div class="social-login">
       <button class="btn social" @click="loginWithGoogle"><img src="../assets/images/google.png" height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Google</button>
-      <button class="btn social"><img src="../assets/images/facebook.png"  height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Facebook</button>
+      <button class="btn social" @click="loginWithFacebook"><img src="../assets/images/facebook.png"  height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Facebook</button>
     </div>
 
     <div class="divider">
@@ -39,6 +39,9 @@
 </template>
 
 <script>
+import { FacebookAuthProvider, signInWithPopup } from 'firebase/auth';
+import { auth } from '../../firebase';
+
 export default {
   props: {
     loading: {
@@ -63,7 +66,30 @@ export default {
     },
     loginWithGoogle() {
       window.location.href = 'http://localhost:3005/api/auth/google';
-    }
+    },
+    async loginWithFacebook() {
+      const provider = new FacebookAuthProvider();
+
+      try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        const idToken = await user.getIdToken();
+
+        // Gửi token lên server để xác thực
+        const response = await fetch('http://localhost:3005/api/verifyToken', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        });
+
+        if (!response.ok) throw new Error('Token verification failed');
+
+        const data = await response.json();
+        console.log('Xác thực thành công với UID:', data.uid);
+      } catch (error) {
+        console.error('Lỗi đăng nhập:', error.message);
+      }
+    },
   }
 };
 </script>

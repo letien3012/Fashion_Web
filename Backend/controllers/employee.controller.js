@@ -4,13 +4,14 @@ const { admin } = require("../firebase/firebase-admin");
 // Đăng ký tài khoản nhân viên mới
 exports.add = async (req, res) => {
   try {
-    const { email, password, fullname, role, address, image, publish } = req.body;
+    const { email, password, fullname, role, address, image, publish } =
+      req.body;
 
     // Validate required fields
     if (!email || !password || !fullname) {
       return res.status(400).json({
         success: false,
-        message: "Email, password and fullname are required"
+        message: "Email, password and fullname are required",
       });
     }
 
@@ -19,7 +20,7 @@ exports.add = async (req, res) => {
     if (existingEmployee) {
       return res.status(400).json({
         success: false,
-        message: "Email already exists"
+        message: "Email already exists",
       });
     }
 
@@ -31,7 +32,7 @@ exports.add = async (req, res) => {
       role: role || "staff",
       address: address || "",
       image,
-      publish: publish !== undefined ? publish : true
+      publish: publish !== undefined ? publish : true,
     });
 
     const id = await employee.save();
@@ -39,13 +40,13 @@ exports.add = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Employee added successfully",
-      data: { id }
+      data: { id },
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: "Error adding employee",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -118,14 +119,15 @@ exports.getEmployeeById = async (req, res) => {
 exports.updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, password, fullname, role, address, image, publish } = req.body;
+    const { email, password, fullname, role, address, image, publish } =
+      req.body;
 
     // Check if employee exists
     const existingEmployee = await Employee.getById(id);
     if (!existingEmployee) {
       return res.status(404).json({
         success: false,
-        message: "Employee not found"
+        message: "Employee not found",
       });
     }
 
@@ -135,7 +137,7 @@ exports.updateEmployee = async (req, res) => {
       if (emailExists) {
         return res.status(400).json({
           success: false,
-          message: "Email already exists"
+          message: "Email already exists",
         });
       }
     }
@@ -147,7 +149,7 @@ exports.updateEmployee = async (req, res) => {
       role: role || existingEmployee.role,
       address: address !== undefined ? address : existingEmployee.address,
       image: image || existingEmployee.image,
-      publish: publish !== undefined ? publish : existingEmployee.publish
+      publish: publish !== undefined ? publish : existingEmployee.publish,
     };
 
     // Only update password if provided
@@ -159,13 +161,13 @@ exports.updateEmployee = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Employee updated successfully"
+      message: "Employee updated successfully",
     });
   } catch (error) {
     res.status(500).json({
       success: false,
       message: "Error updating employee",
-      error: error.message
+      error: error.message,
     });
   }
 };
@@ -245,7 +247,7 @@ exports.getAllEmployees = async (req, res) => {
     const employees = await Employee.getAllEmployees();
     res.status(200).json({
       message: "Employees retrieved successfully",
-      data: employees
+      data: employees,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
