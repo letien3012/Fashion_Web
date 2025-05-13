@@ -1,43 +1,33 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
-require("./firebase/firebase-admin");
-const path = require("path");
+// server.js
+const app = require("./app");
 
-const app = express();
+// Route imports
+const routes = {
+  employee: require("./routes/employee.route"),
+  attributeCatalogue: require("./routes/attributeCatalogue.route"),
+  attribute: require("./routes/attribute.route"),
+  customer: require("./routes/customer.route"),
+  productCatalogue: require("./routes/productCatalogue.route"),
+  product: require("./routes/product.route"),
+  supplier: require("./routes/supplier.route"),
+  importReceipt: require("./routes/importReceipt.route"),
+  cart: require("./routes/cart.route"),
+  order: require("./routes/order.route"),
+  auth: require("./routes/auth.route"),
+};
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-// Serve static files from the public directory
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Routes
-const employeeRoutes = require("./routes/employee.route");
-const attributeCatalogueRoutes = require("./routes/attributeCatalogue.route");
-const attributeRoutes = require("./routes/attribute.route");
-const customerRoutes = require("./routes/customer.route");
-const productCatalogueRoutes = require("./routes/productCatalogue.route");
-const productRoutes = require("./routes/product.route");
-const supplierRoutes = require("./routes/supplier.route");
-const importReceiptRoutes = require("./routes/importReceipt.route");
-const cartRoutes = require("./routes/cart.route");
-const orderRoutes = require("./routes/order.route");
-const authRoutes = require("./routes/auth.route");
-
-app.use("/api/employees", employeeRoutes);
-app.use("/api/attributeCatalogues", attributeCatalogueRoutes);
-app.use("/api/attributes", attributeRoutes);
-app.use("/api/customers", customerRoutes);
-app.use("/api/productCatalogues", productCatalogueRoutes);
-app.use("/api/products", productRoutes);
-app.use("/api/suppliers", supplierRoutes);
-app.use("/api/import-receipts", importReceiptRoutes);
-app.use("/api/carts", cartRoutes);
-app.use("/api/orders", orderRoutes);
-app.use("/api/auth", authRoutes);
+// Register API routes
+app.use("/api/employees", routes.employee);
+app.use("/api/attributeCatalogues", routes.attributeCatalogue);
+app.use("/api/attributes", routes.attribute);
+app.use("/api/customers", routes.customer);
+app.use("/api/productCatalogues", routes.productCatalogue);
+app.use("/api/products", routes.product);
+app.use("/api/suppliers", routes.supplier);
+app.use("/api/import-receipts", routes.importReceipt);
+app.use("/api/carts", routes.cart);
+app.use("/api/orders", routes.order);
+app.use("/api/auth", routes.auth);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -48,7 +38,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+// Start the server
+const PORT = process.env.PORT || 3005;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`✅ Server is running on http://localhost:${PORT}`);
 });

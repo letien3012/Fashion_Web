@@ -3,8 +3,24 @@
     <h2>Đăng nhập</h2>
 
     <div class="social-login">
-      <button class="btn social" @click="loginWithGoogle"><img src="../assets/images/google.png" height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Google</button>
-      <button class="btn social" @click="loginWithFacebook"><img src="../assets/images/facebook.png"  height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Facebook</button>
+      <button class="btn social" @click="loginWithGoogle">
+        <img
+          src="../assets/images/google.png"
+          height="16px"
+          width="16px"
+          style="margin-right: 5px"
+        />
+        Tiếp tục với Google
+      </button>
+      <button class="btn social" @click="loginWithFacebook">
+        <img
+          src="../assets/images/facebook.png"
+          height="16px"
+          width="16px"
+          style="margin-right: 5px"
+        />
+        Tiếp tục với Facebook
+      </button>
     </div>
 
     <div class="divider">
@@ -12,60 +28,75 @@
     </div>
 
     <form @submit.prevent="handleSubmit">
-      <input type="email" placeholder="Email hoặc username" v-model="email" required />
-      
+      <input
+        type="email"
+        placeholder="Email hoặc username"
+        v-model="email"
+        required
+      />
+
       <div class="password-group">
-        <input :type="showPassword ? 'text' : 'password'" placeholder="Mật khẩu" v-model="password" required />
-        <span @click="showPassword = !showPassword">{{ showPassword ? 'Ẩn' : 'Hiện' }}</span>
+        <input
+          :type="showPassword ? 'text' : 'password'"
+          placeholder="Mật khẩu"
+          v-model="password"
+          required
+        />
+        <span @click="showPassword = !showPassword">{{
+          showPassword ? "Ẩn" : "Hiện"
+        }}</span>
       </div>
 
       <div class="remember-forgot">
-        <label><input type="checkbox" v-model="rememberMe" style="width: auto;"> Ghi nhớ đăng nhập</label>
+        <label
+          ><input type="checkbox" v-model="rememberMe" style="width: auto" />
+          Ghi nhớ đăng nhập</label
+        >
         <a href="/forgotpw">Quên mật khẩu?</a>
       </div>
 
       <button type="submit" class="btn login" :disabled="loading">
-        {{ loading ? 'Đang đăng nhập...' : 'Đăng nhập' }}
+        {{ loading ? "Đang đăng nhập..." : "Đăng nhập" }}
       </button>
     </form>
 
     <div class="signup-section">
       <p>Chưa có tài khoản?</p>
       <router-link to="/register">
-         <button class="btn signup">Đăng ký</button>
+        <button class="btn signup">Đăng ký</button>
       </router-link>
     </div>
   </div>
 </template>
 
 <script>
-import { FacebookAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { FacebookAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "../../firebase";
 
 export default {
   props: {
     loading: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   data() {
     return {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       showPassword: false,
-      rememberMe: false
+      rememberMe: false,
     };
   },
   methods: {
     handleSubmit() {
-      this.$emit('submit-login', {
+      this.$emit("submit-login", {
         email: this.email,
-        password: this.password
+        password: this.password,
       });
     },
     loginWithGoogle() {
-      window.location.href = 'http://localhost:3005/api/auth/google';
+      window.location.href = "http://localhost:3005/api/auth/google";
     },
     async loginWithFacebook() {
       const provider = new FacebookAuthProvider();
@@ -76,21 +107,21 @@ export default {
         const idToken = await user.getIdToken();
 
         // Gửi token lên server để xác thực
-        const response = await fetch('http://localhost:3005/api/verifyToken', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+        const response = await fetch("http://localhost:3005/api/verifyToken", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ idToken }),
         });
 
-        if (!response.ok) throw new Error('Token verification failed');
+        if (!response.ok) throw new Error("Token verification failed");
 
         const data = await response.json();
-        console.log('Xác thực thành công với UID:', data.uid);
+        console.log("Xác thực thành công với UID:", data.uid);
       } catch (error) {
-        console.error('Lỗi đăng nhập:', error.message);
+        console.error("Lỗi đăng nhập:", error.message);
       }
     },
-  }
+  },
 };
 </script>
 
@@ -139,7 +170,7 @@ h2 {
 
 .divider::before,
 .divider::after {
-  content: '';
+  content: "";
   flex: 1;
   border-bottom: 1px solid #ccc;
 }

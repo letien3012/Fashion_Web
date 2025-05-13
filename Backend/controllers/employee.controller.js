@@ -1,5 +1,6 @@
 const Employee = require("../models/employee.model");
 const { admin } = require("../firebase/firebase-admin");
+const jwt = require("jsonwebtoken");
 
 // Đăng ký tài khoản nhân viên mới
 exports.add = async (req, res) => {
@@ -59,7 +60,7 @@ exports.login = async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email and password are required",
+        message: "Vui lòng nhập email và mật khẩu",
       });
     }
 
@@ -67,7 +68,7 @@ exports.login = async (req, res) => {
     if (!employee) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Email hoặc mật khẩu không đúng",
       });
     }
 
@@ -75,7 +76,7 @@ exports.login = async (req, res) => {
     if (employee.deletedAt) {
       return res.status(401).json({
         success: false,
-        message: "This account has been deleted",
+        message: "Tài khoản này đã bị xóa",
       });
     }
 
@@ -84,22 +85,43 @@ exports.login = async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email or password",
+        message: "Email hoặc mật khẩu không đúng",
       });
     }
 
     // Remove password from response
     const { password: _, ...employeeWithoutPassword } = employee;
 
+    // Tạo token
+    const token = jwt.sign(
+      { 
+        id: employee.id, 
+        email: employee.email, 
+        role: employee.role,
+        fullname: employee.fullname 
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: "24h" }
+    );
+
+    // Set cookie
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     res.status(200).json({
       success: true,
-      message: "Login successful",
-      data: employeeWithoutPassword,
+      message: "Đăng nhập thành công",
+      token,
+      employee: employeeWithoutPassword,
     });
   } catch (error) {
+    console.error('Login error:', error);
     res.status(500).json({
       success: false,
-      message: "Error logging in",
+      message: "Lỗi đăng nhập. Vui lòng thử lại sau",
       error: error.message,
     });
   }

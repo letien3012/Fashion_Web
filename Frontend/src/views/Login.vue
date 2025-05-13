@@ -1,6 +1,6 @@
 <template>
   <div class="login-container">
-    <Header />
+    <Header></Header>
     <div class="login-page">
       <FormLogin :loading="loading" @submit-login="handleLogin" />
     </div>
