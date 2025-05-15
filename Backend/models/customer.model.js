@@ -3,6 +3,7 @@ const { db } = require("../firebase/firebase-admin");
 class Customer {
   constructor(data) {
     this.email = data.email;
+    this.phone = data.phone || "";
     this.password = data.password;
     this.fullname = data.fullname;
     this.address = data.address || "";
@@ -44,6 +45,7 @@ class Customer {
     try {
       const customerData = {
         email: this.email,
+        phone: this.phone,
         fullname: this.fullname,
         address: this.address,
         image: this.image,
@@ -102,9 +104,9 @@ class Customer {
   static async getAll() {
     try {
       const snapshot = await db.collection("customers").get();
-      return snapshot.docs.map(doc => ({
+      return snapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
     } catch (error) {
       throw new Error(`Error fetching customers: ${error.message}`);

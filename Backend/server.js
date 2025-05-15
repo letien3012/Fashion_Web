@@ -30,6 +30,8 @@ const importReceiptRoutes = require("./routes/importReceipt.route");
 const cartRoutes = require("./routes/cart.route");
 const orderRoutes = require("./routes/order.route");
 const authRoutes = require("./routes/auth.route");
+const mailRoutes = require("./routes/mail.route");
+const verifyRoutes = require("./routes/verify.route");
 
 app.use("/api/employees", employeeRoutes);
 app.use("/api/attributeCatalogues", attributeCatalogueRoutes);
@@ -42,7 +44,8 @@ app.use("/api/import-receipts", importReceiptRoutes);
 app.use("/api/carts", cartRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/auth", authRoutes);
-
+app.use("/api/mail", mailRoutes);
+app.use("/api/verify", verifyRoutes);
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);

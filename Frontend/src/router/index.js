@@ -3,6 +3,7 @@ import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import adminRoutes from "./admin";
 import ForgotPW from "../views/ForgotPW.vue";
+import Verification from "../views/OtpVerification.vue";
 
 const routes = [
   {
@@ -16,6 +17,7 @@ const routes = [
     component: Register,
   },
   { path: "/forgotpw", name: "ForgotPW", component: ForgotPW },
+  { path: "/verification", name: "VerificationOtp", component: Verification },
   ...adminRoutes,
 ];
 

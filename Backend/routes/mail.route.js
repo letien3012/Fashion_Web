@@ -1,0 +1,19 @@
+// routes/mail.route.js
+const express = require("express");
+const router = express.Router();
+const sendVerificationCode = require("../mailer/sendVerificationCode");
+
+router.post("/send-code", async (req, res) => {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ message: "Email là bắt buộc" });
+
+  try {
+    await sendVerificationCode(email);
+    res.json({ message: "Đã gửi mã xác thực đến email" });
+  } catch (err) {
+    console.error("Lỗi gửi mail:", err);
+    res.status(500).json({ message: "Lỗi khi gửi mã xác thực" });
+  }
+});
+
+module.exports = router;
