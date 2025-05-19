@@ -1,158 +1,41 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-<<<<<<< HEAD
-class Customer {
-  constructor(data) {
-    this.email = data.email;
-    this.phone = data.phone || "";
-    this.password = data.password;
-    this.fullname = data.fullname;
-    this.address = data.address || "";
-    this.image = data.image || null;
-    this.createdAt = data.createdAt || new Date();
-    this.updatedAt = data.updatedAt || null;
-    this.deletedAt = null;
-=======
 const customerSchema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
   },
   password: {
     type: String,
-    required: true
+    required: true,
   },
   fullname: {
     type: String,
-    required: true
+    required: true,
   },
   address: {
     type: String,
-    default: ""
+    default: "",
   },
   image: {
     type: String,
-    default: null
+    default: null,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: null
+    default: null,
   },
   deletedAt: {
     type: Date,
-    default: null
->>>>>>> 02fa2c9b0590165b080ac49f2b1ddc903b8c7e33
-  }
+    default: null,
+  },
 });
 
-<<<<<<< HEAD
-  static async getById(id) {
-    try {
-      const doc = await db.collection("customers").doc(id).get();
-      if (!doc.exists) {
-        throw new Error("Customer not found");
-      }
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      throw new Error(`Error getting customer by ID: ${error.message}`);
-    }
-  }
-
-  static async getByEmail(email) {
-    try {
-      const snapshot = await db
-        .collection("customers")
-        .where("email", "==", email)
-        .get();
-
-      if (snapshot.empty) return null;
-
-      const doc = snapshot.docs[0];
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      throw new Error(`Error getting customer by email: ${error.message}`);
-    }
-  }
-
-  async save() {
-    try {
-      const customerData = {
-        email: this.email,
-        phone: this.phone,
-        fullname: this.fullname,
-        address: this.address,
-        image: this.image,
-        createdAt: this.createdAt,
-        updatedAt: null,
-        deletedAt: null,
-      };
-
-      const customerRef = await db.collection("customers").add(customerData);
-      return customerRef.id;
-    } catch (error) {
-      throw new Error(`Error saving customer: ${error.message}`);
-    }
-  }
-
-  static async update(id, data) {
-    try {
-      const updateData = {
-        ...data,
-        updatedAt: new Date(),
-      };
-
-      await db.collection("customers").doc(id).update(updateData);
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating customer: ${error.message}`);
-    }
-  }
-
-  static async delete(id) {
-    try {
-      await db.collection("customers").doc(id).delete();
-      return true;
-    } catch (error) {
-      throw new Error(`Error deleting customer: ${error.message}`);
-    }
-  }
-
-  static async getCustomerOrders(customerId) {
-    try {
-      const snapshot = await db
-        .collection("orders")
-        .where("customerId", "==", customerId)
-        .orderBy("createdAt", "desc")
-        .get();
-
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      throw new Error(`Error fetching customer orders: ${error.message}`);
-    }
-  }
-
-  static async getAll() {
-    try {
-      const snapshot = await db.collection("customers").get();
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      throw new Error(`Error fetching customers: ${error.message}`);
-    }
-  }
-}
-=======
-const Customer = mongoose.model('Customer', customerSchema);
->>>>>>> 02fa2c9b0590165b080ac49f2b1ddc903b8c7e33
+const Customer = mongoose.model("Customer", customerSchema);
 
 module.exports = Customer;

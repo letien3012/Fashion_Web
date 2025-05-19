@@ -1,5 +1,5 @@
 const nodemailer = require("nodemailer");
-const { db } = require("../firebase/firebase-admin");
+// const { db } = require("../firebase/firebase-admin");
 require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
@@ -89,10 +89,10 @@ function generateEmailTemplate({ code = "123456", name = "User" }) {
 async function sendVerificationCode(email, name = "User") {
   const code = generateCode();
 
-  await db.collection("verifications").doc(email).set({
-    code,
-    createdAt: new Date(),
-  });
+  // await db.collection("verifications").doc(email).set({
+  //   code,
+  //   createdAt: new Date(),
+  // });
 
   const mailOptions = {
     from: `"Xác thực đăng ký" <${process.env.MAIL_USER}>`,

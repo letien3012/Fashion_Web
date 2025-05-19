@@ -70,13 +70,14 @@
 </template>
 
 <script>
-<<<<<<< HEAD
-import { FacebookAuthProvider, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '../../firebase';
-=======
+import {
+  FacebookAuthProvider,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth } from "../../firebase";
 import { FacebookAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../../firebase";
->>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
 
 export default {
   props: {
@@ -100,34 +101,8 @@ export default {
         password: this.password,
       });
     },
-<<<<<<< HEAD
-    async loginWithGoogle() {
-      const provider = new GoogleAuthProvider();
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        const idToken = await user.getIdToken();
-
-        // Gửi token lên server để xác thực
-        const response = await fetch('http://localhost:3005/api/auth/verifyToken', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        });
-
-        if (!response.ok) throw new Error('Token verification failed');
-
-        const data = await response.json();
-        console.log('Xác thực thành công với UID:', data.uid);
-        this.$router.push({ name: 'Register' });
-      } catch (error) {
-        console.error('Lỗi đăng nhập:', error.message);
-      }
-      // window.location.href = 'http://localhost:3005/api/auth/google';
-=======
     loginWithGoogle() {
       window.location.href = "http://localhost:3005/api/auth/google";
->>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
     },
     async loginWithFacebook() {
       const provider = new FacebookAuthProvider();
@@ -138,18 +113,20 @@ export default {
         const idToken = await user.getIdToken();
 
         // Gửi token lên server để xác thực
-<<<<<<< HEAD
-        const response = await fetch('http://localhost:3005/api/auth/verifyToken', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        });
 
-        if (!response.ok) throw new Error('Token verification failed');
+        const response = await fetch(
+          "http://localhost:3005/api/auth/verifyToken",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          }
+        );
+
+        if (!response.ok) throw new Error("Token verification failed");
         const data = await response.json();
-        console.log('Xác thực thành công với UID:', data.uid);
-        this.$router.push('/');
-=======
+        console.log("Xác thực thành công với UID:", data.uid);
+        this.$router.push("/");
         const response = await fetch("http://localhost:3005/api/verifyToken", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -160,7 +137,6 @@ export default {
 
         const data = await response.json();
         console.log("Xác thực thành công với UID:", data.uid);
->>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
       } catch (error) {
         console.error("Lỗi đăng nhập:", error.message);
       }

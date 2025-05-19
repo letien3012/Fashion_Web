@@ -1,4 +1,4 @@
-const { db } = require("../firebase/firebase-admin");
+// const { db } = require("../firebase/firebase-admin");
 
 async function verifyCode(email, inputCode) {
   const docRef = db.collection("verifications").doc(email);

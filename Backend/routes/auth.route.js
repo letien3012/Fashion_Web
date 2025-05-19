@@ -2,7 +2,6 @@
 const express = require("express");
 const passport = require("passport");
 require("../config/passport");
-const firebase = require("../firebase/firebase-admin");
 const router = express.Router();
 const { loginSuccess, logout } = require("../controllers/auth.controller");
 const Customer = require("../models/customer.model");
@@ -11,9 +10,9 @@ const jwt = require("jsonwebtoken");
 // Route: Bắt đầu đăng nhập Google
 router.get(
   "/google",
-  passport.authenticate("google", { 
+  passport.authenticate("google", {
     scope: ["profile", "email"],
-    prompt: "select_account"
+    prompt: "select_account",
   })
 );
 
@@ -25,7 +24,7 @@ router.get(
   // async (req, res) => {
   //   res.redirect("http://localhost:5173");
 
-  //   passport.authenticate("google", { 
+  //   passport.authenticate("google", {
   //     failureRedirect: "http://localhost:5173/login",
   //     failureMessage: true
   //   }),
@@ -33,12 +32,12 @@ router.get(
   (req, res) => {
     // Tạo JWT token
     const token = jwt.sign(
-      { 
+      {
         id: req.user.id,
         email: req.user.emails[0].value,
-        name: req.user.displayName
+        name: req.user.displayName,
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      process.env.JWT_SECRET || "your-secret-key",
       { expiresIn: "24h" }
     );
 
