@@ -3,11 +3,8 @@ import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import adminRoutes from "./admin";
 import ForgotPW from "../views/ForgotPW.vue";
-<<<<<<< HEAD
 import Verification from "../views/OtpVerification.vue";
-=======
 import AuthCallback from "../views/AuthCallback.vue";
->>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
 
 const routes = [
   {
@@ -20,10 +17,8 @@ const routes = [
     name: "Register",
     component: Register,
   },
-<<<<<<< HEAD
   { path: "/forgotpw", name: "ForgotPW", component: ForgotPW },
   { path: "/verification", name: "VerificationOtp", component: Verification },
-=======
   {
     path: "/forgotpw",
     name: "ForgotPW",
@@ -34,7 +29,6 @@ const routes = [
     name: "AuthCallback",
     component: AuthCallback,
   },
->>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
   ...adminRoutes,
 ];
 
