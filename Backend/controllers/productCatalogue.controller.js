@@ -1,30 +1,43 @@
 const ProductCatalogue = require("../models/productCatalogue.model");
+const ImageModel = require("../models/image.model");
 
 // Thêm danh mục sản phẩm mới
 exports.add = async (req, res) => {
   try {
-    const { name, description, icon, parentId } = req.body;
+    const { name, description, parentId } = req.body;
+    let icon = null;
 
+    // Handle icon upload if present
+    if (req.body.icon) {
+      icon = await ImageModel.saveImage(req.body.icon, "icon");
+    }
+
+    // Validate required fields
     if (!name) {
-      return res.status(400).json({ message: "Name is required" });
+      return res.status(400).json({
+        message: "Vui lòng nhập tên danh mục",
+      });
     }
 
-    // Nếu có parentId, kiểm tra parent có tồn tại không
-    if (parentId) {
-      const parent = await ProductCatalogue.getById(parentId);
-      if (!parent) {
-        return res.status(400).json({ message: "Parent catalogue not found" });
-      }
-    }
+    // Create new catalogue
+    const catalogue = new ProductCatalogue({
+      name,
+      description,
+      parentId,
+      icon,
+    });
 
-    const productCatalogue = new ProductCatalogue(req.body);
-    const id = await productCatalogue.save();
+    await catalogue.save();
+
     res.status(201).json({
-      message: "ProductCatalogue added successfully",
-      id,
+      message: "Thêm danh mục thành công",
+      data: catalogue,
     });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
@@ -33,11 +46,11 @@ exports.getChildren = async (req, res) => {
   try {
     const children = await ProductCatalogue.getChildren(req.params.id);
     res.status(200).json({
-      message: "Child catalogues retrieved successfully",
+      message: "Success",
       data: children
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
@@ -46,59 +59,122 @@ exports.getTree = async (req, res) => {
   try {
     const tree = await ProductCatalogue.getTree();
     res.status(200).json({
-      message: "Catalogue tree retrieved successfully",
+      message: "Success",
       data: tree
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(400).json({ message: error.message });
   }
 };
 
 // Lấy danh sách danh mục sản phẩm
 exports.getAll = async (req, res) => {
   try {
-    const productCatalogues = await ProductCatalogue.getAll();
+    const catalogues = await ProductCatalogue.find();
     res.status(200).json({
-      message: "ProductCatalogues retrieved successfully",
-      data: productCatalogues
+      data: catalogues,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
 // Lấy danh mục sản phẩm theo ID
 exports.getById = async (req, res) => {
   try {
-    const productCatalogue = await ProductCatalogue.getById(req.params.id);
-    res.status(200).json(productCatalogue);
+    const catalogue = await ProductCatalogue.findById(req.params.id);
+    if (!catalogue) {
+      return res.status(404).json({
+        message: "Không tìm thấy danh mục",
+      });
+    }
+    res.status(200).json(catalogue);
   } catch (error) {
-    res.status(404).json({ message: error.message });
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
 // Cập nhật danh mục sản phẩm
 exports.update = async (req, res) => {
   try {
-    const { name, description, icon } = req.body;
-    
-    if (!name) {
-      return res.status(400).json({ message: "Name is required" });
+    const { id } = req.params;
+    const { name, description, parentId } = req.body;
+    let icon = null;
+
+    const catalogue = await ProductCatalogue.findById(id);
+    if (!catalogue) {
+      return res.status(404).json({
+        message: "Không tìm thấy danh mục",
+      });
     }
 
-    await ProductCatalogue.update(req.params.id, req.body);
-    res.status(200).json({ message: "ProductCatalogue updated successfully" });
+    // Update fields
+    catalogue.name = name || catalogue.name;
+    catalogue.description = description || catalogue.description;
+    catalogue.parentId = parentId || catalogue.parentId;
+
+    // Handle icon update
+    if (req.body.icon) {
+      // If icon is a base64 string (new icon)
+      if (req.body.icon.startsWith('data:')) {
+        icon = await ImageModel.saveImage(req.body.icon, "icon");
+        // Delete old icon if exists
+        if (catalogue.icon) {
+          await ImageModel.deleteImage(catalogue.icon);
+        }
+        catalogue.icon = icon;
+      }
+      // If icon is a path (old icon), keep it
+      else if (req.body.icon.startsWith('/images/')) {
+        catalogue.icon = req.body.icon;
+      }
+    }
+
+    await catalogue.save();
+
+    res.status(200).json({
+      message: "Cập nhật danh mục thành công",
+      data: catalogue,
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
 // Xóa danh mục sản phẩm
 exports.delete = async (req, res) => {
   try {
-    await ProductCatalogue.delete(req.params.id);
-    res.status(200).json({ message: "ProductCatalogue deleted successfully" });
+    const { id } = req.params;
+    const catalogue = await ProductCatalogue.findById(id);
+    if (!catalogue) {
+      return res.status(404).json({
+        message: "Không tìm thấy danh mục",
+      });
+    }
+
+    // Delete icon if exists
+    if (catalogue.icon) {
+      await ImageModel.deleteImage(catalogue.icon);
+    }
+
+    await catalogue.delete();
+
+    res.status(200).json({
+      message: "Xóa danh mục thành công",
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 }; 

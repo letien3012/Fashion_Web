@@ -14,8 +14,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="employee in employees" :key="employee.id">
-          <td>{{ employee.id }}</td>
+        <tr v-for="employee in employees" :key="employee._id">
+          <td>{{ employee._id }}</td>
           <td>
             <img
               :src="
@@ -32,9 +32,7 @@
           <td>{{ employee.role }}</td>
           <td>{{ employee.address }}</td>
           <td>
-            <span
-              :class="['status', employee.publish ? 'active' : 'inactive']"
-            >
+            <span :class="['status', employee.publish ? 'active' : 'inactive']">
               {{ employee.publish ? "Đang làm việc" : "Đã nghỉ" }}
             </span>
           </td>
@@ -47,6 +45,9 @@
             </button>
           </td>
         </tr>
+        <tr v-if="employees.length === 0">
+          <td colspan="8" class="text-center">Không có dữ liệu</td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -54,90 +55,16 @@
 
 <script>
 export default {
-  name: 'EmployeeTable',
+  name: "EmployeeTable",
   props: {
     employees: {
       type: Array,
-      required: true
-    }
-  }
-}
+      required: true,
+    },
+  },
+};
 </script>
 
 <style scoped>
-.table-container {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-  margin-top: 20px;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #333;
-}
-
-tr:hover {
-  background-color: #f8f9fa;
-}
-
-.status {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.status.active {
-  background-color: #e3fcef;
-  color: #00a854;
-}
-
-.status.inactive {
-  background-color: #fff1f0;
-  color: #f5222d;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.edit-btn, .delete-btn {
-  padding: 6px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.edit-btn {
-  background-color: #e6f7ff;
-  color: #1890ff;
-}
-
-.delete-btn {
-  background-color: #fff1f0;
-  color: #f5222d;
-}
-
-.edit-btn:hover {
-  background-color: #bae7ff;
-}
-
-.delete-btn:hover {
-  background-color: #ffccc7;
-}
-</style> 
+@import "../../assets/styles/admin/table.css";
+</style>

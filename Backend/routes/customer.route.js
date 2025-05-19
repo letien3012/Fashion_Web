@@ -1,16 +1,22 @@
 const express = require("express");
 const router = express.Router();
 const customerController = require("../controllers/customer.controller");
+const auth = require("../middleware/auth");
 
-router.post("/add", customerController.add);
+// Public routes
+router.post("/register", customerController.register);
 router.post("/login", customerController.login);
-router.get("/:id", customerController.getCustomerById);
-router.put("/update/:id", customerController.updateCustomer);
-router.delete("/delete/:id", customerController.deleteCustomer);
-router.get("/:id/orders", customerController.getCustomerOrders);
-router.put("/:id/password", customerController.updatePassword);
-router.post("/forgot-password", customerController.forgotPassword);
+router.post("/request-password-reset", customerController.requestPasswordReset);
 router.post("/reset-password", customerController.resetPassword);
-router.get("/", customerController.getAllCustomers);
+
+// Protected routes
+router.get("/profile", auth, customerController.getProfile);
+router.put("/profile", auth, customerController.updateProfile);
+router.delete("/profile", auth, customerController.deleteAccount);
+router.put("/change-password", auth, customerController.changePassword);
+router.get("/orders", auth, customerController.getCustomerOrders);
+
+// Admin routes
+router.get("/", auth, customerController.getAllCustomers);
 
 module.exports = router;

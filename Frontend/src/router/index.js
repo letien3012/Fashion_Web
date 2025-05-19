@@ -3,7 +3,6 @@ import Login from "../views/Login.vue";
 import Register from "../views/Register.vue";
 import adminRoutes from "./admin";
 import ForgotPW from "../views/ForgotPW.vue";
-import AuthCallback from "../views/AuthCallback.vue";
 
 const routes = [
   {
@@ -20,11 +19,6 @@ const routes = [
     path: "/forgotpw",
     name: "ForgotPW",
     component: ForgotPW,
-  },
-  {
-    path: "/auth/callback",
-    name: "AuthCallback",
-    component: AuthCallback,
   },
   ...adminRoutes,
 ];

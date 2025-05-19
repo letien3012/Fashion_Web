@@ -1,25 +1,28 @@
 <template>
-  <div class="employee-list">
+  <div class="list-container">
     <div class="header">
       <h2>Quản lý nhân viên</h2>
-      <button class="add-btn" @click="showAddModal = true">
+      <button class="add-btn" @click="openAddModal">
         <i class="fas fa-plus"></i> Thêm nhân viên
       </button>
     </div>
 
-    <EmployeeTable 
-      :employees="employees"
-      @edit="editEmployee"
-      @delete="confirmDelete"
-    />
+    <div class="content">
+      <EmployeeTable
+        :employees="employees"
+        @edit="editEmployee"
+        @delete="confirmDelete"
+      />
 
-    <EmployeeForm
-      :show="showAddModal"
-      :is-editing="isEditing"
-      :initial-data="formData"
-      @close="closeModal"
-      @submit="handleSubmit"
-    />
+      <EmployeeForm
+        :show="showAddModal"
+        :is-editing="isEditing"
+        :initial-data="formData"
+        @close="closeModal"
+        @submitEmployee="handleSubmit"
+        @error="handleFormError"
+      />
+    </div>
   </div>
 </template>
 
@@ -30,229 +33,258 @@ import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
 import EmployeeTable from "../../components/admin/EmployeeTable.vue";
 import EmployeeForm from "../../components/admin/EmployeeForm.vue";
+import { ref } from "vue";
+import { useRouter } from "vue-router";
 
 export default {
   name: "EmployeeList",
   components: {
     EmployeeTable,
-    EmployeeForm
+    EmployeeForm,
   },
-  data() {
-    return {
-      employees: [],
-      showAddModal: false,
-      isEditing: false,
-      backendUrl: "http://localhost:3005",
-      formData: {
-        fullname: "",
-        email: "",
-        password: "",
-        role: "staff",
-        publish: true,
-        address: "",
-        image: "",
-      },
-    };
-  },
-  methods: {
-    async fetchEmployees() {
+  setup() {
+    const router = useRouter();
+    const employees = ref([]);
+    const showAddModal = ref(false);
+    const isEditing = ref(false);
+    const backendUrl = "http://localhost:3005";
+    const formData = ref({
+      id: null,
+      fullname: "",
+      email: "",
+      phone: "",
+      address: "",
+      role: "employee",
+      image: "",
+      publish: true,
+    });
+
+    const fetchEmployees = async () => {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
           toast.error("Vui lòng đăng nhập để tiếp tục");
-          this.$router.push("/admin/login");
+          router.push("/admin/login");
           return;
         }
 
-        const response = await axios.get(
-          "http://localhost:3005/api/employees",
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const response = await axios.get(`${backendUrl}/api/employees`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
         if (response.data && response.data.data) {
-          this.employees = response.data.data;
+          employees.value = response.data.data;
         } else {
           toast.error("Dữ liệu trả về không đúng định dạng");
         }
       } catch (error) {
-        console.error('Fetch employees error:', error);
+        console.error("Fetch employees error:", error);
         if (error.response?.status === 401) {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
-          this.$router.push("/admin/login");
+          router.push("/admin/login");
         } else {
-          toast.error("Không thể tải danh sách nhân viên. Vui lòng thử lại sau.");
-        }
-      }
-    },
-    editEmployee(employee) {
-      console.log('Employee to edit:', employee);
-      this.isEditing = true;
-      this.formData = {
-        id: employee.id,
-        ...employee,
-        image: employee.image ? `http://localhost:3005${employee.image}` : "",
-        publish: employee.publish === undefined ? true : employee.publish,
-      };
-      this.formData.password = ""; // Không hiển thị mật khẩu cũ
-      this.showAddModal = true;
-    },
-    async confirmDelete(employee) {
-      const result = await Swal.fire({
-        title: "Xác nhận xóa",
-        text: `Bạn có chắc muốn xóa nhân viên ${employee.fullname}?`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#d33",
-        cancelButtonColor: "#3085d6",
-        confirmButtonText: "Xóa",
-        cancelButtonText: "Hủy",
-      });
-
-      if (result.isConfirmed) {
-        try {
-          const token = localStorage.getItem("token");
-          await axios.delete(
-            `http://localhost:3005/api/employees/delete/${employee.id}`,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          toast.success("Đã xóa nhân viên thành công!");
-          this.fetchEmployees();
-        } catch (error) {
-          if (error.response?.status === 401) {
-            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
-            this.$router.push("/admin/login");
-          } else {
-            toast.error("Không thể xóa nhân viên. Vui lòng thử lại sau.");
-          }
-        }
-      }
-    },
-    async handleSubmit(formData) {
-      try {
-        const token = localStorage.getItem("token");
-        const data = { ...formData };
-
-        if (this.isEditing && !data.password) {
-          delete data.password;
-        }
-
-        // Handle image for update
-        if (this.isEditing) {
-          // Nếu có ảnh mới (base64) thì giữ nguyên
-          // Nếu không có ảnh mới và có ảnh cũ (URL) thì xóa trường image
-          if (!data.image || data.image.startsWith("http://localhost:3005")) {
-            delete data.image;
-          }
-        }
-
-        let response;
-        if (this.isEditing) {
-          // Kiểm tra ID trước khi gửi request
-          if (!data.id) {
-            toast.error("Không tìm thấy ID nhân viên. Vui lòng thử lại sau.");
-            return;
-          }
-
-          const employeeId = data.id;
-          delete data.id; 
-
-          response = await axios.put(
-            `http://localhost:3005/api/employees/update/${employeeId}`,
-            data,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-        } else {
-          response = await axios.post(
-            "http://localhost:3005/api/employees/create",
-            data,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
+          toast.error(
+            "Không thể tải danh sách nhân viên. Vui lòng thử lại sau."
           );
         }
-
-        // Kiểm tra response từ server
-        if (response.data && response.data.success) {
-          toast.success(this.isEditing ? "Cập nhật nhân viên thành công!" : "Thêm nhân viên thành công!");
-          this.closeModal();
-          this.fetchEmployees();
-        } else {
-          toast.error(response.data?.message || `Không thể ${this.isEditing ? "cập nhật" : "thêm"} nhân viên. Vui lòng thử lại sau.`);
-        }
-      } catch (error) {
-        console.error('Error:', error);
-        if (error.response?.status === 401) {
-          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
-          this.$router.push("/admin/login");
-        } else if (error.response?.status === 500) {
-          toast.error("Lỗi server. Vui lòng thử lại sau.");
-        } else {
-          toast.error(`Không thể ${this.isEditing ? "cập nhật" : "thêm"} nhân viên. Vui lòng thử lại sau.`);
-        }
       }
-    },
-    closeModal() {
-      this.showAddModal = false;
-      this.isEditing = false;
-      this.formData = {
+    };
+
+    const openAddModal = () => {
+      isEditing.value = false;
+      formData.value = {
+        id: null,
         fullname: "",
         email: "",
-        password: "",
-        role: "staff",
-        publish: true,
+        phone: "",
         address: "",
+        role: "employee",
         image: "",
+        publish: true,
       };
-    }
+      showAddModal.value = true;
+    };
+
+    const editEmployee = (employee) => {
+      if (!employee || !employee._id) {
+        toast.error("Dữ liệu không hợp lệ");
+        return;
+      }
+
+      isEditing.value = true;
+      formData.value = {
+        id: employee._id,
+        fullname: employee.fullname,
+        email: employee.email,
+        address: employee.address || "",
+        role: employee.role || "employee",
+        image: employee.image || "",
+        publish: employee.publish !== undefined ? employee.publish : true,
+      };
+      showAddModal.value = true;
+    };
+
+    const confirmDelete = async (employee) => {
+      try {
+        const result = await Swal.fire({
+          title: "Xác nhận xóa?",
+          text: `Bạn có chắc chắn muốn xóa nhân viên "${employee.fullname}"?`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#3085d6",
+          confirmButtonText: "Xóa",
+          cancelButtonText: "Hủy",
+          showLoaderOnConfirm: true,
+          preConfirm: async () => {
+            try {
+              const token = localStorage.getItem("token");
+              if (!token) {
+                throw new Error("Vui lòng đăng nhập để tiếp tục");
+              }
+
+              const response = await axios.delete(
+                `${backendUrl}/api/employees/delete/${employee._id}`,
+                {
+                  headers: { Authorization: `Bearer ${token}` },
+                }
+              );
+
+              if (response.status === 200) {
+                return response.data;
+              }
+              throw new Error(response.data.message || "Có lỗi xảy ra");
+            } catch (error) {
+              Swal.showValidationMessage(
+                error.response?.data?.message || error.message
+              );
+            }
+          },
+          allowOutsideClick: () => !Swal.isLoading(),
+        });
+
+        if (result.isConfirmed) {
+          toast.success("Xóa nhân viên thành công");
+          fetchEmployees();
+        }
+      } catch (error) {
+        console.error("Delete confirmation error:", error);
+        toast.error("Có lỗi xảy ra khi xóa nhân viên");
+      }
+    };
+
+    const handleSubmit = async (formData) => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để tiếp tục");
+          router.push("/admin/login");
+          return;
+        }
+
+        if (isEditing.value) {
+          // Update existing employee
+          const response = await axios.put(
+            `${backendUrl}/api/employees/update/${formData.id}`,
+            {
+              fullname: formData.fullname,
+              email: formData.email,
+              password: formData.password,
+              role: formData.role,
+              address: formData.address,
+              image: formData.image,
+              publish: formData.publish
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.status === 200) {
+            toast.success("Cập nhật nhân viên thành công");
+            closeModal();
+            fetchEmployees();
+          }
+        } else {
+          // Add new employee
+          const response = await axios.post(
+            `${backendUrl}/api/employees/add`,
+            {
+              fullname: formData.fullname,
+              email: formData.email,
+              password: formData.password,
+              role: formData.role,
+              address: formData.address,
+              image: formData.image,
+              publish: formData.publish
+            },
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            }
+          );
+
+          if (response.status === 201) {
+            toast.success("Thêm nhân viên thành công");
+            closeModal();
+            fetchEmployees();
+          }
+        }
+      } catch (error) {
+        console.error("Submit error:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập đã hết hạn");
+          router.push("/admin/login");
+        } else if (error.response?.status === 500) {
+          toast.error("Lỗi server");
+        } else {
+          toast.error(error.response?.data?.message || "Có lỗi xảy ra");
+        }
+      }
+    };
+
+    const handleFormError = (error) => {
+      toast.error(error);
+    };
+
+    const closeModal = () => {
+      showAddModal.value = false;
+      isEditing.value = false;
+      formData.value = {
+        id: null,
+        fullname: "",
+        email: "",
+        phone: "",
+        address: "",
+        role: "employee",
+        image: "",
+        publish: true,
+      };
+    };
+
+    return {
+      employees,
+      showAddModal,
+      isEditing,
+      formData,
+      fetchEmployees,
+      openAddModal,
+      editEmployee,
+      confirmDelete,
+      handleSubmit,
+      handleFormError,
+      closeModal,
+    };
   },
   created() {
     this.fetchEmployees();
-  }
+  },
 };
 </script>
 
 <style scoped>
-.employee-list {
-  padding: 20px;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.header h2 {
-  margin: 0;
-  color: #333;
-}
-
-.add-btn {
-  background-color: #1890ff;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.add-btn:hover {
-  background-color: #40a9ff;
-}
-
-.add-btn i {
-  font-size: 14px;
-}
+@import "../../assets/styles/admin/list.css";
 </style>

@@ -1,276 +1,191 @@
-const { db } = require("../firebase/firebase-admin");
+const mongoose = require('mongoose');
 
-class ImportReceipt {
-  constructor(data) {
-    this.code = data.code;
-    this.publish = data.publish || "pending";
-    this.import_receipt_detail = data.import_receipt_detail || [];
-    this.createdAt = data.createdAt || new Date();
-    this.updatedAt = data.updatedAt || null;
-    this.deletedAt = data.deletedAt || null;
+const importReceiptSchema = new mongoose.Schema({
+  supplierId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Supplier',
+    required: true
+  },
+  employeeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Employee',
+    required: true
+  },
+  total_price: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'processing', 'completed', 'cancelled'],
+    default: 'pending'
+  },
+  note: {
+    type: String,
+    default: ""
+  },
+  import_details: [{
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
+      required: true
+    },
+    variants: [{
+      sku: String,
+      quantity: Number,
+      price: Number,
+      attributeId1: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Attribute'
+      },
+      attributeId2: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Attribute'
+      }
+    }],
+    quantity: Number,
+    price: Number
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
+});
 
-  // Validate import receipt detail
-  static async validateDetail(detail) {
-    if (!detail.productId) {
-      throw new Error("Product ID is required in detail");
+// Static method to get import receipt by ID
+importReceiptSchema.statics.getById = async function(id) {
+  try {
+    const importReceipt = await this.findById(id)
+      .populate('supplierId', 'name')
+      .populate('employeeId', 'email fullname')
+      .populate('import_details.productId', 'name image')
+      .populate('import_details.variants.attributeId1', 'name')
+      .populate('import_details.variants.attributeId2', 'name');
+    
+    if (!importReceipt) {
+      throw new Error("Import receipt not found");
     }
-    if (!detail.variant) {
-      throw new Error("Variant information is required in detail");
+    if (importReceipt.deletedAt) {
+      throw new Error("Import receipt has been deleted");
     }
-    if (typeof detail.price !== 'number' || detail.price < 0) {
-      throw new Error("Price must be a positive number");
-    }
-    if (typeof detail.quantity !== 'number' || detail.quantity <= 0) {
-      throw new Error("Quantity must be a positive number");
-    }
+    return importReceipt;
+  } catch (error) {
+    throw new Error(`Error getting import receipt by ID: ${error.message}`);
+  }
+};
 
-    // Validate variant structure
-    const variant = detail.variant;
-    if (!variant.sku) {
-      throw new Error("Variant SKU is required");
-    }
-    if (!variant.image) {
-      throw new Error("Variant image is required");
-    }
+// Static method to create new import receipt
+importReceiptSchema.statics.create = async function(data) {
+  try {
+    const importReceipt = new this(data);
+    await importReceipt.save();
+    return importReceipt;
+  } catch (error) {
+    throw new Error(`Error creating import receipt: ${error.message}`);
+  }
+};
 
-    // Kiểm tra attributeId1 nếu có
-    if (variant.attributeId1) {
-      const attribute1Doc = await db.collection("attributes").doc(variant.attributeId1).get();
-      if (!attribute1Doc.exists) {
-        throw new Error(`Attribute ID '${variant.attributeId1}' does not exist`);
-      }
+// Static method to update import receipt
+importReceiptSchema.statics.update = async function(id, data) {
+  try {
+    const importReceipt = await this.findById(id);
+    if (!importReceipt) {
+      throw new Error("Import receipt not found");
     }
-
-    // Kiểm tra attributeId2 nếu có
-    if (variant.attributeId2) {
-      const attribute2Doc = await db.collection("attributes").doc(variant.attributeId2).get();
-      if (!attribute2Doc.exists) {
-        throw new Error(`Attribute ID '${variant.attributeId2}' does not exist`);
-      }
+    if (importReceipt.deletedAt) {
+      throw new Error("Import receipt has been deleted");
     }
+    
+    Object.assign(importReceipt, data);
+    importReceipt.updatedAt = new Date();
+    await importReceipt.save();
+    return importReceipt;
+  } catch (error) {
+    throw new Error(`Error updating import receipt: ${error.message}`);
+  }
+};
 
+// Static method to delete import receipt (soft delete)
+importReceiptSchema.statics.delete = async function(id) {
+  try {
+    const importReceipt = await this.findById(id);
+    if (!importReceipt) {
+      throw new Error("Import receipt not found");
+    }
+    if (importReceipt.deletedAt) {
+      throw new Error("Import receipt has already been deleted");
+    }
+    
+    importReceipt.deletedAt = new Date();
+    await importReceipt.save();
     return true;
+  } catch (error) {
+    throw new Error(`Error deleting import receipt: ${error.message}`);
   }
+};
 
-  static async getById(id) {
-    try {
-      const doc = await db.collection("import_receipts").doc(id).get();
-      if (!doc.exists) {
-        throw new Error("Import receipt not found");
-      }
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      throw new Error(`Error getting import receipt by ID: ${error.message}`);
+// Static method to get all import receipts
+importReceiptSchema.statics.getAll = async function() {
+  try {
+    return await this.find({ deletedAt: null })
+      .populate('supplierId', 'name')
+      .populate('employeeId', 'email fullname')
+      .populate('import_details.productId', 'name image');
+  } catch (error) {
+    throw new Error(`Error fetching import receipts: ${error.message}`);
+  }
+};
+
+// Static method to update import receipt status
+importReceiptSchema.statics.updateStatus = async function(id, status) {
+  try {
+    const importReceipt = await this.findById(id);
+    if (!importReceipt) {
+      throw new Error("Import receipt not found");
     }
-  }
-
-  async save() {
-    try {
-      // Validate all details
-      if (this.import_receipt_detail && this.import_receipt_detail.length > 0) {
-        this.import_receipt_detail.forEach(detail => {
-          ImportReceipt.validateDetail(detail);
-        });
-      }
-
-      const importReceiptData = {
-        code: this.code,
-        publish: this.publish,
-        import_receipt_detail: this.import_receipt_detail,
-        createdAt: this.createdAt,
-        updatedAt: null,
-        deletedAt: null,
-      };
-
-      const importReceiptRef = await db.collection("import_receipts").add(importReceiptData);
-      return importReceiptRef.id;
-    } catch (error) {
-      throw new Error(`Error saving import receipt: ${error.message}`);
+    if (importReceipt.deletedAt) {
+      throw new Error("Import receipt has been deleted");
     }
+    
+    importReceipt.status = status;
+    importReceipt.updatedAt = new Date();
+    await importReceipt.save();
+    return importReceipt;
+  } catch (error) {
+    throw new Error(`Error updating import receipt status: ${error.message}`);
   }
+};
 
-  static async update(id, data) {
-    try {
-      // Validate details if they exist in update data
-      if (data.import_receipt_detail && data.import_receipt_detail.length > 0) {
-        data.import_receipt_detail.forEach(detail => {
-          ImportReceipt.validateDetail(detail);
-        });
-      }
-
-      const updateData = {
-        ...data,
-        updatedAt: new Date(),
-      };
-
-      await db.collection("import_receipts").doc(id).update(updateData);
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating import receipt: ${error.message}`);
+// Static method to add consignment
+importReceiptSchema.statics.addConsignment = async function(id, consignmentData) {
+  try {
+    const importReceipt = await this.findById(id);
+    if (!importReceipt) {
+      throw new Error("Import receipt not found");
     }
-  }
-
-  static async delete(id) {
-    try {
-      await db.collection("import_receipts").doc(id).delete();
-      return true;
-    } catch (error) {
-      throw new Error(`Error deleting import receipt: ${error.message}`);
+    if (importReceipt.deletedAt) {
+      throw new Error("Import receipt has been deleted");
     }
+    
+    // Add consignment to import receipt
+    importReceipt.consignments = importReceipt.consignments || [];
+    importReceipt.consignments.push(consignmentData);
+    importReceipt.updatedAt = new Date();
+    await importReceipt.save();
+    return importReceipt;
+  } catch (error) {
+    throw new Error(`Error adding consignment: ${error.message}`);
   }
+};
 
-  static async getAll() {
-    try {
-      const snapshot = await db.collection("import_receipts").get();
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      throw new Error(`Error fetching import receipts: ${error.message}`);
-    }
-  }
-
-  // Thêm chi tiết vào phiếu nhập
-  static async addDetail(id, detail) {
-    try {
-      ImportReceipt.validateDetail(detail);
-
-      const importReceipt = await this.getById(id);
-      const details = importReceipt.import_receipt_detail || [];
-      details.push(detail);
-
-      await db.collection("import_receipts").doc(id).update({
-        import_receipt_detail: details,
-        updatedAt: new Date()
-      });
-
-      return true;
-    } catch (error) {
-      throw new Error(`Error adding detail: ${error.message}`);
-    }
-  }
-
-  // Cập nhật chi tiết trong phiếu nhập
-  static async updateDetail(id, detailIndex, detail) {
-    try {
-      ImportReceipt.validateDetail(detail);
-
-      const importReceipt = await this.getById(id);
-      const details = importReceipt.import_receipt_detail || [];
-      
-      if (detailIndex >= details.length) {
-        throw new Error("Detail index out of bounds");
-      }
-
-      details[detailIndex] = detail;
-
-      await db.collection("import_receipts").doc(id).update({
-        import_receipt_detail: details,
-        updatedAt: new Date()
-      });
-
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating detail: ${error.message}`);
-    }
-  }
-
-  // Xóa chi tiết khỏi phiếu nhập
-  static async deleteDetail(id, detailIndex) {
-    try {
-      const importReceipt = await this.getById(id);
-      const details = importReceipt.import_receipt_detail || [];
-      
-      if (detailIndex >= details.length) {
-        throw new Error("Detail index out of bounds");
-      }
-
-      details.splice(detailIndex, 1);
-
-      await db.collection("import_receipts").doc(id).update({
-        import_receipt_detail: details,
-        updatedAt: new Date()
-      });
-
-      return true;
-    } catch (error) {
-      throw new Error(`Error deleting detail: ${error.message}`);
-    }
-  }
-
-  // Sửa lại phương thức publish
-  static async publish(id) {
-    try {
-      const importReceipt = await this.getById(id);
-      
-      if (importReceipt.publish === "success") {
-        throw new Error("Import receipt is already published successfully");
-      }
-
-      // Cập nhật trạng thái publish thành success
-      await db.collection("import_receipts").doc(id).update({
-        publish: "success",
-        updatedAt: new Date()
-      });
-
-      // Tạo consignments cho từng chi tiết
-      const consignmentPromises = importReceipt.import_receipt_detail.map(async (detail) => {
-        const consignmentData = {
-          code: importReceipt.code,
-          import_receipt_id: id,
-          productId: detail.productId,
-          variant: {
-            ...detail.variant,
-            quantity: detail.quantity,  // Thêm trường quantity vào variant
-            quantity_sold: 0  // Khởi tạo quantity_sold = 0
-          },
-          price: detail.price,
-          quantity: detail.quantity,
-          current_quantity: detail.quantity,
-          publish: true,
-          createdAt: new Date(),
-          updatedAt: null,
-          deletedAt: null
-        };
-
-        // Thêm vào collection consignments
-        const consignmentRef = await db.collection("consignments").add(consignmentData);
-        return consignmentRef.id;
-      });
-
-      // Đợi tất cả consignments được tạo
-      await Promise.all(consignmentPromises);
-
-      return true;
-    } catch (error) {
-      // Nếu có lỗi, cập nhật trạng thái thành failed
-      await db.collection("import_receipts").doc(id).update({
-        publish: "failed",
-        updatedAt: new Date()
-      });
-      throw new Error(`Error publishing import receipt: ${error.message}`);
-    }
-  }
-
-  // Thêm phương thức để cập nhật trạng thái publish
-  static async updatePublishStatus(id, status) {
-    try {
-      if (!["pending", "success", "failed"].includes(status)) {
-        throw new Error("Invalid publish status");
-      }
-
-      await db.collection("import_receipts").doc(id).update({
-        publish: status,
-        updatedAt: new Date()
-      });
-
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating publish status: ${error.message}`);
-    }
-  }
-}
+const ImportReceipt = mongoose.model('ImportReceipt', importReceiptSchema);
 
 module.exports = ImportReceipt; 

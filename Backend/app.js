@@ -4,6 +4,10 @@ const cors = require("cors");
 const session = require("express-session");
 const passport = require("passport");
 const path = require("path");
+const connectDB = require("./config/mongodb");
+
+// Connect to MongoDB
+connectDB();
 
 require("./config/passport");
 
@@ -11,7 +15,7 @@ const app = express();
 
 // CORS options
 const corsOptions = {
-  origin: "http://localhost:5173", // Frontend Vite
+  origin: ["http://localhost:5173", "http://localhost:3005"], // Allow both frontend ports
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
@@ -42,15 +46,15 @@ app.use(
 );
 // Middleware setup
 app.use(cors(corsOptions));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// app.use(express.json());
+// app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, "public")));
-
-// Firebase Admin
-require("./firebase/firebase-admin");
 
 module.exports = app;

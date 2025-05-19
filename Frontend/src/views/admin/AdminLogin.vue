@@ -57,6 +57,8 @@ export default {
     async handleLogin() {
       try {
         this.loading = true;
+        console.log(this.email);
+        console.log(this.password);
         const response = await axios.post(
           "http://localhost:3005/api/employees/login",
           {
@@ -70,8 +72,13 @@ export default {
             },
           }
         );
+        console.log(response.data);
 
-        if (response.data.success && response.data.token && response.data.employee) {
+        if (
+          response.data.success &&
+          response.data.token &&
+          response.data.employee
+        ) {
           // Lưu token và thông tin employee
           localStorage.setItem("token", response.data.token);
           localStorage.setItem(
@@ -93,11 +100,13 @@ export default {
           toast.error("Thông tin đăng nhập không hợp lệ!");
         }
       } catch (error) {
-        console.error('Login error:', error);
+        console.error("Login error:", error);
         if (error.response?.status === 401) {
           toast.error("Email hoặc mật khẩu không đúng!");
         } else if (error.response?.status === 400) {
-          toast.error(error.response.data.message || "Vui lòng nhập đầy đủ thông tin!");
+          toast.error(
+            error.response.data.message || "Vui lòng nhập đầy đủ thông tin!"
+          );
         } else {
           toast.error("Đăng nhập thất bại. Vui lòng thử lại sau!");
         }
