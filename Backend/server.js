@@ -1,19 +1,20 @@
-const express = require("express");
-const cors = require("cors");
-require("dotenv").config();
-require("./firebase/firebase-admin");
-
+// server.js
 const app = require("./app");
 
-// Middleware
-// app.use(cors());
-const corsOptions = {
-  origin: "http://localhost:5173", // Frontend Vite
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true, // Chỉ bật nếu dùng cookies hoặc session
+// Route imports
+const routes = {
+  employee: require("./routes/employee.route"),
+  attributeCatalogue: require("./routes/attributeCatalogue.route"),
+  attribute: require("./routes/attribute.route"),
+  customer: require("./routes/customer.route"),
+  productCatalogue: require("./routes/productCatalogue.route"),
+  product: require("./routes/product.route"),
+  supplier: require("./routes/supplier.route"),
+  importReceipt: require("./routes/importReceipt.route"),
+  cart: require("./routes/cart.route"),
+  order: require("./routes/order.route"),
+  auth: require("./routes/auth.route"),
 };
-app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -46,6 +47,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/mail", mailRoutes);
 app.use("/api/verify", verifyRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -55,7 +57,8 @@ app.use((err, req, res, next) => {
   });
 });
 
-const PORT = process.env.PORT || 5000;
+// Start the server
+const PORT = process.env.PORT || 3005;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`✅ Server is running on http://localhost:${PORT}`);
 });

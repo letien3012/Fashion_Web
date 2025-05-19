@@ -3,56 +3,104 @@
     <h2>Đăng nhập</h2>
 
     <div class="social-login">
-      <button class="btn social" @click="loginWithGoogle"><img src="../assets/images/google.png" height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Google</button>
-      <button class="btn social" @click="loginWithFacebook"><img src="../assets/images/facebook.png"  height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Facebook</button>
+      <button class="btn social" @click="loginWithGoogle">
+        <img
+          src="../assets/images/google.png"
+          height="16px"
+          width="16px"
+          style="margin-right: 5px"
+        />
+        Tiếp tục với Google
+      </button>
+      <button class="btn social" @click="loginWithFacebook">
+        <img
+          src="../assets/images/facebook.png"
+          height="16px"
+          width="16px"
+          style="margin-right: 5px"
+        />
+        Tiếp tục với Facebook
+      </button>
     </div>
 
     <div class="divider">
       <span>OR</span>
     </div>
 
-    <form @submit.prevent="handleLogin">
-      <input type="email" placeholder="Email hoặc username" v-model="email" required />
-      
+    <form @submit.prevent="handleSubmit">
+      <input
+        type="email"
+        placeholder="Email hoặc username"
+        v-model="email"
+        required
+      />
+
       <div class="password-group">
-        <input :type="showPassword ? 'text' : 'password'" placeholder="Mật khẩu" v-model="password" required />
-        <span @click="showPassword = !showPassword">{{ showPassword ? 'Ẩn' : 'Hiện' }}</span>
+        <input
+          :type="showPassword ? 'text' : 'password'"
+          placeholder="Mật khẩu"
+          v-model="password"
+          required
+        />
+        <span @click="showPassword = !showPassword">{{
+          showPassword ? "Ẩn" : "Hiện"
+        }}</span>
       </div>
 
       <div class="remember-forgot">
-        <label ><input type="checkbox" v-model="rememberMe" style="width: auto;"> Ghi nhớ đăng nhập</label>
+        <label
+          ><input type="checkbox" v-model="rememberMe" style="width: auto" />
+          Ghi nhớ đăng nhập</label
+        >
         <a href="/forgotpw">Quên mật khẩu?</a>
       </div>
 
-      <button type="submit" class="btn login">Đăng nhập</button>
+      <button type="submit" class="btn login" :disabled="loading">
+        {{ loading ? "Đang đăng nhập..." : "Đăng nhập" }}
+      </button>
     </form>
 
     <div class="signup-section">
       <p>Chưa có tài khoản?</p>
       <router-link to="/register">
-         <button class="btn signup" >Đăng ký</button>
+        <button class="btn signup">Đăng ký</button>
       </router-link>
     </div>
   </div>
 </template>
 
 <script>
+<<<<<<< HEAD
 import { FacebookAuthProvider, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { auth } from '../../firebase';
+=======
+import { FacebookAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth } from "../../firebase";
+>>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
 
 export default {
+  props: {
+    loading: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       showPassword: false,
-      rememberMe: false
+      rememberMe: false,
     };
   },
   methods: {
-    handleLogin() {
-      alert(`Login with ${this.email}`);
+    handleSubmit() {
+      this.$emit("submit-login", {
+        email: this.email,
+        password: this.password,
+      });
     },
+<<<<<<< HEAD
     async loginWithGoogle() {
       const provider = new GoogleAuthProvider();
       try {
@@ -76,6 +124,10 @@ export default {
         console.error('Lỗi đăng nhập:', error.message);
       }
       // window.location.href = 'http://localhost:3005/api/auth/google';
+=======
+    loginWithGoogle() {
+      window.location.href = "http://localhost:3005/api/auth/google";
+>>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
     },
     async loginWithFacebook() {
       const provider = new FacebookAuthProvider();
@@ -86,6 +138,7 @@ export default {
         const idToken = await user.getIdToken();
 
         // Gửi token lên server để xác thực
+<<<<<<< HEAD
         const response = await fetch('http://localhost:3005/api/auth/verifyToken', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -96,11 +149,23 @@ export default {
         const data = await response.json();
         console.log('Xác thực thành công với UID:', data.uid);
         this.$router.push('/');
+=======
+        const response = await fetch("http://localhost:3005/api/verifyToken", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken }),
+        });
+
+        if (!response.ok) throw new Error("Token verification failed");
+
+        const data = await response.json();
+        console.log("Xác thực thành công với UID:", data.uid);
+>>>>>>> 6fe69737aa2c255c5eaad4635240370470430f36
       } catch (error) {
-        console.error('Lỗi đăng nhập:', error.message);
+        console.error("Lỗi đăng nhập:", error.message);
       }
     },
-  }
+  },
 };
 </script>
 
@@ -149,7 +214,7 @@ h2 {
 
 .divider::before,
 .divider::after {
-  content: '';
+  content: "";
   flex: 1;
   border-bottom: 1px solid #ccc;
 }
@@ -193,6 +258,12 @@ input {
   background-color: #999;
   color: white;
   border: none;
+  cursor: pointer;
+}
+
+.btn.login:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
 }
 
 .signup-section {
@@ -206,5 +277,6 @@ input {
   padding: 10px;
   width: 100%;
   background: white;
+  cursor: pointer;
 }
 </style>

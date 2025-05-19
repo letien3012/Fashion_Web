@@ -7,377 +7,252 @@
       </button>
     </div>
 
-    <div class="table-container">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Họ tên</th>
-            <th>Email</th>
-            <th>Vị trí</th>
-            <th>Trạng thái</th>
-            <th>Thao tác</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="employee in employees" :key="employee.id">
-            <td>{{ employee.id }}</td>
-            <td>{{ employee.name }}</td>
-            <td>{{ employee.email }}</td>
-            <td>{{ employee.position }}</td>
-            <td>
-              <span :class="['status', employee.status]">
-                {{ employee.status === 'active' ? 'Đang làm việc' : 'Đã nghỉ' }}
-              </span>
-            </td>
-            <td class="actions">
-              <button class="edit-btn" @click="editEmployee(employee)">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="delete-btn" @click="confirmDelete(employee)">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <EmployeeTable 
+      :employees="employees"
+      @edit="editEmployee"
+      @delete="confirmDelete"
+    />
 
-    <!-- Modal thêm/sửa nhân viên -->
-    <div v-if="showAddModal" class="modal">
-      <div class="modal-content">
-        <h3>{{ isEditing ? 'Sửa nhân viên' : 'Thêm nhân viên' }}</h3>
-        <form @submit.prevent="handleSubmit">
-          <div class="form-group">
-            <label>Họ tên</label>
-            <input v-model="formData.name" type="text" required>
-          </div>
-          <div class="form-group">
-            <label>Email</label>
-            <input v-model="formData.email" type="email" required>
-          </div>
-          <div class="form-group">
-            <label>Mật khẩu</label>
-            <input v-model="formData.password" type="password" :required="!isEditing">
-          </div>
-          <div class="form-group">
-            <label>Vị trí</label>
-            <input v-model="formData.position" type="text" required>
-          </div>
-          <div class="form-group">
-            <label>Trạng thái</label>
-            <select v-model="formData.status">
-              <option value="active">Đang làm việc</option>
-              <option value="inactive">Đã nghỉ</option>
-            </select>
-          </div>
-          <div class="modal-actions">
-            <button type="button" @click="closeModal">Hủy</button>
-            <button type="submit">{{ isEditing ? 'Cập nhật' : 'Thêm' }}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+    <EmployeeForm
+      :show="showAddModal"
+      :is-editing="isEditing"
+      :initial-data="formData"
+      @close="closeModal"
+      @submit="handleSubmit"
+    />
   </div>
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
+import Swal from "sweetalert2";
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
+import EmployeeTable from "../../components/admin/EmployeeTable.vue";
+import EmployeeForm from "../../components/admin/EmployeeForm.vue";
 
 export default {
-  name: 'EmployeeList',
+  name: "EmployeeList",
+  components: {
+    EmployeeTable,
+    EmployeeForm
+  },
   data() {
     return {
       employees: [],
       showAddModal: false,
       isEditing: false,
+      backendUrl: "http://localhost:3005",
       formData: {
-        name: '',
-        email: '',
-        password: '',
-        position: '',
-        status: 'active'
-      }
-    }
+        fullname: "",
+        email: "",
+        password: "",
+        role: "staff",
+        publish: true,
+        address: "",
+        image: "",
+      },
+    };
   },
   methods: {
     async fetchEmployees() {
       try {
-        const response = await axios.get('http://localhost:3000/api/employees');
-        this.employees = response.data;
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để tiếp tục");
+          this.$router.push("/admin/login");
+          return;
+        }
+
+        const response = await axios.get(
+          "http://localhost:3005/api/employees",
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+
+        if (response.data && response.data.data) {
+          this.employees = response.data.data;
+        } else {
+          toast.error("Dữ liệu trả về không đúng định dạng");
+        }
       } catch (error) {
-        console.error('Error fetching employees:', error);
-      }
-    },
-    editEmployee(employee) {
-      this.isEditing = true;
-      this.formData = { ...employee };
-      this.formData.password = '';
-      this.showAddModal = true;
-    },
-    async confirmDelete(employee) {
-      if (confirm('Bạn có chắc muốn xóa nhân viên này?')) {
-        try {
-          await axios.delete(`http://localhost:3000/api/employees/${employee.id}`);
-          this.fetchEmployees();
-        } catch (error) {
-          console.error('Error deleting employee:', error);
+        console.error('Fetch employees error:', error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else {
+          toast.error("Không thể tải danh sách nhân viên. Vui lòng thử lại sau.");
         }
       }
     },
-    async handleSubmit() {
+    editEmployee(employee) {
+      console.log('Employee to edit:', employee);
+      this.isEditing = true;
+      this.formData = {
+        id: employee.id,
+        ...employee,
+        image: employee.image ? `http://localhost:3005${employee.image}` : "",
+        publish: employee.publish === undefined ? true : employee.publish,
+      };
+      this.formData.password = ""; // Không hiển thị mật khẩu cũ
+      this.showAddModal = true;
+    },
+    async confirmDelete(employee) {
+      const result = await Swal.fire({
+        title: "Xác nhận xóa",
+        text: `Bạn có chắc muốn xóa nhân viên ${employee.fullname}?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Xóa",
+        cancelButtonText: "Hủy",
+      });
+
+      if (result.isConfirmed) {
+        try {
+          const token = localStorage.getItem("token");
+          await axios.delete(
+            `http://localhost:3005/api/employees/delete/${employee.id}`,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          toast.success("Đã xóa nhân viên thành công!");
+          this.fetchEmployees();
+        } catch (error) {
+          if (error.response?.status === 401) {
+            toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+            this.$router.push("/admin/login");
+          } else {
+            toast.error("Không thể xóa nhân viên. Vui lòng thử lại sau.");
+          }
+        }
+      }
+    },
+    async handleSubmit(formData) {
       try {
-        const data = { ...this.formData };
+        const token = localStorage.getItem("token");
+        const data = { ...formData };
+
         if (this.isEditing && !data.password) {
           delete data.password;
         }
 
+        // Handle image for update
         if (this.isEditing) {
-          await axios.put(`http://localhost:3000/api/employees/${this.formData.id}`, data);
-        } else {
-          await axios.post('http://localhost:3000/api/employees', data);
+          // Nếu có ảnh mới (base64) thì giữ nguyên
+          // Nếu không có ảnh mới và có ảnh cũ (URL) thì xóa trường image
+          if (!data.image || data.image.startsWith("http://localhost:3005")) {
+            delete data.image;
+          }
         }
-        this.closeModal();
-        this.fetchEmployees();
+
+        let response;
+        if (this.isEditing) {
+          // Kiểm tra ID trước khi gửi request
+          if (!data.id) {
+            toast.error("Không tìm thấy ID nhân viên. Vui lòng thử lại sau.");
+            return;
+          }
+
+          const employeeId = data.id;
+          delete data.id; 
+
+          response = await axios.put(
+            `http://localhost:3005/api/employees/update/${employeeId}`,
+            data,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+        } else {
+          response = await axios.post(
+            "http://localhost:3005/api/employees/create",
+            data,
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+        }
+
+        // Kiểm tra response từ server
+        if (response.data && response.data.success) {
+          toast.success(this.isEditing ? "Cập nhật nhân viên thành công!" : "Thêm nhân viên thành công!");
+          this.closeModal();
+          this.fetchEmployees();
+        } else {
+          toast.error(response.data?.message || `Không thể ${this.isEditing ? "cập nhật" : "thêm"} nhân viên. Vui lòng thử lại sau.`);
+        }
       } catch (error) {
-        console.error('Error saving employee:', error);
+        console.error('Error:', error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else if (error.response?.status === 500) {
+          toast.error("Lỗi server. Vui lòng thử lại sau.");
+        } else {
+          toast.error(`Không thể ${this.isEditing ? "cập nhật" : "thêm"} nhân viên. Vui lòng thử lại sau.`);
+        }
       }
     },
     closeModal() {
       this.showAddModal = false;
       this.isEditing = false;
-      this.resetForm();
-    },
-    resetForm() {
       this.formData = {
-        name: '',
-        email: '',
-        password: '',
-        position: '',
-        status: 'active'
+        fullname: "",
+        email: "",
+        password: "",
+        role: "staff",
+        publish: true,
+        address: "",
+        image: "",
       };
     }
   },
-  mounted() {
+  created() {
     this.fetchEmployees();
   }
-}
+};
 </script>
 
 <style scoped>
 .employee-list {
-  padding: 24px;
+  padding: 20px;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .header h2 {
-  font-size: 24px;
-  font-weight: 600;
+  margin: 0;
   color: #333;
 }
 
 .add-btn {
-  background-color: #4CAF50;
+  background-color: #1890ff;
   color: white;
   border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
+  padding: 8px 16px;
+  border-radius: 4px;
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.3s ease;
 }
 
 .add-btn:hover {
-  background-color: #45a049;
+  background-color: #40a9ff;
 }
 
-.table-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  overflow: hidden;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-th, td {
-  padding: 16px;
-  text-align: left;
-  border-bottom: 1px solid #eee;
-}
-
-th {
-  background-color: #f8f9fa;
-  font-weight: 600;
-  color: #333;
-}
-
-.status {
-  padding: 6px 12px;
-  border-radius: 20px;
+.add-btn i {
   font-size: 14px;
-  font-weight: 500;
 }
-
-.status.active {
-  background-color: #e8f5e9;
-  color: #2e7d32;
-}
-
-.status.inactive {
-  background-color: #ffebee;
-  color: #c62828;
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.edit-btn, .delete-btn {
-  padding: 8px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.edit-btn {
-  background-color: #2196F3;
-  color: white;
-}
-
-.edit-btn:hover {
-  background-color: #1976D2;
-}
-
-.delete-btn {
-  background-color: #f44336;
-  color: white;
-}
-
-.delete-btn:hover {
-  background-color: #d32f2f;
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0,0,0,0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  width: 100%;
-  max-width: 500px;
-}
-
-.modal-content h3 {
-  font-size: 20px;
-  font-weight: 600;
-  margin-bottom: 24px;
-  color: #333;
-}
-
-.form-group {
-  margin-bottom: 16px;
-}
-
-.form-group label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #333;
-}
-
-.form-group input,
-.form-group select {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 16px;
-}
-
-.form-group input:focus,
-.form-group select:focus {
-  border-color: #2196F3;
-  outline: none;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 24px;
-}
-
-.modal-actions button {
-  padding: 12px 24px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: all 0.3s ease;
-}
-
-.modal-actions button[type="submit"] {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-}
-
-.modal-actions button[type="submit"]:hover {
-  background-color: #45a049;
-}
-
-.modal-actions button[type="button"] {
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  color: #333;
-}
-
-.modal-actions button[type="button"]:hover {
-  background-color: #e0e0e0;
-}
-
-@media (max-width: 768px) {
-  .header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-
-  .add-btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .table-container {
-    overflow-x: auto;
-  }
-
-  table {
-    min-width: 800px;
-  }
-}
-</style> 
+</style>

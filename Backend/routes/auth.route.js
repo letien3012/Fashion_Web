@@ -7,18 +7,43 @@ const router = express.Router();
 const { loginSuccess, logout } = require("../controllers/auth.controller");
 const Customer = require("../models/customer.model");
 const axios = require("axios");
+const jwt = require("jsonwebtoken");
 // Route: Bắt đầu đăng nhập Google
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  passport.authenticate("google", { 
+    scope: ["profile", "email"],
+    prompt: "select_account"
+  })
 );
 
-// Route: Google callback
+// Callback route sau khi xác thực Google
 router.get(
   "/google/callback",
+
   passport.authenticate("google", { failureRedirect: "/" }),
-  async (req, res) => {
-    res.redirect("http://localhost:5173");
+  // async (req, res) => {
+  //   res.redirect("http://localhost:5173");
+
+  //   passport.authenticate("google", { 
+  //     failureRedirect: "http://localhost:5173/login",
+  //     failureMessage: true
+  //   }),
+  // }
+  (req, res) => {
+    // Tạo JWT token
+    const token = jwt.sign(
+      { 
+        id: req.user.id,
+        email: req.user.emails[0].value,
+        name: req.user.displayName
+      },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: "24h" }
+    );
+
+    // Redirect về frontend với token
+    res.redirect(`http://localhost:5173/auth/callback?token=${token}`);
   }
 );
 //Route: VerifyToken
@@ -56,7 +81,7 @@ router.post("/verifyToken", async (req, res) => {
 
 module.exports = router;
 // Route: Lấy thông tin user sau đăng nhập
-router.get("/user", loginSuccess);
+router.get("/login/success", loginSuccess);
 
 // Route: Logout
 router.get("/logout", logout);

@@ -4,32 +4,32 @@
       <div class="login-header">
         <h1>Đăng Nhập ADMIN</h1>
       </div>
-      
+
       <form @submit.prevent="handleLogin" class="login-form">
         <div class="form-group">
           <label for="email">Email</label>
-          <input 
-            type="email" 
-            id="email" 
-            v-model="email" 
+          <input
+            type="email"
+            id="email"
+            v-model="email"
             required
             placeholder="Nhập email của bạn"
-          >
+          />
         </div>
-        
+
         <div class="form-group">
           <label for="password">Mật khẩu</label>
-          <input 
-            type="password" 
-            id="password" 
-            v-model="password" 
+          <input
+            type="password"
+            id="password"
+            v-model="password"
             required
             placeholder="Nhập mật khẩu của bạn"
-          >
+          />
         </div>
-        
+
         <button type="submit" class="login-btn" :disabled="loading">
-          {{ loading ? 'Đang đăng nhập...' : 'Đăng Nhập' }}
+          {{ loading ? "Đang đăng nhập..." : "Đăng Nhập" }}
         </button>
       </form>
     </div>
@@ -37,48 +37,84 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
+import { toast } from "vue3-toastify";
+
+// Cấu hình axios mặc định
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common["Content-Type"] = "application/json";
 
 export default {
-  name: 'AdminLogin',
+  name: "AdminLogin",
   data() {
     return {
-      email: '',
-      password: '',
-      loading: false
-    }
+      email: "",
+      password: "",
+      loading: false,
+    };
   },
   methods: {
     async handleLogin() {
-      this.loading = true;
       try {
-        console.log('Đang gửi request đăng nhập...');
-        const response = await axios.post('http://localhost:3005/api/employees/login', {
-          email: this.email,
-          password: this.password
-        });
-        console.log('Response từ server:', response.data);
+        this.loading = true;
+        const response = await axios.post(
+          "http://localhost:3005/api/employees/login",
+          {
+            email: this.email,
+            password: this.password,
+          },
+          {
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
 
-        if (response.data.employee && response.data.token) {
-          localStorage.setItem('employee', JSON.stringify(response.data.employee));
-          localStorage.setItem('token', response.data.token);
-          localStorage.setItem('isAdmin', 'true');
-          axios.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-          this.$router.push('/admin/dashboard');
+        if (response.data.success && response.data.token && response.data.employee) {
+          // Lưu token và thông tin employee
+          localStorage.setItem("token", response.data.token);
+          localStorage.setItem(
+            "employee",
+            JSON.stringify(response.data.employee)
+          );
+          localStorage.setItem("isAdmin", "true");
+
+          // Cập nhật header mặc định cho axios
+          axios.defaults.headers.common[
+            "Authorization"
+          ] = `Bearer ${response.data.token}`;
+
+          toast.success("Đăng nhập thành công!");
+
+          // Chuyển hướng sau khi đăng nhập thành công
+          await this.$router.push("/admin/dashboard");
         } else {
-          console.error('Phản hồi không hợp lệ:', response.data);
-          alert('Phản hồi không hợp lệ từ máy chủ');
+          toast.error("Thông tin đăng nhập không hợp lệ!");
         }
       } catch (error) {
-        console.error('Lỗi đăng nhập:', error);
-        console.error('Chi tiết lỗi:', error.response?.data);
-        alert(error.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin đăng nhập.');
+        console.error('Login error:', error);
+        if (error.response?.status === 401) {
+          toast.error("Email hoặc mật khẩu không đúng!");
+        } else if (error.response?.status === 400) {
+          toast.error(error.response.data.message || "Vui lòng nhập đầy đủ thông tin!");
+        } else {
+          toast.error("Đăng nhập thất bại. Vui lòng thử lại sau!");
+        }
       } finally {
         this.loading = false;
       }
+    },
+  },
+  created() {
+    // Kiểm tra nếu đã đăng nhập thì chuyển hướng
+    const token = localStorage.getItem("token");
+    const isAdmin = localStorage.getItem("isAdmin");
+    if (token && isAdmin === "true") {
+      this.$router.push("/admin/dashboard");
     }
-  }
-}
+  },
+};
 </script>
 
 <style scoped>
@@ -87,7 +123,6 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #f5f5f5;
 }
 
 .login-container {
@@ -165,13 +200,14 @@ input:focus {
     max-width: 90%;
     padding: 32px;
   }
-  
+
   .login-header h1 {
     font-size: 28px;
   }
-  
-  input, .login-btn {
+
+  input,
+  .login-btn {
     font-size: 16px;
   }
 }
-</style> 
+</style>
