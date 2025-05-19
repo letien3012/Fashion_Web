@@ -23,7 +23,7 @@
           <label>Vị trí</label>
           <select v-model="formData.role">
             <option value="admin">Admin</option>
-            <option value="staff">Nhân viên</option>
+            <option value="employee">Nhân viên</option>
           </select>
         </div>
         <div class="form-group">
@@ -38,14 +38,21 @@
             @change="handleImageUpload"
             ref="imageInput"
           />
-          <img
-            v-if="formData.image"
-            :src="formData.image"
-            class="preview-image"
-            alt="Preview"
-          />
-          <div v-if="isEditing && formData.image" class="current-image-info">
-            <small>Ảnh hiện tại</small>
+          <div class="image-preview-container">
+            <img
+              v-if="previewImage"
+              :src="previewImage"
+              class="preview-image"
+              alt="Preview"
+            />
+            <div v-if="isEditing && formData.image && !previewImage" class="current-image">
+              <img
+                :src="formData.image.startsWith('http') ? formData.image : `http://localhost:3005${formData.image}`"
+                class="preview-image"
+                alt="Current"
+              />
+              <small>Ảnh hiện tại</small>
+            </div>
           </div>
         </div>
         <div class="form-group">
@@ -57,7 +64,9 @@
         </div>
         <div class="modal-actions">
           <button type="button" @click="$emit('close')">Hủy</button>
-          <button type="button" @click="handleSubmit">{{ isEditing ? "Cập nhật" : "Thêm" }}</button>
+          <button type="submit" style="background-color: #1890ff; color: white">
+            {{ isEditing ? "Cập nhật" : "Thêm" }}
+          </button>
         </div>
       </form>
     </div>
@@ -66,15 +75,15 @@
 
 <script>
 export default {
-  name: 'EmployeeForm',
+  name: "EmployeeForm",
   props: {
     show: {
       type: Boolean,
-      required: true
+      required: true,
     },
     isEditing: {
       type: Boolean,
-      default: false
+      default: false,
     },
     initialData: {
       type: Object,
@@ -83,30 +92,35 @@ export default {
         fullname: "",
         email: "",
         password: "",
-        role: "staff",
+        role: "employee",
         publish: true,
         address: "",
-        image: ""
-      })
-    }
+        image: "",
+      }),
+    },
   },
   data() {
     return {
-      formData: { ...this.initialData }
-    }
+      formData: { ...this.initialData },
+      previewImage: null,
+    };
   },
   watch: {
     initialData: {
       handler(newVal) {
-        this.formData = { ...newVal }
+        this.formData = { ...newVal };
+        this.previewImage = null;
       },
-      deep: true
+      deep: true,
     },
     show(newVal) {
-      if (!newVal && this.$refs.imageInput) {
-        this.$refs.imageInput.value = '';
+      if (!newVal) {
+        this.previewImage = null;
+        if (this.$refs.imageInput) {
+          this.$refs.imageInput.value = "";
+        }
       }
-    }
+    },
   },
   methods: {
     handleImageUpload(event) {
@@ -114,17 +128,65 @@ export default {
       if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
+          this.previewImage = e.target.result;
           this.formData.image = e.target.result;
         };
         reader.readAsDataURL(file);
       }
     },
     handleSubmit() {
-      console.log('Form Data before emit:', this.formData);
-      this.$emit('submit', { ...this.formData });
-    }
-  }
-}
+      // Validate required fields
+      if (!this.formData.fullname || !this.formData.email) {
+        this.$emit("error", "Vui lòng điền đầy đủ thông tin bắt buộc");
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(this.formData.email)) {
+        this.$emit("error", "Email không hợp lệ");
+        return;
+      }
+
+      // If not editing, password is required
+      if (!this.isEditing && !this.formData.password) {
+        this.$emit("error", "Vui lòng nhập mật khẩu");
+        return;
+      }
+
+      // Prepare data for submission
+      const submitData = {
+        id: this.formData.id,
+        fullname: this.formData.fullname,
+        email: this.formData.email,
+        role: this.formData.role,
+        address: this.formData.address || "",
+        publish: this.formData.publish
+      };
+
+      // Add password only if it's provided
+      if (this.formData.password) {
+        submitData.password = this.formData.password;
+      }
+
+      // Handle image
+      if (this.isEditing) {
+        // If editing and no new image selected, keep the old image path
+        if (!this.previewImage && this.formData.image && !this.formData.image.startsWith('data:')) {
+          submitData.image = this.formData.image;
+        } else if (this.previewImage) {
+          // If new image selected, use the new image
+          submitData.image = this.previewImage;
+        }
+      } else {
+        // For new employee, use the selected image if any
+        submitData.image = this.formData.image;
+      }
+
+      this.$emit("submitEmployee", submitData);
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -167,7 +229,8 @@ label {
   font-weight: 500;
 }
 
-input, select {
+input,
+select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid #ddd;
@@ -175,21 +238,38 @@ input, select {
   font-size: 14px;
 }
 
-input:focus, select:focus {
+input:focus,
+select:focus {
   outline: none;
   border-color: #1890ff;
 }
 
-.preview-image {
-  max-width: 100px;
-  max-height: 100px;
-  margin-top: 8px;
-  border-radius: 4px;
+.image-preview-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
 }
 
-.current-image-info {
-  margin-top: 4px;
+.preview-image {
+  max-width: 150px;
+  max-height: 150px;
+  border-radius: 4px;
+  object-fit: cover;
+  border: 1px solid #ddd;
+}
+
+.current-image {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.current-image small {
   color: #666;
+  font-size: 12px;
 }
 
 .modal-actions {
@@ -221,4 +301,4 @@ input:focus, select:focus {
 .modal-actions button:hover {
   opacity: 0.8;
 }
-</style> 
+</style>

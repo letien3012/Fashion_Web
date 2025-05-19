@@ -1,5 +1,6 @@
-const { db } = require("../firebase/firebase-admin");
+const mongoose = require('mongoose');
 
+<<<<<<< HEAD
 class Customer {
   constructor(data) {
     this.email = data.email;
@@ -11,8 +12,45 @@ class Customer {
     this.createdAt = data.createdAt || new Date();
     this.updatedAt = data.updatedAt || null;
     this.deletedAt = null;
+=======
+const customerSchema = new mongoose.Schema({
+  email: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  password: {
+    type: String,
+    required: true
+  },
+  fullname: {
+    type: String,
+    required: true
+  },
+  address: {
+    type: String,
+    default: ""
+  },
+  image: {
+    type: String,
+    default: null
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
+>>>>>>> 02fa2c9b0590165b080ac49f2b1ddc903b8c7e33
   }
+});
 
+<<<<<<< HEAD
   static async getById(id) {
     try {
       const doc = await db.collection("customers").doc(id).get();
@@ -113,5 +151,8 @@ class Customer {
     }
   }
 }
+=======
+const Customer = mongoose.model('Customer', customerSchema);
+>>>>>>> 02fa2c9b0590165b080ac49f2b1ddc903b8c7e33
 
 module.exports = Customer;

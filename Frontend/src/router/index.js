@@ -24,11 +24,6 @@ const routes = [
     name: "ForgotPW",
     component: ForgotPW,
   },
-  {
-    path: "/auth/callback",
-    name: "AuthCallback",
-    component: AuthCallback,
-  },
   ...adminRoutes,
 ];
 

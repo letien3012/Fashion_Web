@@ -10,4 +10,4 @@ router.get("/:id/children", productCatalogueController.getChildren);
 router.put("/update/:id", productCatalogueController.update);
 router.delete("/delete/:id", productCatalogueController.delete);
 
-module.exports = router; 
+module.exports = router;

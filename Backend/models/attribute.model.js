@@ -1,96 +1,118 @@
-const { db } = require("../firebase/firebase-admin");
+const mongoose = require('mongoose');
 
-class Attribute {
-  constructor(data) {
-    this.name = data.name;
-    this.image = data.image || null;
-    this.attributeCatalogueId = data.attributeCatalogueId; // Lưu ID của attributeCatalogue
-    this.createdAt = data.createdAt || new Date();
-    this.updatedAt = data.updatedAt || null;
-    this.deletedAt = data.deletedAt || null;
+const attributeSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  attributeCatalogueId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'AttributeCatalogue',
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
+});
 
-  // Lấy danh sách tất cả các attributes
-  static async getAll() {
-    try {
-      const snapshot = await db.collection("attributes").get();
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      throw new Error(`Error fetching attribute list: ${error.message}`);
+// Static method to get all attributes
+attributeSchema.statics.getAll = async function() {
+  try {
+    return await this.find({ deletedAt: null })
+      .populate('attributeCatalogueId', 'name');
+  } catch (error) {
+    throw new Error(`Error fetching attribute list: ${error.message}`);
+  }
+};
+
+// Static method to get attribute by ID
+attributeSchema.statics.getById = async function(id) {
+  try {
+    const attribute = await this.findById(id)
+      .populate('attributeCatalogueId', 'name');
+    if (!attribute) {
+      throw new Error("Attribute not found");
     }
-  }
-
-  // Lấy attribute theo ID
-  static async getById(id) {
-    try {
-      const doc = await db.collection("attributes").doc(id).get();
-      if (!doc.exists) {
-        throw new Error("Attribute not found");
-      }
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      throw new Error(`Error fetching attribute by ID: ${error.message}`);
+    if (attribute.deletedAt) {
+      throw new Error("Attribute has been deleted");
     }
+    return attribute;
+  } catch (error) {
+    throw new Error(`Error getting attribute by ID: ${error.message}`);
   }
+};
 
-  // Lưu mới attribute vào Firestore
-  async save() {
-    try {
-      // Kiểm tra attributeCatalogueId có tồn tại không
-      const attributeCatalogueRef = db
-        .collection("attribute_catalogues")
-        .doc(this.attributeCatalogueId);
-      const doc = await attributeCatalogueRef.get();
+// Static method to get attributes by catalogue ID
+attributeSchema.statics.getByCatalogueId = async function(catalogueId) {
+  try {
+    return await this.find({
+      attributeCatalogueId: catalogueId,
+      deletedAt: null
+    });
+  } catch (error) {
+    throw new Error(`Error fetching attributes by catalogue ID: ${error.message}`);
+  }
+};
 
-      if (!doc.exists) {
-        throw new Error(
-          `AttributeCatalogue ID '${this.attributeCatalogueId}' does not exist.`
-        );
-      }
+// Static method to create new attribute
+attributeSchema.statics.create = async function(data) {
+  try {
+    const attribute = new this(data);
+    await attribute.save();
+    return attribute;
+  } catch (error) {
+    throw new Error(`Error creating attribute: ${error.message}`);
+  }
+};
 
-      // Nếu tồn tại thì mới thêm attribute
-      const attributeData = {
-        name: this.name,
-        image: this.image,
-        attributeCatalogueId: this.attributeCatalogueId,
-        createdAt: this.createdAt,
-        updatedAt: null,
-        deletedAt: null,
-      };
-
-      const attributeRef = await db.collection("attributes").add(attributeData);
-      return attributeRef.id;
-    } catch (error) {
-      throw new Error(`Error saving attribute: ${error.message}`);
+// Static method to update attribute
+attributeSchema.statics.update = async function(id, data) {
+  try {
+    const attribute = await this.findById(id);
+    if (!attribute) {
+      throw new Error("Attribute not found");
     }
-  }
-
-  // Cập nhật thông tin attribute
-  static async update(id, data) {
-    try {
-      const updateData = {
-        ...data,
-        updatedAt: new Date(),
-      };
-      await db.collection("attributes").doc(id).update(updateData);
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating attribute: ${error.message}`);
+    if (attribute.deletedAt) {
+      throw new Error("Attribute has been deleted");
     }
+    
+    Object.assign(attribute, data);
+    attribute.updatedAt = new Date();
+    await attribute.save();
+    return attribute;
+  } catch (error) {
+    throw new Error(`Error updating attribute: ${error.message}`);
   }
+};
 
-  // Xóa attribute
-  static async delete(id) {
-    try {
-      await db.collection("attributes").doc(id).delete();
-      return true;
-    } catch (error) {
-      throw new Error(`Error deleting attribute: ${error.message}`);
+// Static method to delete attribute (soft delete)
+attributeSchema.statics.delete = async function(id) {
+  try {
+    const attribute = await this.findById(id);
+    if (!attribute) {
+      throw new Error("Attribute not found");
     }
+    if (attribute.deletedAt) {
+      throw new Error("Attribute has already been deleted");
+    }
+    
+    attribute.deletedAt = new Date();
+    await attribute.save();
+    return true;
+  } catch (error) {
+    throw new Error(`Error deleting attribute: ${error.message}`);
   }
-}
+};
+
+const Attribute = mongoose.model('Attribute', attributeSchema);
 
 module.exports = Attribute;

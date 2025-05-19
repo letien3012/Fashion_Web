@@ -1,79 +1,107 @@
-const { db } = require("../firebase/firebase-admin");
+const mongoose = require('mongoose');
 
-class Supplier {
-  constructor(data) {
-    this.name = data.name;
-    this.address = data.address || "";
-    this.phone = data.phone || "";
-    this.createdAt = data.createdAt || new Date();
-    this.updatedAt = data.updatedAt || null;
-    this.deletedAt = data.deletedAt || null;
+const supplierSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  address: {
+    type: String,
+    default: ""
+  },
+  phone: {
+    type: String,
+    default: ""
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
+});
 
-  static async getById(id) {
-    try {
-      const doc = await db.collection("suppliers").doc(id).get();
-      if (!doc.exists) {
-        throw new Error("Supplier not found");
-      }
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      throw new Error(`Error getting supplier by ID: ${error.message}`);
+// Static method to get supplier by ID
+supplierSchema.statics.getById = async function(id) {
+  try {
+    const supplier = await this.findById(id);
+    if (!supplier) {
+      throw new Error("Supplier not found");
     }
-  }
-
-  async save() {
-    try {
-      const supplierData = {
-        name: this.name,
-        address: this.address,
-        phone: this.phone,
-        createdAt: this.createdAt,
-        updatedAt: null,
-        deletedAt: null,
-      };
-
-      const supplierRef = await db.collection("suppliers").add(supplierData);
-      return supplierRef.id;
-    } catch (error) {
-      throw new Error(`Error saving supplier: ${error.message}`);
+    if (supplier.deletedAt) {
+      throw new Error("Supplier has been deleted");
     }
+    return supplier;
+  } catch (error) {
+    throw new Error(`Error getting supplier by ID: ${error.message}`);
   }
+};
 
-  static async update(id, data) {
-    try {
-      const updateData = {
-        ...data,
-        updatedAt: new Date(),
-      };
+// Static method to get all suppliers
+supplierSchema.statics.getAll = async function() {
+  try {
+    return await this.find({ deletedAt: null });
+  } catch (error) {
+    throw new Error(`Error fetching suppliers: ${error.message}`);
+  }
+};
 
-      await db.collection("suppliers").doc(id).update(updateData);
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating supplier: ${error.message}`);
+// Static method to create new supplier
+supplierSchema.statics.create = async function(data) {
+  try {
+    const supplier = new this(data);
+    await supplier.save();
+    return supplier;
+  } catch (error) {
+    throw new Error(`Error creating supplier: ${error.message}`);
+  }
+};
+
+// Static method to update supplier
+supplierSchema.statics.update = async function(id, data) {
+  try {
+    const supplier = await this.findById(id);
+    if (!supplier) {
+      throw new Error("Supplier not found");
     }
-  }
-
-  static async delete(id) {
-    try {
-      await db.collection("suppliers").doc(id).delete();
-      return true;
-    } catch (error) {
-      throw new Error(`Error deleting supplier: ${error.message}`);
+    if (supplier.deletedAt) {
+      throw new Error("Supplier has been deleted");
     }
+    
+    Object.assign(supplier, data);
+    supplier.updatedAt = new Date();
+    await supplier.save();
+    return supplier;
+  } catch (error) {
+    throw new Error(`Error updating supplier: ${error.message}`);
   }
+};
 
-  static async getAll() {
-    try {
-      const snapshot = await db.collection("suppliers").get();
-      return snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }));
-    } catch (error) {
-      throw new Error(`Error fetching suppliers: ${error.message}`);
+// Static method to delete supplier (soft delete)
+supplierSchema.statics.delete = async function(id) {
+  try {
+    const supplier = await this.findById(id);
+    if (!supplier) {
+      throw new Error("Supplier not found");
     }
+    if (supplier.deletedAt) {
+      throw new Error("Supplier has already been deleted");
+    }
+    
+    supplier.deletedAt = new Date();
+    await supplier.save();
+    return true;
+  } catch (error) {
+    throw new Error(`Error deleting supplier: ${error.message}`);
   }
-}
+};
+
+const Supplier = mongoose.model('Supplier', supplierSchema);
 
 module.exports = Supplier; 
