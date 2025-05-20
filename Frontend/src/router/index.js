@@ -4,10 +4,13 @@ import Register from "../views/Register.vue";
 import adminRoutes from "./admin";
 import ForgotPW from "../views/ForgotPW.vue";
 import AuthCallback from "../views/AuthCallback.vue";
+import About from "../views/About.vue";
+import Home from "../views/Home.vue";
+import ProductDetail from "../views/ProductDetail.vue";
 
 const routes = [
   {
-    path: "/",
+    path: "/login",
     name: "Login",
     component: Login,
   },
@@ -25,6 +28,21 @@ const routes = [
     path: "/auth/callback",
     name: "AuthCallback",
     component: AuthCallback,
+  },
+  {
+    path: "/about",
+    name: "About",
+    component: About,
+  },
+  {
+    path: "/",
+    name: "Home",
+    component: Home,
+  },
+  {
+    path: "/product-detail",
+    name: "ProductDetail",
+    component: ProductDetail,
   },
   ...adminRoutes,
 ];
