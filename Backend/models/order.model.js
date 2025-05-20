@@ -1,183 +1,180 @@
-const { db } = require("../firebase/firebase-admin");
+const mongoose = require('mongoose');
 
-class Order {
-  constructor(data) {
-    // Thông tin cơ bản
-    this.customerId = data.customerId;
-    this.employeeId = null; // Ban đầu là null, chỉ được cập nhật khi nhân viên xử lý đơn hàng
-    
-    // Thông tin thanh toán
-    this.total_product_price = data.total_product_price || 0; // Tổng tiền sản phẩm
-    this.total_ship_fee = data.total_ship_fee || 0; // Phí vận chuyển
-    this.discount = data.discount || 0; // Giảm giá
-    this.total_price = data.total_price || 0; // Tổng tiền cuối cùng
-    
-    // Thông tin đơn hàng
-    this.method = data.method || ""; // Phương thức thanh toán
-    this.status = data.status || "pending"; // Trạng thái đơn hàng
-    this.note = data.note || ""; // Ghi chú
-    
-    // Chi tiết đơn hàng
-    this.order_detail = data.order_detail || []; // Mảng các sản phẩm trong đơn hàng
-    
-    // Timestamps
-    this.createdAt = data.createdAt || new Date();
-    this.updatedAt = data.updatedAt || null;
-    this.deletedAt = data.deletedAt || null;
+const orderSchema = new mongoose.Schema({
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer',
+    required: true
+  },
+  employeeId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Employee',
+    default: null
+  },
+  total_product_price: {
+    type: Number,
+    default: 0
+  },
+  total_ship_fee: {
+    type: Number,
+    default: 0
+  },
+  discount: {
+    type: Number,
+    default: 0
+  },
+  total_price: {
+    type: Number,
+    default: 0
+  },
+  method: {
+    type: String,
+    default: ""
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    default: 'pending'
+  },
+  note: {
+    type: String,
+    default: ""
+  },
+  order_detail: [{
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product',
+      required: true
+    },
+    variants: [{
+      sku: String,
+      quantity: Number,
+      price: Number
+    }],
+    quantity: Number,
+    price: Number
+  }],
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: null
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
+});
 
-  static async getById(id) {
-    try {
-      const doc = await db.collection("orders").doc(id).get();
-      if (!doc.exists) {
-        throw new Error("Order not found");
-      }
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      throw new Error(`Error getting order by ID: ${error.message}`);
+// Static method to get order by ID
+orderSchema.statics.getById = async function(id) {
+  try {
+    const order = await this.findById(id)
+      .populate('customerId', 'email fullname')
+      .populate('employeeId', 'email fullname')
+      .populate('order_detail.productId', 'name image');
+    
+    if (!order) {
+      throw new Error("Order not found");
     }
+    return order;
+  } catch (error) {
+    throw new Error(`Error getting order by ID: ${error.message}`);
   }
+};
 
-  async save() {
-    try {
-      const orderData = {
-        customerId: this.customerId,
-        employeeId: this.employeeId,
-        total_product_price: this.total_product_price,
-        total_ship_fee: this.total_ship_fee,
-        discount: this.discount,
-        total_price: this.total_price,
-        method: this.method,
-        status: this.status,
-        note: this.note,
-        order_detail: this.order_detail,
-        createdAt: this.createdAt,
-        updatedAt: null,
-        deletedAt: null
-      };
-
-      const orderRef = await db.collection("orders").add(orderData);
-      return orderRef.id;
-    } catch (error) {
-      throw new Error(`Error saving order: ${error.message}`);
+// Static method to update order status by employee
+orderSchema.statics.updateStatusByEmployee = async function(id, employeeId, status) {
+  try {
+    const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
+    if (!validStatuses.includes(status)) {
+      throw new Error("Invalid order status");
     }
-  }
 
-  // Regular update method that doesn't modify employeeId
-  static async update(id, data) {
-    try {
-      const updateData = {
-        ...data,
-        updatedAt: new Date()
-      };
-
-      // Remove employeeId from update data if it exists
-      delete updateData.employeeId;
-
-      await db.collection("orders").doc(id).update(updateData);
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating order: ${error.message}`);
-    }
-  }
-
-  // Special method for updating order status by employee
-  static async updateStatusByEmployee(id, employeeId, status) {
-    try {
-      const validStatuses = ["pending", "processing", "shipped", "delivered", "cancelled"];
-      if (!validStatuses.includes(status)) {
-        throw new Error("Invalid order status");
-      }
-
-      const updateData = {
+    const order = await this.findByIdAndUpdate(
+      id,
+      {
         status,
-        employeeId, // Only set employeeId when status is updated by employee
+        employeeId,
         updatedAt: new Date()
-      };
+      },
+      { new: true }
+    );
 
-      await db.collection("orders").doc(id).update(updateData);
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating order status: ${error.message}`);
+    if (!order) {
+      throw new Error("Order not found");
     }
+
+    return order;
+  } catch (error) {
+    throw new Error(`Error updating order status: ${error.message}`);
   }
+};
 
-  // Method to process successful payment and update cart
-  static async processSuccessfulPayment(orderId) {
-    try {
-      const order = await this.getById(orderId);
-      
-      // Get customer's cart
-      const cartSnapshot = await db
-        .collection("carts")
-        .where("customerId", "==", order.customerId)
-        .get();
+// Static method to process successful payment and update cart
+orderSchema.statics.processSuccessfulPayment = async function(orderId) {
+  try {
+    const order = await this.findById(orderId);
+    if (!order) {
+      throw new Error("Order not found");
+    }
 
-      if (!cartSnapshot.empty) {
-        const cartDoc = cartSnapshot.docs[0];
-        const cartData = cartDoc.data();
-        
-        // Process each item in the order
-        for (const orderItem of order.order_detail) {
-          // Find matching item in cart
-          const cartItemIndex = cartData.items.findIndex(
-            item => item.productId === orderItem.productId && 
-                   JSON.stringify(item.variants) === JSON.stringify(orderItem.variants)
+    // Get customer's cart
+    const Cart = mongoose.model('Cart');
+    const cart = await Cart.findOne({ customerId: order.customerId });
+
+    if (cart) {
+      // Process each item in the order
+      for (const orderItem of order.order_detail) {
+        // Find matching item in cart
+        const cartItemIndex = cart.items.findIndex(
+          item => item.productId.toString() === orderItem.productId.toString() && 
+                 JSON.stringify(item.variants) === JSON.stringify(orderItem.variants)
+        );
+
+        if (cartItemIndex !== -1) {
+          const cartItem = cart.items[cartItemIndex];
+          
+          // Update or remove variant quantity
+          const variantIndex = cartItem.variants.findIndex(
+            v => JSON.stringify(v) === JSON.stringify(orderItem.variants)
           );
 
-          if (cartItemIndex !== -1) {
-            const cartItem = cartData.items[cartItemIndex];
+          if (variantIndex !== -1) {
+            // Reduce quantity or remove variant if quantity becomes 0
+            cartItem.variants[variantIndex].quantity -= orderItem.quantity;
             
-            // Update or remove variant quantity
-            const variantIndex = cartItem.variants.findIndex(
-              v => JSON.stringify(v) === JSON.stringify(orderItem.variants)
-            );
-
-            if (variantIndex !== -1) {
-              // Reduce quantity or remove variant if quantity becomes 0
-              cartItem.variants[variantIndex].quantity -= orderItem.quantity;
-              
-              if (cartItem.variants[variantIndex].quantity <= 0) {
-                cartItem.variants.splice(variantIndex, 1);
-              }
-            }
-
-            // Remove item from cart if no variants left
-            if (cartItem.variants.length === 0) {
-              cartData.items.splice(cartItemIndex, 1);
+            if (cartItem.variants[variantIndex].quantity <= 0) {
+              cartItem.variants.splice(variantIndex, 1);
             }
           }
-        }
 
-        // Update or delete cart
-        if (cartData.items.length === 0) {
-          // Delete cart if empty
-          await cartDoc.ref.delete();
-        } else {
-          // Update cart with remaining items
-          await cartDoc.ref.update({
-            items: cartData.items,
-            updatedAt: new Date()
-          });
+          // Remove item from cart if no variants left
+          if (cartItem.variants.length === 0) {
+            cart.items.splice(cartItemIndex, 1);
+          }
         }
       }
 
-      return true;
-    } catch (error) {
-      throw new Error(`Error processing payment: ${error.message}`);
+      // Update or delete cart
+      if (cart.items.length === 0) {
+        // Delete cart if empty
+        await Cart.findByIdAndDelete(cart._id);
+      } else {
+        // Update cart with remaining items
+        cart.updatedAt = new Date();
+        await cart.save();
+      }
     }
-  }
 
-  static async delete(id) {
-    try {
-      await db.collection("orders").doc(id).update({
-        deletedAt: new Date()
-      });
-      return true;
-    } catch (error) {
-      throw new Error(`Error deleting order: ${error.message}`);
-    }
+    return true;
+  } catch (error) {
+    throw new Error(`Error processing payment: ${error.message}`);
   }
-}
+};
+
+const Order = mongoose.model('Order', orderSchema);
 
 module.exports = Order; 

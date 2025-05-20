@@ -1,52 +1,67 @@
 const Employee = require("../models/employee.model");
-const { admin } = require("../firebase/firebase-admin");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcryptjs");
+const ImageModel = require("../models/image.model");
+
+const JWT_SECRET = process.env.JWT_SECRET || "fashion_web_secret_key_2024";
 
 // Đăng ký tài khoản nhân viên mới
 exports.add = async (req, res) => {
   try {
-    const { email, password, fullname, role, address, image, publish } =
-      req.body;
+    const { fullname, email, password, role, address, publish } = req.body;
+    let image = null;
+
+    // Handle image upload if present
+    if (req.body.image) {
+      image = await ImageModel.saveImage(req.body.image);
+    }
 
     // Validate required fields
-    if (!email || !password || !fullname) {
+    if (!fullname || !email || !password) {
       return res.status(400).json({
-        success: false,
-        message: "Email, password and fullname are required",
+        message: "Vui lòng nhập đầy đủ thông tin",
       });
     }
 
     // Check if email already exists
-    const existingEmployee = await Employee.getByEmail(email);
+    const existingEmployee = await Employee.findOne({ email });
     if (existingEmployee) {
       return res.status(400).json({
-        success: false,
-        message: "Email already exists",
+        message: "Email đã tồn tại",
       });
     }
 
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
     // Create new employee
     const employee = new Employee({
-      email,
-      password,
       fullname,
-      role: role || "staff",
-      address: address || "",
+      email,
+      password: hashedPassword,
+      role,
+      address,
       image,
-      publish: publish !== undefined ? publish : true,
+      publish,
     });
 
-    const id = await employee.save();
+    await employee.save();
 
     res.status(201).json({
-      success: true,
-      message: "Employee added successfully",
-      data: { id },
+      message: "Thêm nhân viên thành công",
+      employee: {
+        _id: employee._id,
+        fullname: employee.fullname,
+        email: employee.email,
+        role: employee.role,
+        address: employee.address,
+        image: employee.image,
+        publish: employee.publish,
+      },
     });
   } catch (error) {
     res.status(500).json({
-      success: false,
-      message: "Error adding employee",
+      message: "Lỗi server",
       error: error.message,
     });
   }
@@ -64,7 +79,7 @@ exports.login = async (req, res) => {
       });
     }
 
-    const employee = await Employee.getByEmail(email);
+    const employee = await Employee.findOne({ email, deletedAt: null });
     if (!employee) {
       return res.status(401).json({
         success: false,
@@ -72,16 +87,8 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check if employee is deleted
-    if (employee.deletedAt) {
-      return res.status(401).json({
-        success: false,
-        message: "Tài khoản này đã bị xóa",
-      });
-    }
-
     // Compare password
-    const isMatch = await Employee.comparePassword(password, employee.password);
+    const isMatch = await bcrypt.compare(password, employee.password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -90,25 +97,25 @@ exports.login = async (req, res) => {
     }
 
     // Remove password from response
-    const { password: _, ...employeeWithoutPassword } = employee;
+    const { password: _, ...employeeWithoutPassword } = employee.toObject();
 
-    // Tạo token
+    // Create token
     const token = jwt.sign(
-      { 
-        id: employee.id, 
-        email: employee.email, 
+      {
+        id: employee._id,
+        email: employee.email,
         role: employee.role,
-        fullname: employee.fullname 
+        fullname: employee.fullname,
       },
-      process.env.JWT_SECRET || 'your-secret-key',
+      JWT_SECRET,
       { expiresIn: "24h" }
     );
 
     // Set cookie
-    res.cookie('token', token, {
+    res.cookie("token", token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
     });
 
     res.status(200).json({
@@ -118,7 +125,7 @@ exports.login = async (req, res) => {
       employee: employeeWithoutPassword,
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error("Login error:", error);
     res.status(500).json({
       success: false,
       message: "Lỗi đăng nhập. Vui lòng thử lại sau",
@@ -130,10 +137,20 @@ exports.login = async (req, res) => {
 // Lấy thông tin nhân viên theo ID
 exports.getEmployeeById = async (req, res) => {
   try {
-    const employee = await Employee.getById(req.params.id);
-    res.status(200).json(employee);
+    const employee = await Employee.findActiveById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({
+        message: "Không tìm thấy nhân viên",
+      });
+    }
+    const { password, ...employeeWithoutPassword } = employee.toObject();
+    res.status(200).json(employeeWithoutPassword);
   } catch (error) {
-    res.status(404).json({ message: error.message });
+    console.error("Get employee by ID error:", error);
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
@@ -141,73 +158,124 @@ exports.getEmployeeById = async (req, res) => {
 exports.updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    const { email, password, fullname, role, address, image, publish } =
-      req.body;
+    const { fullname, email, password, role, address, publish } = req.body;
+    let image = null;
 
-    // Check if employee exists
-    const existingEmployee = await Employee.getById(id);
-    if (!existingEmployee) {
+    const employee = await Employee.findById(id);
+    if (!employee) {
       return res.status(404).json({
-        success: false,
-        message: "Employee not found",
+        message: "Không tìm thấy nhân viên",
       });
     }
 
-    // If email is being changed, check if new email already exists
-    if (email && email !== existingEmployee.email) {
-      const emailExists = await Employee.getByEmail(email);
-      if (emailExists) {
-        return res.status(400).json({
-          success: false,
-          message: "Email already exists",
-        });
+    // Update fields
+    employee.fullname = fullname || employee.fullname;
+    employee.email = email || employee.email;
+    employee.role = role || employee.role;
+    employee.address = address || employee.address;
+    employee.publish = publish !== undefined ? publish : employee.publish;
+
+    // Update password if provided
+    if (password) {
+      employee.password = await bcrypt.hash(password, 10);
+    }
+
+    // Handle image update
+    if (req.body.image) {
+      // If image is a base64 string (new image)
+      if (req.body.image.startsWith("data:")) {
+        image = await ImageModel.saveImage(req.body.image);
+        // Delete old image if exists
+        if (employee.image) {
+          await ImageModel.deleteImage(employee.image);
+        }
+        employee.image = image;
+      }
+      // If image is a path (old image), keep it
+      else if (req.body.image.startsWith("/images/")) {
+        employee.image = req.body.image;
       }
     }
 
-    // Prepare update data
-    const updateData = {
-      email: email || existingEmployee.email,
-      fullname: fullname || existingEmployee.fullname,
-      role: role || existingEmployee.role,
-      address: address !== undefined ? address : existingEmployee.address,
-      image: image || existingEmployee.image,
-      publish: publish !== undefined ? publish : existingEmployee.publish,
-    };
-
-    // Only update password if provided
-    if (password) {
-      updateData.password = password;
-    }
-
-    await Employee.update(id, updateData);
+    await employee.save();
 
     res.status(200).json({
-      success: true,
-      message: "Employee updated successfully",
+      message: "Cập nhật nhân viên thành công",
+      employee: {
+        _id: employee._id,
+        fullname: employee.fullname,
+        email: employee.email,
+        role: employee.role,
+        address: employee.address,
+        image: employee.image,
+        publish: employee.publish,
+      },
     });
   } catch (error) {
+    console.error("Update employee error:", error);
     res.status(500).json({
-      success: false,
-      message: "Error updating employee",
+      message: "Lỗi server",
       error: error.message,
     });
   }
 };
 
-// Xóa tài khoản nhân viên
+// Xóa tài khoản nhân viên (soft delete)
 exports.deleteEmployee = async (req, res) => {
   try {
-    await Employee.delete(req.params.id);
-    res.status(200).json({ message: "Employee deleted successfully" });
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id) {
+      return res.status(400).json({
+        message: "ID nhân viên không hợp lệ",
+      });
+    }
+
+    // Find active employee
+    const employee = await Employee.findActiveById(id);
+    if (!employee) {
+      return res.status(404).json({
+        message: "Không tìm thấy nhân viên",
+      });
+    }
+
+    // Check if trying to delete self
+    if (req.employee && req.employee._id.toString() === id) {
+      return res.status(400).json({
+        message: "Không thể xóa tài khoản của chính mình",
+      });
+    }
+
+    // Soft delete by setting deletedAt
+    employee.deletedAt = new Date();
+    await employee.save();
+
+    res.status(200).json({
+      message: "Xóa nhân viên thành công",
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("Delete employee error:", error);
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
 // Lấy danh sách đơn hàng đã xử lý
 exports.getEmployeeOrders = async (req, res) => {
   try {
-    const orders = await Employee.getEmployeeOrders(req.params.id);
+    const employee = await Employee.findById(req.params.id);
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    const orders = await Order.find({
+      employeeId: req.params.id,
+      deletedAt: null,
+    }).populate("customerId", "email fullname");
+
     res.status(200).json(orders);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -218,9 +286,26 @@ exports.getEmployeeOrders = async (req, res) => {
 exports.updatePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-    await admin.auth().updateUser(req.params.id, {
-      password: newPassword,
-    });
+    const employee = await Employee.findById(req.params.id);
+
+    if (!employee) {
+      return res.status(404).json({ message: "Employee not found" });
+    }
+
+    // Verify current password
+    const isMatch = await bcrypt.compare(currentPassword, employee.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: "Current password is incorrect" });
+    }
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    employee.password = hashedPassword;
+    employee.updatedAt = new Date();
+    await employee.save();
+
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -231,15 +316,24 @@ exports.updatePassword = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-    const employee = await Employee.getByEmail(email);
+    const employee = await Employee.findOne({ email });
     if (!employee) {
-      throw new Error("Employee not found");
+      return res.status(404).json({ message: "Employee not found" });
     }
 
-    // Gửi email reset password
-    await admin.auth().generatePasswordResetLink(email);
+    // Generate reset token
+    const resetToken = jwt.sign(
+      { id: employee._id },
+      process.env.JWT_SECRET || "your-secret-key",
+      { expiresIn: "1h" }
+    );
 
-    res.status(200).json({ message: "Password reset email sent" });
+    // TODO: Send email with reset token
+    // For now, just return the token
+    res.status(200).json({
+      message: "Password reset token generated",
+      resetToken,
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
@@ -248,15 +342,26 @@ exports.forgotPassword = async (req, res) => {
 // Đặt lại mật khẩu
 exports.resetPassword = async (req, res) => {
   try {
-    const { email, newPassword } = req.body;
-    const employee = await Employee.getByEmail(email);
+    const { token, newPassword } = req.body;
+
+    // Verify token
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "your-secret-key"
+    );
+    const employee = await Employee.findById(decoded.id);
+
     if (!employee) {
-      throw new Error("Employee not found");
+      return res.status(404).json({ message: "Employee not found" });
     }
 
-    await admin.auth().updateUser(employee.id, {
-      password: newPassword,
-    });
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password
+    employee.password = hashedPassword;
+    employee.updatedAt = new Date();
+    await employee.save();
 
     res.status(200).json({ message: "Password reset successfully" });
   } catch (error) {
@@ -268,10 +373,14 @@ exports.getAllEmployees = async (req, res) => {
   try {
     const employees = await Employee.getAllEmployees();
     res.status(200).json({
-      message: "Employees retrieved successfully",
+      message: "Lấy danh sách nhân viên thành công",
       data: employees,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Get all employees error:", error);
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };

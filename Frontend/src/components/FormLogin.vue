@@ -70,6 +70,12 @@
 </template>
 
 <script>
+import {
+  FacebookAuthProvider,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth } from "../../firebase";
 import { FacebookAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../../firebase";
 
@@ -107,6 +113,20 @@ export default {
         const idToken = await user.getIdToken();
 
         // Gửi token lên server để xác thực
+
+        const response = await fetch(
+          "http://localhost:3005/api/auth/verifyToken",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+          }
+        );
+
+        if (!response.ok) throw new Error("Token verification failed");
+        const data = await response.json();
+        console.log("Xác thực thành công với UID:", data.uid);
+        this.$router.push("/");
         const response = await fetch("http://localhost:3005/api/verifyToken", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

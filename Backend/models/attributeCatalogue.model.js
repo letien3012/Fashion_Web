@@ -1,84 +1,38 @@
-const { db } = require("../firebase/firebase-admin");
+const mongoose = require('mongoose');
 
-class AttributeCatalogue {
-  constructor(data) {
-    this.name = data.name;
-    this.createdAt = data.createdAt || new Date();
-    this.updatedAt = data.updatedAt || null;
-    this.deletedAt = data.deletedAt || null;
+const attributeCatalogueSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null
   }
+}, {
+  timestamps: true
+});
 
-  // Lấy danh sách tất cả các attributeCatalogue
-  static async getAll() {
-    try {
-      const snapshot = await db.collection("attribute_catalogues").get();
-      return snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-    } catch (error) {
-      throw new Error(
-        `Error fetching attribute catalogue list: ${error.message}`
-      );
-    }
-  }
+// Static method to get all active catalogues
+attributeCatalogueSchema.statics.getAllCatalogues = function() {
+  return this.find({ deletedAt: null });
+};
 
-  // Lấy attributeCatalogue theo ID
-  static async getById(id) {
-    try {
-      const doc = await db.collection("attribute_catalogues").doc(id).get();
-      if (!doc.exists) {
-        throw new Error("AttributeCatalogue not found");
-      }
-      return { id: doc.id, ...doc.data() };
-    } catch (error) {
-      throw new Error(
-        `Error fetching attribute catalogue by ID: ${error.message}`
-      );
-    }
-  }
+// Static method to find active catalogue by ID
+attributeCatalogueSchema.statics.findActiveById = function(id) {
+  return this.findOne({ _id: id, deletedAt: null });
+};
 
-  // Lưu mới attributeCatalogue vào Firestore
-  async save() {
-    try {
-      const attributeCatalogueData = {
-        name: this.name,
-        createdAt: this.createdAt,
-        updatedAt: null,
-        deletedAt: null,
-      };
-      const attributeCatalogueRef = await db
-        .collection("attribute_catalogues")
-        .add(attributeCatalogueData);
-      return attributeCatalogueRef.id;
-    } catch (error) {
-      throw new Error(`Error saving attribute catalogue: ${error.message}`);
-    }
-  }
+// Static method to soft delete catalogue
+attributeCatalogueSchema.statics.softDelete = async function(id) {
+  return this.findByIdAndUpdate(
+    id,
+    { deletedAt: new Date() },
+    { new: true }
+  );
+};
 
-  // Cập nhật thông tin attributeCatalogue
-  static async update(id, data) {
-    try {
-      const updateData = {
-        ...data,
-        updatedAt: new Date(),
-      };
-      await db.collection("attribute_catalogues").doc(id).update(updateData);
-      return true;
-    } catch (error) {
-      throw new Error(`Error updating attribute catalogue: ${error.message}`);
-    }
-  }
-
-  // Xóa attributeCatalogue
-  static async delete(id) {
-    try {
-      await db.collection("attribute_catalogues").doc(id).delete();
-      return true;
-    } catch (error) {
-      throw new Error(`Error deleting attribute catalogue: ${error.message}`);
-    }
-  }
-}
+const AttributeCatalogue = mongoose.model('AttributeCatalogue', attributeCatalogueSchema);
 
 module.exports = AttributeCatalogue;

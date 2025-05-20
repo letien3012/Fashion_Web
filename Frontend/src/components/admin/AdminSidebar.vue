@@ -1,9 +1,9 @@
 <template>
-  <aside class="admin-sidebar" :class="{ 'collapsed': isCollapsed }">
+  <aside class="admin-sidebar" :class="{ collapsed: isCollapsed }">
     <div class="sidebar-header">
       <h2>Admin Panel</h2>
     </div>
-    
+
     <nav class="sidebar-nav">
       <router-link to="/admin/dashboard" class="nav-item">
         <i class="fas fa-home"></i>
@@ -13,8 +13,20 @@
         <i class="fas fa-users"></i>
         <span>Quản lý nhân viên</span>
       </router-link>
+      <router-link to="/admin/attribute-catalogues" class="nav-item">
+        <i class="fas fa-list"></i>
+        <span>Danh mục thuộc tính</span>
+      </router-link>
+      <router-link to="/admin/product-catalogues" class="nav-item">
+        <i class="fas fa-folder"></i>
+        <span>Danh mục sản phẩm</span>
+      </router-link>
+      <router-link to="/admin/products" class="nav-item">
+        <i class="fas fa-box"></i>
+        <span>Quản lý sản phẩm</span>
+      </router-link>
     </nav>
-    
+
     <div class="sidebar-footer">
       <button @click="handleLogout" class="logout-btn">
         <i class="fas fa-sign-out-alt"></i>
@@ -25,15 +37,15 @@
 </template>
 
 <script>
-import { toast } from 'vue3-toastify';
+import { toast } from "vue3-toastify";
 
 export default {
-  name: 'AdminSidebar',
+  name: "AdminSidebar",
   props: {
     isCollapsed: {
       type: Boolean,
-      default: false
-    }
+      default: false,
+    },
   },
   methods: {
     handleLogout() {
@@ -42,9 +54,9 @@ export default {
       localStorage.removeItem("isAdmin");
       toast.success("Đăng xuất thành công!");
       this.$router.push("/admin/login");
-    }
-  }
-}
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -59,7 +71,6 @@ export default {
   position: fixed;
   left: 0;
   top: 0;
-  z-index: 1000;
 }
 
 .admin-sidebar.collapsed {
@@ -160,4 +171,4 @@ export default {
   opacity: 0;
   margin-left: 0;
 }
-</style> 
+</style>
