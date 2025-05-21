@@ -76,8 +76,6 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { auth } from "../../firebase";
-import { FacebookAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../../firebase";
 
 export default {
   props: {
@@ -112,8 +110,7 @@ export default {
         const user = result.user;
         const idToken = await user.getIdToken();
 
-        // Gửi token lên server để xác thực
-
+        // Gửi token lên server để xác thực (chỉ gọi một lần)
         const response = await fetch(
           "http://localhost:3005/api/auth/verifyToken",
           {
@@ -122,21 +119,10 @@ export default {
             body: JSON.stringify({ idToken }),
           }
         );
-
         if (!response.ok) throw new Error("Token verification failed");
         const data = await response.json();
         console.log("Xác thực thành công với UID:", data.uid);
         this.$router.push("/");
-        const response = await fetch("http://localhost:3005/api/verifyToken", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-
-        if (!response.ok) throw new Error("Token verification failed");
-
-        const data = await response.json();
-        console.log("Xác thực thành công với UID:", data.uid);
       } catch (error) {
         console.error("Lỗi đăng nhập:", error.message);
       }
