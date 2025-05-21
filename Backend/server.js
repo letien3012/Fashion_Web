@@ -14,6 +14,8 @@ const routes = {
   cart: require("./routes/cart.route"),
   order: require("./routes/order.route"),
   auth: require("./routes/auth.route"),
+  consignment: require("./routes/consignment.route"),
+  promotion: require("./routes/promotion.route"),
 };
 
 // Register API routes
@@ -28,6 +30,8 @@ app.use("/api/import-receipts", routes.importReceipt);
 app.use("/api/carts", routes.cart);
 app.use("/api/orders", routes.order);
 app.use("/api/auth", routes.auth);
+app.use("/api/consignments", routes.consignment);
+app.use("/api/promotions", routes.promotion);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

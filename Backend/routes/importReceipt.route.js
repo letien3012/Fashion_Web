@@ -10,7 +10,6 @@ router.delete("/delete/:id", importReceiptController.delete);
 router.post("/:id/details", importReceiptController.addDetail);
 router.put("/:id/details/:detailIndex", importReceiptController.updateDetail);
 router.delete("/:id/details/:detailIndex", importReceiptController.deleteDetail);
-router.put("/:id/publish", importReceiptController.publish);
-router.put("/:id/publish-status", importReceiptController.updatePublishStatus);
+router.put("/status/:id", importReceiptController.updateStatus);
 
 module.exports = router; 

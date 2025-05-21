@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const importReceiptSchema = new mongoose.Schema({
+  code: {
+    type: String,
+    required: true,
+    unique: true
+  },
   supplierId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Supplier',
@@ -30,21 +35,30 @@ const importReceiptSchema = new mongoose.Schema({
       ref: 'Product',
       required: true
     },
-    variants: [{
-      sku: String,
-      quantity: Number,
-      price: Number,
-      attributeId1: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Attribute'
-      },
-      attributeId2: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Attribute'
-      }
-    }],
-    quantity: Number,
-    price: Number
+    sku: {
+      type: String,
+      required: true
+    },
+    quantity: {
+      type: Number,
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true
+    },
+    attributeId1: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Attribute'
+    },
+    attributeId2: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Attribute'
+    },
+    variant_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Variant'
+    }
   }],
   createdAt: {
     type: Date,
@@ -67,8 +81,8 @@ importReceiptSchema.statics.getById = async function(id) {
       .populate('supplierId', 'name')
       .populate('employeeId', 'email fullname')
       .populate('import_details.productId', 'name image')
-      .populate('import_details.variants.attributeId1', 'name')
-      .populate('import_details.variants.attributeId2', 'name');
+      .populate('import_details.attributeId1', 'name')
+      .populate('import_details.attributeId2', 'name');
     
     if (!importReceipt) {
       throw new Error("Import receipt not found");

@@ -49,26 +49,25 @@
             <th>Mã sản phẩm</th>
             <th>Tên sản phẩm</th>
             <th>Danh mục</th>
-            <th>Giá</th>
             <th>Trạng thái</th>
             <th>Thao tác</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="7" class="text-center">
+            <td colspan="6" class="text-center">
               <div class="spinner-border text-primary" role="status">
                 <span class="visually-hidden">Loading...</span>
               </div>
             </td>
           </tr>
           <tr v-else-if="filteredProducts.length === 0">
-            <td colspan="7" class="text-center">Không có sản phẩm nào</td>
+            <td colspan="6" class="text-center">Không có sản phẩm nào</td>
           </tr>
           <tr v-else v-for="product in filteredProducts" :key="product.id">
             <td>
               <img
-                :src="product.mainImage"
+                :src="`http://localhost:3005${product.image}`"
                 :alt="product.name"
                 class="product-thumbnail"
               />
@@ -76,30 +75,29 @@
             <td>{{ product.code }}</td>
             <td>{{ product.name }}</td>
             <td>{{ getCatalogueName(product.catalogueId) }}</td>
-            <td>{{ formatPrice(product.price) }}</td>
             <td>
               <span
                 :class="[
                   'badge',
-                  product.status === 'active' ? 'bg-success' : 'bg-danger',
+                  product.publish ? 'bg-success' : 'bg-danger'
                 ]"
               >
-                {{ product.status === "active" ? "Đang bán" : "Ngừng bán" }}
+                {{ product.publish ? 'Đang bán' : 'Ngừng bán' }}
               </span>
             </td>
             <td>
-              <div class="btn-group">
+              <div class="actions">
                 <button
-                  class="btn btn-sm btn-primary"
+                  class="edit-btn"
                   @click="$emit('edit', product)"
                 >
-                  <i class="bi bi-pencil"></i>
+                  <i class="fas fa-edit"></i>
                 </button>
                 <button
-                  class="btn btn-sm btn-danger"
+                  class="delete-btn"
                   @click="confirmDelete(product.id)"
                 >
-                  <i class="bi bi-trash"></i>
+                  <i class="fas fa-trash"></i>
                 </button>
               </div>
             </td>
@@ -142,6 +140,7 @@
 
 <script>
 import { toast } from "vue3-toastify";
+import '../../assets/styles/admin/table.css';
 
 export default {
   name: "ProductTable",
@@ -230,7 +229,9 @@ export default {
       }
     },
     getCatalogueName(catalogueId) {
-      const catalogue = this.catalogues.find((c) => c.id === catalogueId);
+      const catalogue = this.catalogues.find(
+        (c) => c._id === (catalogueId?._id || catalogueId)
+      );
       return catalogue ? catalogue.name : "N/A";
     },
     formatPrice(price) {
@@ -320,23 +321,49 @@ export default {
   transform: scale(1.1);
 }
 
-.btn-group {
-  gap: 5px;
+.actions {
+  display: flex;
+  gap: 8px;
 }
 
-.btn-group .btn {
-  padding: 6px 10px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+.edit-btn,
+.delete-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  transition: all 0.3s ease;
 }
 
-.btn-group .btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+.edit-btn {
+  background-color: #e3f2fd;
+  color: #1976d2;
 }
 
-.btn-group .btn i {
-  font-size: 14px;
+.edit-btn:hover {
+  background-color: #1976d2;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(25, 118, 210, 0.2);
+}
+
+.delete-btn {
+  background-color: #fdecea;
+  color: #d32f2f;
+}
+
+.delete-btn:hover {
+  background-color: #d32f2f;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(211, 47, 47, 0.2);
+}
+
+.actions .btn i {
+  font-size: 16px;
 }
 
 .badge {

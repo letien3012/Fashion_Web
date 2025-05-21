@@ -21,23 +21,23 @@ library.add(fas, fab);
 
 const app = createApp(App);
 
-// Toast configuration
-app.use(toast, {
-  position: "top-right",
-  autoClose: 3000,
-  hideProgressBar: false,
-  closeOnClick: true,
-  pauseOnHover: true,
-  draggable: true,
-  theme: "light",
-  transition: "bounce",
-  limit: 3,
-  rtl: false,
-  closeButton: true,
-  newestOnTop: true,
-  pauseOnFocusLoss: true,
-  preventDuplicates: true,
-});
+// // Toast configuration
+// app.use(toast, {
+//   position: "top-right",
+//   autoClose: 3000,
+//   hideProgressBar: false,
+//   closeOnClick: true,
+//   pauseOnHover: true,
+//   draggable: true,
+//   theme: "light",
+//   transition: "bounce",
+//   limit: 3,
+//   rtl: false,
+//   closeButton: true,
+//   newestOnTop: true,
+//   pauseOnFocusLoss: true,
+//   preventDuplicates: true,
+// });
 
 app.use(router);
 // app.use(BootstrapVueNext);
