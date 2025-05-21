@@ -1,5 +1,12 @@
 const nodemailer = require("nodemailer");
-// const { db } = require("../firebase/firebase-admin");
+const mongoose = require("mongoose");
+
+const VerificationSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true },
+  code: { type: String, required: true },
+  createdAt: { type: Date, default: Date.now, expires: 300 },
+});
+const Verification = mongoose.model("Verification", VerificationSchema);
 require("dotenv").config();
 
 const transporter = nodemailer.createTransport({
@@ -56,7 +63,7 @@ function generateEmailTemplate({ code = "123456", name = "User" }) {
             Mã xác thực OTP có hiệu lực trong <span style="font-weight: 600; color: #1f1f1f;">5 phút</span>.
             Vui lòng không chia sẻ mã OTP này với bất kỳ ai.
           </p>
-          <p style="margin: 0; margin-top: 60px; font-size: 40px; font-weight: 600; letter-spacing: 25px; color: #ba3d4f;">
+          <p style="margin: 0; margin-top: 60px; font-size: 32px; font-weight: 600; letter-spacing: 20px; color: #ba3d4f;">
             ${code}
           </p>
         </div>
@@ -88,11 +95,11 @@ function generateEmailTemplate({ code = "123456", name = "User" }) {
 
 async function sendVerificationCode(email, name = "User") {
   const code = generateCode();
-
-  // await db.collection("verifications").doc(email).set({
-  //   code,
-  //   createdAt: new Date(),
-  // });
+  await Verification.findOneAndUpdate(
+    { email },
+    { code, createdAt: new Date() },
+    { upsert: true }
+  );
 
   const mailOptions = {
     from: `"Xác thực đăng ký" <${process.env.MAIL_USER}>`,

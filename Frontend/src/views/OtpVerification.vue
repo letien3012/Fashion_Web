@@ -1,17 +1,22 @@
 <template>
-  <div><Header></Header></div>
-  <div>
+  <div class="Otp-verify-page">
     <FormVerification />
   </div>
 </template>
 
 <script>
 import FormVerification from "../components/FormVerification.vue";
-import Header from "../components/Header.vue";
 export default {
   components: {
     FormVerification,
-    Header,
   },
 };
 </script>
+
+<style scoped>
+.Otp-verify-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+</style>

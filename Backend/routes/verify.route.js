@@ -9,19 +9,18 @@ router.post("/", async (req, res) => {
   if (!email || !code) {
     return res
       .status(400)
-      .json({ message: "Email và mã xác thực là bắt buộc." });
+      .json({ success: false, message: "Email và mã xác thực là bắt buộc." });
   }
 
   try {
     const result = await verifyCode(email, code);
-    if (result.success) {
-      return res.status(200).json({ message: result.message });
-    } else {
-      return res.status(400).json({ message: result.message });
-    }
+    // luôn trả JSON có key "success"
+    return res.status(result.success ? 200 : 400).json(result);
   } catch (err) {
     console.error("Lỗi khi xác thực mã:", err);
-    return res.status(500).json({ message: "Lỗi khi xác thực mã" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Lỗi khi xác thực mã" });
   }
 });
 

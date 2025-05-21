@@ -34,6 +34,7 @@ const customerSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  providers: [{ type: String }],
 });
 
 const Customer = mongoose.model("Customer", customerSchema);

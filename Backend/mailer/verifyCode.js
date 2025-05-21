@@ -1,31 +1,31 @@
-// const { db } = require("../firebase/firebase-admin");
-
+const mongoose = require("mongoose");
 async function verifyCode(email, inputCode) {
-  const docRef = db.collection("verifications").doc(email);
-  const doc = await docRef.get();
+  const Verification = mongoose.model("Verification");
 
-  if (!doc.exists) {
+  // Tìm OTP theo email
+  const record = await Verification.findOne({ email });
+  if (!record) {
     return { success: false, message: "Không tìm thấy mã xác thực." };
   }
 
-  const { code, createdAt } = doc.data();
+  const { code, createdAt } = record;
 
-  // Kiểm tra trùng mã
+  // Kiểm tra mã đúng không
   if (code !== inputCode) {
     return { success: false, message: "Mã xác thực không đúng." };
   }
 
   // Kiểm tra thời gian hết hạn
   const now = new Date();
-  const created = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
-  const diffInMinutes = (now - created) / 1000 / 60;
+  const diffInMinutes = (now - createdAt) / 1000 / 60;
 
   if (diffInMinutes > 5) {
     return { success: false, message: "Mã xác thực đã hết hạn." };
   }
 
-  // Hợp lệ
-  await docRef.delete(); // Xoá sau khi dùng (tuỳ chọn)
+  // Xoá bản ghi sau khi dùng (nên làm)
+  await Verification.deleteOne({ email });
+
   return { success: true, message: "Xác thực thành công." };
 }
 

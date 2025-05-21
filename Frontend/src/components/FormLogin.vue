@@ -70,15 +70,6 @@
 </template>
 
 <script>
-import {
-  FacebookAuthProvider,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from "firebase/auth";
-import { auth } from "../../firebase";
-import { FacebookAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../../firebase";
-
 export default {
   props: {
     loading: {
@@ -101,45 +92,56 @@ export default {
         password: this.password,
       });
     },
+    // loginWithGoogle() {
+    //   window.location.href = "http://localhost:3005/api/auth/google";
+    // },
     loginWithGoogle() {
-      window.location.href = "http://localhost:3005/api/auth/google";
+      const googleAuthURL = "http://localhost:3005/api/auth/google";
+
+      const popup = window.open(
+        googleAuthURL,
+        "_blank",
+        "width=500,height=600"
+      );
+
+      // Nghe kết quả từ popup gửi về
+      window.addEventListener("message", (event) => {
+        if (event.origin !== "http://localhost:3005") return;
+
+        const { token, user } = event.data;
+
+        if (token) {
+          localStorage.setItem("token", token);
+          localStorage.setItem("user", JSON.stringify(user));
+
+          alert("Đăng nhập thành công!");
+          // hoặc this.$router.push("/") nếu dùng Vue Router
+        }
+      });
     },
-    async loginWithFacebook() {
-      const provider = new FacebookAuthProvider();
+    loginWithFacebook() {
+      const facebookAuthURL = "http://localhost:3005/api/auth/facebook";
 
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        const idToken = await user.getIdToken();
+      const popup = window.open(
+        facebookAuthURL,
+        "_blank",
+        "width=500,height=600"
+      );
 
-        // Gửi token lên server để xác thực
+      // Nghe kết quả từ popup gửi về
+      window.addEventListener("message", (event) => {
+        if (event.origin !== "http://localhost:3005") return;
 
-        const response = await fetch(
-          "http://localhost:3005/api/auth/verifyToken",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ idToken }),
-          }
-        );
+        const { token, user } = event.data;
 
-        if (!response.ok) throw new Error("Token verification failed");
-        const data = await response.json();
-        console.log("Xác thực thành công với UID:", data.uid);
-        this.$router.push("/");
-        const response = await fetch("http://localhost:3005/api/verifyToken", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
+        if (token) {
+          localStorage.setItem("token", token);
+          localStorage.setItem("user", JSON.stringify(user));
 
-        if (!response.ok) throw new Error("Token verification failed");
-
-        const data = await response.json();
-        console.log("Xác thực thành công với UID:", data.uid);
-      } catch (error) {
-        console.error("Lỗi đăng nhập:", error.message);
-      }
+          alert("Đăng nhập bằng Facebook thành công!");
+          // hoặc this.$router.push("/") nếu dùng Vue Router
+        }
+      });
     },
   },
 };

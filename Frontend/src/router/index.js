@@ -4,7 +4,8 @@ import Register from "../views/Register.vue";
 import adminRoutes from "./admin";
 import ForgotPW from "../views/ForgotPW.vue";
 import Verification from "../views/OtpVerification.vue";
-import AuthCallback from "../views/AuthCallback.vue";
+import CreatePW from "../views/CreatePW.vue";
+// import AuthCallback from "../views/AuthCallback.vue";
 
 const routes = [
   {
@@ -19,6 +20,7 @@ const routes = [
   },
   { path: "/forgotpw", name: "ForgotPW", component: ForgotPW },
   { path: "/verification", name: "VerificationOtp", component: Verification },
+  { path: "/createpw", name: "CreatePW", component: CreatePW },
   {
     path: "/forgotpw",
     name: "ForgotPW",

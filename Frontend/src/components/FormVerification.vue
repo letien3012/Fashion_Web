@@ -12,6 +12,7 @@
         v-model="otp[index]"
         @input="handleInput(index, $event)"
         @keydown="handleKeydown(index, $event)"
+        @paste="handlePaste"
       />
     </div>
 
@@ -109,9 +110,62 @@ export default {
         if (nextInput) nextInput.focus();
       }
     },
+    handlePaste(event) {
+      event.preventDefault();
+      const pasteData = event.clipboardData.getData("text").trim();
 
+      if (!/^\d{6}$/.test(pasteData)) {
+        alert("Mã OTP phải gồm 6 chữ số.");
+        return;
+      }
+
+      // Cập nhật các ô OTP
+      for (let i = 0; i < this.otp.length; i++) {
+        this.otp[i] = pasteData[i];
+      }
+
+      // Tự động focus vào ô cuối cùng
+      this.$nextTick(() => {
+        const inputs = event.target.parentElement.querySelectorAll("input");
+        if (inputs.length) {
+          inputs[this.otp.length - 1].focus();
+        }
+      });
+    },
     handleKeydown(index, event) {
       const allowedKeys = ["Backspace", "ArrowLeft", "ArrowRight", "Tab"];
+      // ✅ Nếu là Ctrl+V hoặc Cmd+V
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "v") {
+        event.preventDefault(); // Ngăn dán mặc định nếu muốn xử lý riêng
+
+        navigator.clipboard
+          .readText()
+          .then((text) => {
+            const pasteData = text.trim();
+            if (!/^\d{6}$/.test(pasteData)) {
+              alert("Mã OTP phải gồm 6 chữ số.");
+              return;
+            }
+
+            for (let i = 0; i < this.otp.length; i++) {
+              this.otp[i] = pasteData[i];
+            }
+
+            // Focus vào ô cuối cùng
+            this.$nextTick(() => {
+              const inputs =
+                event.target.parentElement.querySelectorAll("input");
+              if (inputs.length) {
+                inputs[this.otp.length - 1].focus();
+              }
+            });
+          })
+          .catch((err) => {
+            console.error("Không đọc được clipboard:", err);
+          });
+
+        return;
+      }
       if (!/^[0-9]$/.test(event.key) && !allowedKeys.includes(event.key)) {
         event.preventDefault(); // Chặn ký tự không hợp lệ
       }
@@ -123,12 +177,43 @@ export default {
       }
     },
     verifyOtp() {
-      const code = this.otp.join("");
-      if (code.length === 6 && !this.otp.includes("")) {
-        alert(`Verifying OTP: ${code}`);
-      } else {
-        alert("Please enter the full 6-digit code.");
+      const code = this.otp.join("").trim();
+
+      if (code.length !== 6 || this.otp.includes("")) {
+        alert("Vui lòng nhập đầy đủ 6 chữ số.");
+        return;
       }
+
+      const payload = {
+        email: localStorage.getItem("signup_email"),
+        code: code,
+      };
+
+      fetch("http://localhost:3005/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            // Nếu status không 200-299, có thể đọc json để lấy message lỗi
+            const errorData = await res.json().catch(() => ({}));
+            throw new Error(errorData.message || `Lỗi server: ${res.status}`);
+          }
+          return res.json(); // parse JSON từ response
+        })
+        .then((data) => {
+          if (data.success) {
+            alert("✅ Xác thực thành công!");
+            this.$router.push({ name: "CreatePW" });
+          } else {
+            alert(`❌ ${data.message}`);
+          }
+        })
+        .catch((err) => {
+          console.error("Lỗi xác thực:", err);
+          alert(`Đã xảy ra lỗi: ${err.message || "Vui lòng thử lại."}`);
+        });
     },
   },
 };

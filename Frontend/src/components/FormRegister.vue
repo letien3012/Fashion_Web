@@ -47,7 +47,7 @@
 export default {
   data() {
     return {
-      email: "",
+      email: "" || localStorage.getItem("signup_email"),
       password: "",
       showPassword: false,
       rememberMe: false,
@@ -62,31 +62,49 @@ export default {
       }
 
       try {
-        const response = await fetch(
-          "http://localhost:3005/api/mail/send-code",
+        // Bước 1: Kiểm tra email đã đăng ký chưa
+        const checkRes = await fetch(
+          "http://localhost:3005/api/auth/check-email",
           {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              email: this.email,
-            }),
+            body: JSON.stringify({ email: this.email }),
           }
         );
 
-        const data = await response.json();
-        if (response.ok) {
-          localStorage.setItem("signup_email", this.email);
-          // Thành công, chuyển sang trang nhập OTP
-          this.$router.push({
-            name: "VerificationOtp",
-          });
+        const checkData = await checkRes.json();
+        if (checkRes.ok) {
+          if (checkData.exists) {
+            alert("Email này đã được đăng ký. Vui lòng sử dụng email khác.");
+            return;
+          }
+
+          // Bước 2: Gửi mã OTP nếu email chưa được đăng ký
+          const response = await fetch(
+            "http://localhost:3005/api/mail/send-code",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email: this.email }),
+            }
+          );
+
+          const data = await response.json();
+          if (response.ok) {
+            localStorage.setItem("signup_email", this.email);
+            this.$router.push({ name: "VerificationOtp" });
+          } else {
+            alert(data.message || "Gửi mã xác thực thất bại.");
+          }
         } else {
-          alert(data.message || "Gửi mã xác thực thất bại.");
+          alert(checkData.message || "Lỗi kiểm tra email.");
         }
       } catch (error) {
-        console.error("Lỗi gửi yêu cầu:", error);
+        console.error("Lỗi:", error);
         alert("Lỗi kết nối đến server.");
       }
     },
