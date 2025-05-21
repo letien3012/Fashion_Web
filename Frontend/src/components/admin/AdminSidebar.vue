@@ -25,6 +25,18 @@
         <i class="fas fa-box"></i>
         <span>Quản lý sản phẩm</span>
       </router-link>
+      <router-link to="/admin/suppliers" class="nav-item">
+        <i class="fas fa-truck"></i>
+        <span>Quản lý nhà cung cấp</span>
+      </router-link>
+      <router-link to="/admin/import-receipts" class="nav-item">
+        <i class="fas fa-file-import"></i>
+        <span>Phiếu nhập hàng</span>
+      </router-link>
+      <router-link to="/admin/promotions" class="nav-item">
+        <i class="fas fa-percent"></i>
+        <span>Khuyến mãi</span>
+      </router-link>
     </nav>
 
     <div class="sidebar-footer">

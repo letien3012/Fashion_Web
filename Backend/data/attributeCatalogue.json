@@ -1,0 +1,10 @@
+[
+  {
+    "name": "Size",
+    "description": "Kích thước sản phẩm"
+  },
+  {
+    "name": "Color",
+    "description": "Màu sắc sản phẩm"
+  }
+] 

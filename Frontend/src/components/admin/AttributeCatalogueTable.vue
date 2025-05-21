@@ -100,41 +100,6 @@ tr:hover {
   background-color: #fafafa;
 }
 
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-.edit-btn,
-.delete-btn {
-  padding: 6px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.edit-btn {
-  background-color: #1890ff;
-  color: white;
-}
-
-.delete-btn {
-  background-color: #ff4d4f;
-  color: white;
-}
-
-.edit-btn:hover {
-  background-color: #40a9ff;
-}
-
-.delete-btn:hover {
-  background-color: #ff7875;
-}
-
 .text-center {
   text-align: center;
   color: #999;

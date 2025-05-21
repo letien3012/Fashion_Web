@@ -46,6 +46,34 @@ const adminRoutes = [
         component: () => import("../views/admin/ProductList.vue"),
         meta: { requiresAuth: true, requiresAdmin: true },
       },
+      {
+        path: "suppliers",
+        name: "admin-suppliers",
+        component: () => import("../views/admin/SupplierList.vue"),
+        meta: {
+          requiresAuth: true,
+          title: "Quản lý nhà cung cấp",
+        },
+      },
+      {
+        path: "import-receipts",
+        name: "ImportReceiptList",
+        component: () => import("../views/admin/ImportReceiptList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý phiếu nhập hàng",
+        },
+      },
+      {
+        path: "promotions",
+        name: "AdminPromotions",
+        component: () => import("../views/admin/PromotionList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true
+        }
+      },
     ],
   },
 ];

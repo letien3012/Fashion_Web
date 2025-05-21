@@ -46,9 +46,34 @@ supplierSchema.statics.getById = async function(id) {
 // Static method to get all suppliers
 supplierSchema.statics.getAll = async function() {
   try {
-    return await this.find({ deletedAt: null });
+    return await this.find({ deletedAt: null })
+      .sort({ createdAt: -1 });
   } catch (error) {
     throw new Error(`Error fetching suppliers: ${error.message}`);
+  }
+};
+
+// Static method to check database status
+supplierSchema.statics.checkDatabaseStatus = async function() {
+  try {
+    const totalCount = await this.countDocuments({});
+    const activeCount = await this.countDocuments({ deletedAt: null });
+    const deletedCount = await this.countDocuments({ deletedAt: { $ne: null } });
+    
+    console.log('Database Status:', {
+      totalDocuments: totalCount,
+      activeDocuments: activeCount,
+      deletedDocuments: deletedCount
+    });
+
+    return {
+      totalDocuments: totalCount,
+      activeDocuments: activeCount,
+      deletedDocuments: deletedCount
+    };
+  } catch (error) {
+    console.error('Error checking database status:', error);
+    throw error;
   }
 };
 
