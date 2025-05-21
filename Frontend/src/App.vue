@@ -20,7 +20,7 @@
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;
-  padding: 0px 30px;
+
   box-sizing: border-box;
 }
 </style>

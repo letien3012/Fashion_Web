@@ -3,18 +3,35 @@
     <h2>Đăng ký</h2>
 
     <div class="social-login">
-      <button class="btn social"><img src="../assets/images/google.png" height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Google</button>
-      <button class="btn social"><img src="../assets/images/facebook.png"  height="16px" width="16px" style="margin-right: 5px"> Tiếp tục với Facebook</button>
+      <button class="btn social">
+        <img
+          src="../assets/images/google.png"
+          height="16px"
+          width="16px"
+          style="margin-right: 5px"
+        />
+        Tiếp tục với Google
+      </button>
+      <button class="btn social">
+        <img
+          src="../assets/images/facebook.png"
+          height="16px"
+          width="16px"
+          style="margin-right: 5px"
+        />
+        Tiếp tục với Facebook
+      </button>
     </div>
 
     <div class="divider">
       <span>OR</span>
     </div>
 
-    <form @submit.prevent="handleLogin">
-      <input type="email" placeholder="Email hoặc username" v-model="email" required />
-      
-      <button type="submit" class="btn login">Đăng ký</button>
+    <form @submit.prevent="handleSignup">
+      <input type="text" placeholder="Email" v-model="email" required />
+      <button type="submit" class="btn login" :class="{ active: email }">
+        Đăng ký
+      </button>
     </form>
 
     <div class="signup-section">
@@ -30,17 +47,50 @@
 export default {
   data() {
     return {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
       showPassword: false,
-      rememberMe: false
+      rememberMe: false,
     };
   },
   methods: {
-    handleLogin() {
-      alert(`Login with ${this.email}`);
-    }
-  }
+    async handleSignup() {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(this.email)) {
+        alert("Vui lòng nhập một địa chỉ email hợp lệ.");
+        return;
+      }
+
+      try {
+        const response = await fetch(
+          "http://localhost:3005/api/mail/send-code",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              email: this.email,
+            }),
+          }
+        );
+
+        const data = await response.json();
+        if (response.ok) {
+          localStorage.setItem("signup_email", this.email);
+          // Thành công, chuyển sang trang nhập OTP
+          this.$router.push({
+            name: "VerificationOtp",
+          });
+        } else {
+          alert(data.message || "Gửi mã xác thực thất bại.");
+        }
+      } catch (error) {
+        console.error("Lỗi gửi yêu cầu:", error);
+        alert("Lỗi kết nối đến server.");
+      }
+    },
+  },
 };
 </script>
 
@@ -89,7 +139,7 @@ h2 {
 
 .divider::before,
 .divider::after {
-  content: '';
+  content: "";
   flex: 1;
   border-bottom: 1px solid #ccc;
 }
@@ -111,9 +161,16 @@ input {
   margin-top: 20px;
   padding: 10px;
   border-radius: 30px;
-  background-color: #999;
+  background-color: #999; /* Màu mặc định */
   color: white;
   border: none;
+  cursor: not-allowed;
+  transition: background-color 0.3s ease;
+}
+
+.btn.login.active {
+  background-color: #00b6ff; /* Màu xanh khi đã nhập email */
+  cursor: pointer;
 }
 
 .signup-section {

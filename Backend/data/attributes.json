@@ -1,0 +1,42 @@
+[
+  {
+    "name": "S",
+    "attributeCatalogueId": "SIZE_CATALOGUE_ID"
+  },
+  {
+    "name": "M",
+    "attributeCatalogueId": "SIZE_CATALOGUE_ID"
+  },
+  {
+    "name": "L",
+    "attributeCatalogueId": "SIZE_CATALOGUE_ID"
+  },
+  {
+    "name": "XL",
+    "attributeCatalogueId": "SIZE_CATALOGUE_ID"
+  },
+  {
+    "name": "XXL",
+    "attributeCatalogueId": "SIZE_CATALOGUE_ID"
+  },
+  {
+    "name": "Đỏ",
+    "attributeCatalogueId": "COLOR_CATALOGUE_ID"
+  },
+  {
+    "name": "Đen",
+    "attributeCatalogueId": "COLOR_CATALOGUE_ID"
+  },
+  {
+    "name": "Trắng",
+    "attributeCatalogueId": "COLOR_CATALOGUE_ID"
+  },
+  {
+    "name": "Xanh dương",
+    "attributeCatalogueId": "COLOR_CATALOGUE_ID"
+  },
+  {
+    "name": "Xanh lá",
+    "attributeCatalogueId": "COLOR_CATALOGUE_ID"
+  }
+] 

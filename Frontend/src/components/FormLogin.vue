@@ -70,8 +70,12 @@
 </template>
 
 <script>
-import { FacebookAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../../firebase";
+// import {
+//   FacebookAuthProvider,
+//   GoogleAuthProvider,
+//   signInWithPopup,
+// } from "firebase/auth";
+// import { auth } from "../../firebase";
 
 export default {
   props: {
@@ -98,29 +102,34 @@ export default {
     loginWithGoogle() {
       window.location.href = "http://localhost:3005/api/auth/google";
     },
-    async loginWithFacebook() {
-      const provider = new FacebookAuthProvider();
+    // async loginWithFacebook() {
+    //   const provider = new FacebookAuthProvider();
 
-      try {
-        const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        const idToken = await user.getIdToken();
+    //   try {
+    //     const result = await signInWithPopup(auth, provider);
+    //     const user = result.user;
+    //     const idToken = await user.getIdToken();
 
-        // Gửi token lên server để xác thực
-        const response = await fetch("http://localhost:3005/api/verifyToken", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idToken }),
-        });
-
-        if (!response.ok) throw new Error("Token verification failed");
-
-        const data = await response.json();
-        console.log("Xác thực thành công với UID:", data.uid);
-      } catch (error) {
-        console.error("Lỗi đăng nhập:", error.message);
-      }
-    },
+    //     // Gửi token lên server để xác thực (chỉ gọi một lần)
+    //     const response = await fetch(
+    //       "http://localhost:3005/api/auth/verifyToken",
+    //       {
+    //         method: "POST",
+    //         headers: { "Content-Type": "application/json" },
+    //         body: JSON.stringify({ idToken }),
+    //       }
+    //     );
+    //     if (!response.ok) throw new Error("Token verification failed");
+    //     const data = await response.json();
+    //     console.log("Xác thực thành công với UID:", data.uid);
+    //     this.$router.push("/");
+    //   } catch (error) {
+    //     console.error("Lỗi đăng nhập:", error.message);
+    //   }
+    // },
+  },
+  loginWithFacebook() {
+    window.location.href = "http://localhost:3005/api/auth/facebook";
   },
 };
 </script>

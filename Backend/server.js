@@ -1,5 +1,10 @@
 // server.js
 const app = require("./app");
+const express = require("express");
+
+// Middleware xử lý dữ liệu từ client
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Route imports
 const routes = {
@@ -16,9 +21,11 @@ const routes = {
   auth: require("./routes/auth.route"),
   consignment: require("./routes/consignment.route"),
   promotion: require("./routes/promotion.route"),
+  mail: require("./routes/mail.route"),
+  verify: require("./routes/verify.route"),
 };
 
-// Register API routes
+// Đăng ký các route API
 app.use("/api/employees", routes.employee);
 app.use("/api/attributeCatalogues", routes.attributeCatalogue);
 app.use("/api/attributes", routes.attribute);
@@ -32,8 +39,10 @@ app.use("/api/orders", routes.order);
 app.use("/api/auth", routes.auth);
 app.use("/api/consignments", routes.consignment);
 app.use("/api/promotions", routes.promotion);
+app.use("/api/mail", routes.mail);
+app.use("/api/verify", routes.verify);
 
-// Error handling middleware
+// Middleware xử lý lỗi
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({
@@ -42,7 +51,7 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Start the server
+// Start server
 const PORT = process.env.PORT || 3005;
 app.listen(PORT, () => {
   console.log(`✅ Server is running on http://localhost:${PORT}`);
