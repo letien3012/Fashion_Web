@@ -9,10 +9,10 @@
     </div>
     <div v-else class="product-detail-container">
       <div class="product-gallery">
-        <img :src="product.images[activeImage]" class="main-image" />
+        <img :src="displayImages[activeImage]" class="main-image" />
         <div class="thumbnail-list">
           <img
-            v-for="(img, idx) in product.images"
+            v-for="(img, idx) in displayImages"
             :key="idx"
             :src="img"
             :class="{ active: idx === activeImage }"
@@ -31,7 +31,22 @@
           ></i>
           <span class="rating-number">({{ product.rating }})</span>
         </div>
-        <div class="product-price">${{ product.price }}</div>
+        <div class="product-price-container">
+          <div class="product-price" :class="{ 'has-sale': salePrice }">
+            ${{ displayPrice.toFixed(2) }}
+          </div>
+          <div v-if="salePrice" class="product-sale-price">
+            ${{ salePrice.toFixed(2) }}
+          </div>
+          <div v-if="activePromotion" class="promotion-info">
+            <div class="discount-badge">-{{ discountPercentage }}%</div>
+            <div class="promotion-details">
+              <div class="promotion-period" v-if="activePromotion.end_date">
+                Áp dụng đến: {{ formatDate(activePromotion.end_date) }}
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- Kích thước -->
         <div class="product-options">
@@ -70,7 +85,7 @@
 
         <!-- Số lượng còn lại -->
         <div class="stock-info">
-          Số lượng còn lại: <b>{{ product.stock }}</b>
+          Số lượng còn lại: <b>{{ currentVariant.stock }}</b>
         </div>
 
         <!-- Chọn số lượng -->
@@ -79,7 +94,7 @@
             type="number"
             v-model.number="quantity"
             min="1"
-            :max="product.stock"
+            :max="currentVariant.stock"
             class="quantity-input"
           />
           <button
@@ -99,7 +114,20 @@
     <!-- Mô tả sản phẩm -->
     <div class="product-desc-section">
       <h2>Mô tả sản phẩm</h2>
-      <p>{{ product.description }}</p>
+      <div
+        v-if="product.content"
+        class="product-content"
+        v-html="product.content"
+      ></div>
+      <div v-if="product.description" class="product-description">
+        <p>{{ product.description }}</p>
+      </div>
+      <div
+        v-if="!product.content && !product.description"
+        class="no-description"
+      >
+        <p>Chưa có mô tả cho sản phẩm này.</p>
+      </div>
     </div>
 
     <!-- Đánh giá sản phẩm -->
@@ -174,7 +202,7 @@
 
 <script>
 import Header from "../components/Header.vue";
-import axios from "axios";
+import { productService } from "../services/product.service";
 
 export default {
   name: "ProductDetail",
@@ -183,8 +211,8 @@ export default {
     return {
       activeImage: 0,
       quantity: 1,
-      selectedSize: "M",
-      selectedColor: "#fff",
+      selectedSize: "",
+      selectedColor: "",
       product: {
         name: "",
         price: 0,
@@ -194,11 +222,18 @@ export default {
         colors: [],
         description: "",
         images: [],
-        reviews: []
+        reviews: [],
+        variants: [],
       },
+      currentVariant: {
+        price: 0,
+        stock: 0,
+        images: [],
+        _id: null,
+      },
+      activePromotion: null,
       loading: false,
       error: null,
-      backendUrl: "http://localhost:3005",
       newReview: { rating: 0, content: "", image: null },
     };
   },
@@ -206,28 +241,109 @@ export default {
     try {
       this.loading = true;
       const productId = this.$route.params.id;
-      const response = await axios.get(`${this.backendUrl}/api/products/${productId}`);
-      
-      if (response.data && response.data.data) {
-        this.product = response.data.data;
+      console.log("Fetching product with ID:", productId);
+
+      const response = await productService.getProductById(productId);
+      console.log("Product response in component:", response);
+
+      if (response && response.data) {
+        const productData = response.data;
+        // Xử lý ảnh chính và album
+        const mainImage = productData.image.startsWith("http")
+          ? productData.image
+          : `http://localhost:3005${productData.image}`;
+
+        const albumImages = (productData.album || []).map((img) =>
+          img.startsWith("http") ? img : `http://localhost:3005${img}`
+        );
+
+        this.product = {
+          ...productData,
+          image: mainImage,
+          images: [mainImage, ...albumImages],
+          sizes: this.extractSizes(productData.variants),
+          colors: this.extractColors(productData.variants),
+          reviews: [],
+        };
+
+        // Set initial size and color if available
+        if (this.product.sizes.length > 0) {
+          this.selectedSize = this.product.sizes[0];
+        }
+        if (this.product.colors.length > 0) {
+          this.selectedColor = this.product.colors[0];
+        }
+
+        // Load initial variant data
+        if (this.selectedSize && this.selectedColor) {
+          await this.loadVariantData();
+        }
       } else {
         this.error = "Không tìm thấy thông tin sản phẩm";
       }
     } catch (error) {
-      console.error("Error fetching product:", error);
-      this.error = "Có lỗi xảy ra khi tải thông tin sản phẩm";
+      console.error("Error in created hook:", error);
+      if (error.response) {
+        if (error.response.status === 404) {
+          this.error = "Không tìm thấy sản phẩm với ID này";
+        } else {
+          this.error = `Lỗi server: ${error.response.status}`;
+        }
+      } else if (error.request) {
+        this.error = "Không thể kết nối đến server";
+      } else {
+        this.error = "Có lỗi xảy ra khi tải thông tin sản phẩm";
+      }
     } finally {
       this.loading = false;
     }
+  },
+  watch: {
+    selectedSize: {
+      handler: "loadVariantData",
+      immediate: false,
+    },
+    selectedColor: {
+      handler: "loadVariantData",
+      immediate: false,
+    },
   },
   computed: {
     canBuy() {
       return (
         this.quantity > 0 &&
-        this.quantity <= this.product.stock &&
+        this.quantity <= this.currentVariant.stock &&
         this.selectedSize &&
         this.selectedColor
       );
+    },
+    displayPrice() {
+      return this.currentVariant.price || this.product.price;
+    },
+    salePrice() {
+      if (this.activePromotion) {
+        console.log(
+          "Calculating sale price with promotion:",
+          this.activePromotion
+        );
+        console.log("Original price:", this.displayPrice);
+        const discount =
+          this.displayPrice * (this.activePromotion.discount / 100);
+        console.log("Discount amount:", discount);
+        const finalPrice =
+          Math.round((this.displayPrice - discount) * 100) / 100;
+        console.log("Final price after discount:", finalPrice);
+        return finalPrice;
+      }
+      return null;
+    },
+    discountPercentage() {
+      return this.activePromotion ? this.activePromotion.discount : 0;
+    },
+    displayImages() {
+      return this.currentVariant.images.length > 0
+        ? this.currentVariant.images
+        : this.product.images;
     },
     adminReply() {
       return "Cảm ơn bạn đã đánh giá. Chúng tôi rất vui khi sản phẩm đáp ứng nhu cầu của bạn. Nếu bạn cần hỗ trợ thêm, hãy liên hệ với chúng tôi nhé!";
@@ -237,10 +353,126 @@ export default {
     },
   },
   methods: {
+    extractSizes(variants) {
+      if (!variants) return [];
+      const sizes = new Set();
+      variants.forEach((variant) => {
+        const size = variant.sku.split("-")[1]; // Assuming format: COUNTRY-SIZE-COLOR
+        if (size) sizes.add(size);
+      });
+      return Array.from(sizes);
+    },
+
+    extractColors(variants) {
+      if (!variants) return [];
+      const colors = new Set();
+      variants.forEach((variant) => {
+        const color = variant.sku.split("-")[2]; // Assuming format: COUNTRY-SIZE-COLOR
+        if (color) colors.add(color);
+      });
+      return Array.from(colors);
+    },
+
+    findVariant(size, color) {
+      if (!this.product.variants) return null;
+      return this.product.variants.find((variant) => {
+        const [_, variantSize, variantColor] = variant.sku.split("-");
+        return variantSize === size && variantColor === color;
+      });
+    },
+
+    async loadVariantData() {
+      if (!this.selectedSize || !this.selectedColor) return;
+
+      try {
+        console.log("Loading variant data for:", {
+          size: this.selectedSize,
+          color: this.selectedColor,
+        });
+
+        const variant = this.findVariant(this.selectedSize, this.selectedColor);
+        console.log("Found variant:", variant);
+
+        if (variant) {
+          // Xử lý ảnh variant
+          const variantImage = variant.image.startsWith("http")
+            ? variant.image
+            : `http://localhost:3005${variant.image}`;
+
+          this.currentVariant = {
+            price: variant.price,
+            stock: variant.stock || 0,
+            images: [variantImage, ...this.product.images.slice(1)],
+            _id: variant._id,
+          };
+          this.activeImage = 0; // Reset to first image when variant changes
+
+          // Load promotions for this variant
+          await this.loadPromotions();
+        } else {
+          // Fallback to base product data if variant not found
+          this.currentVariant = {
+            price: this.product.price,
+            stock: 0,
+            images: this.product.images,
+            _id: null,
+          };
+          this.activePromotion = null;
+        }
+      } catch (error) {
+        console.error("Error loading variant data:", error);
+        // Keep the current variant data if there's an error
+        this.currentVariant = {
+          price: this.product.price,
+          stock: 0,
+          images: this.product.images,
+          _id: null,
+        };
+        this.activePromotion = null;
+      }
+    },
+
+    async loadPromotions() {
+      if (!this.currentVariant._id) return;
+
+      try {
+        const promotions = await productService.getProductPromotions(
+          this.$route.params.id,
+          this.currentVariant._id
+        );
+
+        // Lấy promotion có discount cao nhất
+        this.activePromotion =
+          promotions.length > 0
+            ? promotions.reduce((max, p) =>
+                p.discount > max.discount ? p : max
+              )
+            : null;
+      } catch (error) {
+        console.error("Error loading promotions:", error);
+        this.activePromotion = null;
+      }
+    },
     addToCart() {
+      const cartItem = {
+        productId: this.$route.params.id,
+        size: this.selectedSize,
+        color: this.selectedColor,
+        quantity: this.quantity,
+        price: this.displayPrice,
+      };
+      // TODO: Implement cart functionality
       alert(`Đã thêm ${this.quantity} sản phẩm vào giỏ hàng!`);
     },
     buyNow() {
+      const orderItem = {
+        productId: this.$route.params.id,
+        size: this.selectedSize,
+        color: this.selectedColor,
+        quantity: this.quantity,
+        price: this.displayPrice,
+      };
+      // TODO: Implement buy now functionality
       alert(`Bạn đã chọn mua ngay ${this.quantity} sản phẩm!`);
     },
     handleNewReviewImage(e) {
@@ -266,6 +498,14 @@ export default {
       } else {
         alert("Vui lòng nhập nội dung và chọn số sao.");
       }
+    },
+    formatDate(dateString) {
+      const date = new Date(dateString);
+      return date.toLocaleDateString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      });
     },
   },
 };
@@ -348,10 +588,59 @@ export default {
 .product-rating i.active {
   color: #ffd700;
 }
+.product-price-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+}
 .product-price {
-  color: #ff6b6b;
   font-size: 1.5rem;
   font-weight: 700;
+  color: #ff6b6b;
+}
+.product-price.has-sale {
+  text-decoration: line-through;
+  color: #999;
+  font-size: 1.2rem;
+}
+.product-sale-price {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ff6b6b;
+}
+.promotion-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 8px;
+}
+.promotion-details {
+  flex: 1;
+}
+.promotion-name {
+  font-weight: 600;
+  color: #ff6b6b;
+  margin-bottom: 4px;
+}
+.promotion-description {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+.promotion-period {
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+}
+.discount-badge {
+  background: #ff6b6b;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
 .product-options {
   margin: 10px 0;
@@ -432,7 +721,38 @@ export default {
 }
 .product-desc-section h2 {
   font-size: 1.3rem;
-  margin-bottom: 10px;
+  margin-bottom: 20px;
+  color: #333;
+  font-weight: 600;
+}
+.product-content {
+  margin-bottom: 20px;
+  line-height: 1.6;
+  color: #444;
+}
+.product-content :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+.product-content :deep(p) {
+  margin-bottom: 15px;
+}
+.product-description {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+.product-description p {
+  line-height: 1.6;
+  color: #444;
+}
+.no-description {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+  padding: 20px 0;
 }
 .product-review-section {
   max-width: 1100px;

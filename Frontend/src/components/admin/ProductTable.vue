@@ -19,20 +19,16 @@
           >
             <option value="">Tất cả danh mục</option>
             <option
-              v-for="catalogue in catalogues"
-              :key="catalogue.id"
-              :value="catalogue.id"
+              v-for="catalogue in productCatalogues"
+              :key="catalogue._id"
+              :value="catalogue._id"
             >
               {{ catalogue.name }}
             </option>
           </select>
         </div>
         <div class="col-md-4">
-          <select
-            class="form-select"
-            v-model="sortBy"
-            @change="handleSort"
-          >
+          <select class="form-select" v-model="sortBy" @change="handleSort">
             <option value="name">Sắp xếp theo tên</option>
             <option value="price">Sắp xếp theo giá</option>
             <option value="createdAt">Sắp xếp theo ngày tạo</option>
@@ -77,26 +73,17 @@
             <td>{{ getCatalogueName(product.catalogueId) }}</td>
             <td>
               <span
-                :class="[
-                  'badge',
-                  product.publish ? 'bg-success' : 'bg-danger'
-                ]"
+                :class="['badge', product.publish ? 'bg-success' : 'bg-danger']"
               >
-                {{ product.publish ? 'Đang bán' : 'Ngừng bán' }}
+                {{ product.publish ? "Đang bán" : "Ngừng bán" }}
               </span>
             </td>
             <td>
               <div class="actions">
-                <button
-                  class="edit-btn"
-                  @click="$emit('edit', product)"
-                >
+                <button class="edit-btn" @click="$emit('edit', product)">
                   <i class="fas fa-edit"></i>
                 </button>
-                <button
-                  class="delete-btn"
-                  @click="confirmDelete(product.id)"
-                >
+                <button class="delete-btn" @click="confirmDelete(product.id)">
                   <i class="fas fa-trash"></i>
                 </button>
               </div>
@@ -108,12 +95,17 @@
 
     <div class="d-flex justify-content-between align-items-center mt-4">
       <div class="text-muted">
-        Hiển thị {{ paginatedProducts.length }} / {{ filteredProducts.length }} sản phẩm
+        Hiển thị {{ paginatedProducts.length }} /
+        {{ filteredProducts.length }} sản phẩm
       </div>
       <nav>
         <ul class="pagination">
           <li class="page-item" :class="{ disabled: currentPage === 1 }">
-            <a class="page-link" href="#" @click.prevent="changePage(currentPage - 1)">
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="changePage(currentPage - 1)"
+            >
               Trước
             </a>
           </li>
@@ -127,8 +119,15 @@
               {{ page }}
             </a>
           </li>
-          <li class="page-item" :class="{ disabled: currentPage === totalPages }">
-            <a class="page-link" href="#" @click.prevent="changePage(currentPage + 1)">
+          <li
+            class="page-item"
+            :class="{ disabled: currentPage === totalPages }"
+          >
+            <a
+              class="page-link"
+              href="#"
+              @click.prevent="changePage(currentPage + 1)"
+            >
               Sau
             </a>
           </li>
@@ -140,7 +139,7 @@
 
 <script>
 import { toast } from "vue3-toastify";
-import '../../assets/styles/admin/table.css';
+import "../../assets/styles/admin/table.css";
 
 export default {
   name: "ProductTable",
@@ -149,7 +148,7 @@ export default {
       type: Array,
       required: true,
     },
-    catalogues: {
+    productCatalogues: {
       type: Array,
       required: true,
     },
@@ -229,9 +228,19 @@ export default {
       }
     },
     getCatalogueName(catalogueId) {
-      const catalogue = this.catalogues.find(
-        (c) => c._id === (catalogueId?._id || catalogueId)
-      );
+      if (!catalogueId) return "N/A";
+
+      // Nếu catalogueId là một object (đã populate)
+      if (typeof catalogueId === "object" && catalogueId !== null) {
+        return catalogueId.name || "N/A";
+      }
+
+      // Nếu catalogueId là string (ID)
+      const catalogue = this.productCatalogues.find((c) => {
+        const catalogueIdStr = String(catalogueId).trim();
+        const cIdStr = String(c._id).trim();
+        return catalogueIdStr === cIdStr;
+      });
       return catalogue ? catalogue.name : "N/A";
     },
     formatPrice(price) {
@@ -450,4 +459,4 @@ export default {
   position: relative;
   z-index: 10002;
 }
-</style> 
+</style>

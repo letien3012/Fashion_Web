@@ -118,19 +118,28 @@
       </section>
 
       <!-- New Arrivals -->
-      <section class="new-arrivals">
+      <section class="new-arrivals" v-if="!loading && !error">
         <h2 class="section-title">New Arrivals</h2>
-        <div class="product-grid">
+        <div v-if="newArrivals && newArrivals.length > 0" class="product-grid">
           <router-link
             v-for="product in newArrivals"
-            :key="product.id"
+            :key="product._id"
             :to="getProductDetailLink(product)"
             class="product-card"
           >
             <div class="product-image">
-              <img :src="product.image" :alt="product.name" />
-              <div class="product-badge" v-if="product.badge">
-                {{ product.badge }}
+              <img
+                :src="product.image"
+                :alt="product.name"
+                @error="
+                  (e) => {
+                    console.error('Image load error:', e);
+                    product.image = '/images/placeholder.jpg';
+                  }
+                "
+              />
+              <div class="discount-badge" v-if="product.discountPercentage">
+                -{{ product.discountPercentage }}%
               </div>
               <div class="product-overlay">
                 <button class="add-to-cart-btn" @click.prevent>
@@ -143,26 +152,44 @@
                 {{ product.name }}
               </h3>
               <div class="product-meta">
-                <span class="product-price">${{ product.price }}</span>
+                <div class="product-price-container">
+                  <span
+                    class="product-price"
+                    :class="{ 'has-sale': product.salePrice }"
+                  >
+                    ${{ (product.salePrice || product.price).toFixed(2) }}
+                  </span>
+                  <span v-if="product.salePrice" class="product-sale-price">
+                    ${{ product.price.toFixed(2) }}
+                  </span>
+                </div>
                 <span class="product-rating">
                   <i
                     class="fas fa-star"
                     v-for="n in 5"
                     :key="n"
-                    :class="{ active: n <= product.rating }"
+                    :class="{ active: n <= (product.favorite_count || 0) }"
                   ></i>
                 </span>
               </div>
             </div>
           </router-link>
         </div>
+        <div v-else class="no-products">No new arrivals available</div>
       </section>
+      <div v-else-if="loading" class="loading-section">
+        <div class="loading">Loading new arrivals...</div>
+      </div>
+      <div v-else-if="error" class="error-section">
+        <div class="error">{{ error }}</div>
+      </div>
     </div>
   </div>
 </template>
 
 <script>
 import Header from "../components/Header.vue";
+import { productService } from "../services/product.service";
 
 export default {
   name: "Home",
@@ -170,6 +197,7 @@ export default {
   data() {
     return {
       currentSlide: 0,
+      baseUrl: "http://localhost:3005",
       slides: [
         {
           title: "Summer Collection 2024",
@@ -251,46 +279,91 @@ export default {
           rating: 5,
         },
       ],
-      newArrivals: [
-        {
-          id: 5,
-          name: "Casual T-Shirt",
-          price: 29.99,
-          image: "/images/product5.jpg",
-          rating: 4,
-        },
-        {
-          id: 6,
-          name: "Slim Fit Jeans",
-          price: 79.99,
-          image: "/images/product6.jpg",
-          rating: 5,
-        },
-        {
-          id: 7,
-          name: "Summer Hat",
-          price: 24.99,
-          image: "/images/product7.jpg",
-          rating: 4,
-        },
-        {
-          id: 8,
-          name: "Running Shoes",
-          price: 99.99,
-          image: "/images/product8.jpg",
-          rating: 5,
-        },
-      ],
+      newArrivals: [],
+      loading: true,
+      error: null,
       featuredStart: 0,
       featuredPerPage: 4,
     };
   },
+  async created() {
+    await this.fetchNewArrivals();
+  },
   computed: {
     getProductDetailLink() {
-      return (product) => `/product-detail/${product.id}`;
+      return (product) => `/product-detail/${product._id || ""}`;
     },
   },
   methods: {
+    getImageUrl(path) {
+      if (!path) return "";
+      if (path.startsWith("http")) return path;
+      console.log("Original image path:", path);
+      const fullUrl = `${this.baseUrl}${path}`;
+      console.log("Full image URL:", fullUrl);
+      return fullUrl;
+    },
+    async fetchNewArrivals() {
+      this.loading = true;
+      this.error = null;
+      this.newArrivals = [];
+      try {
+        const response = await productService.getNewArrivals();
+        if (response && response.data && Array.isArray(response.data)) {
+          // Duyệt từng sản phẩm để lấy promotion
+          const productsWithPromotions = await Promise.all(
+            response.data.map(async (product) => {
+              const defaultVariant = product.variants?.[0] || {};
+              let salePrice = null;
+              let discountPercentage = null;
+              if (defaultVariant._id) {
+                const promotions = await productService.getProductPromotions(
+                  product._id,
+                  defaultVariant._id
+                );
+                if (promotions && promotions.length > 0) {
+                  const bestPromotion = promotions.reduce((max, p) =>
+                    p.discount > max.discount ? p : max
+                  );
+                  discountPercentage = bestPromotion.discount;
+                  salePrice =
+                    Math.round(
+                      (defaultVariant.price -
+                        (defaultVariant.price * bestPromotion.discount) / 100) *
+                        100
+                    ) / 100;
+                }
+              }
+              return {
+                _id: product._id || "",
+                name: product.name || "",
+                image: this.getImageUrl(product.image),
+                album: (product.album || []).map((img) =>
+                  this.getImageUrl(img)
+                ),
+                price: defaultVariant.price || 0,
+                salePrice,
+                discountPercentage,
+                favorite_count: product.favorite_count || 0,
+                variants: product.variants || [],
+                catalogueId: product.catalogueId || null,
+                publish: product.publish || false,
+                description: product.description || "",
+                content: product.content || "",
+                view_count: product.view_count || 0,
+              };
+            })
+          );
+          this.newArrivals = productsWithPromotions;
+        } else {
+          this.error = "Invalid data format received";
+        }
+      } catch (error) {
+        this.error = "Failed to load new arrivals";
+      } finally {
+        this.loading = false;
+      }
+    },
     nextSlide() {
       this.currentSlide = (this.currentSlide + 1) % this.slides.length;
     },
@@ -456,6 +529,18 @@ router-link {
   font-size: 2.5rem;
   margin-bottom: 3rem;
   color: #333;
+  position: relative;
+}
+
+.section-title::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background: #ff6b6b;
 }
 
 .category-grid {
@@ -545,122 +630,156 @@ router-link {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 2rem;
   max-width: 1400px;
   margin: 0 auto;
+  padding: 0 1rem;
 }
 
-/* Product Card Modern Styles */
 .product-card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
   display: flex;
   flex-direction: column;
   position: relative;
-  cursor: pointer;
 }
+
 .product-card:hover {
-  transform: translateY(-6px) scale(1.03);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
 }
+
 .product-image {
   position: relative;
   width: 100%;
-  aspect-ratio: 1/1;
+  padding-top: 100%; /* Tạo tỷ lệ khung hình 1:1 */
   overflow: hidden;
   background: #f7f7f7;
 }
+
 .product-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s;
+  transition: transform 0.3s ease;
 }
+
 .product-card:hover .product-image img {
-  transform: scale(1.08);
+  transform: scale(1.1);
 }
-.product-badge {
+
+.discount-badge {
   position: absolute;
   top: 12px;
   left: 12px;
   background: #ff6b6b;
-  color: #fff;
+  color: white;
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: 20px;
   font-size: 0.9rem;
   font-weight: 600;
   z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
+
 .product-overlay {
   position: absolute;
-  bottom: 12px;
-  right: 12px;
-  display: flex;
-  gap: 10px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.product-card:hover .product-overlay {
-  opacity: 1;
-}
-.quick-view-btn,
-.add-to-cart-btn {
-  background: #fff;
-  border: none;
-  border-radius: 50%;
-  width: 38px;
-  height: 38px;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #ff6b6b;
-  font-size: 1.2rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: background 0.2s, color 0.2s;
-  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
-.quick-view-btn:hover,
+
+.product-card:hover .product-overlay {
+  opacity: 1;
+}
+
+.add-to-cart-btn {
+  background: white;
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
 .add-to-cart-btn:hover {
   background: #ff6b6b;
-  color: #fff;
+  color: white;
+  transform: scale(1.1);
 }
+
 .product-info {
-  padding: 1.2rem 1.5rem 1.5rem 1.5rem;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
+
 .product-name {
   font-size: 1.1rem;
   font-weight: 600;
-  color: #222;
+  color: #333;
   margin: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 .product-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
 }
+
+.product-price-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .product-price {
   color: #ff6b6b;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 700;
 }
-.product-rating {
-  color: #ffd700;
+
+.product-sale-price {
+  color: #999;
+  text-decoration: line-through;
   font-size: 1rem;
 }
+
+.product-rating {
+  color: #ffd700;
+  font-size: 0.9rem;
+}
+
 .product-rating i {
   margin-right: 2px;
 }
+
 .product-rating i.active {
   color: #ffd700;
 }
@@ -673,32 +792,18 @@ router-link {
   .slide-content p {
     font-size: 1.3rem;
   }
-}
-
-@media (max-width: 768px) {
-  .banner-slider {
-    height: 60vh;
-  }
-  .slide-content h2 {
-    font-size: 2.5rem;
-  }
-  .slide-content p {
-    font-size: 1.1rem;
-  }
-  .slider-btn {
-    width: 40px;
-    height: 40px;
-  }
-  .section-title {
-    font-size: 2rem;
-  }
-  .category-grid,
   .product-grid {
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 992px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
   .banner-slider {
     height: 50vh;
   }
@@ -713,11 +818,42 @@ router-link {
     height: 35px;
   }
   .section-title {
-    font-size: 1.8rem;
+    font-size: 2rem;
   }
-  .category-grid,
   .product-grid {
     grid-template-columns: 1fr;
   }
+
+  .new-arrivals {
+    padding: 2rem 1rem;
+  }
+}
+
+.loading-section,
+.error-section {
+  padding: 2rem;
+  text-align: center;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading {
+  font-size: 1.2rem;
+  color: #666;
+}
+
+.error {
+  font-size: 1.2rem;
+  color: #ff6b6b;
+}
+
+.no-products {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+  color: #666;
+  grid-column: 1 / -1;
 }
 </style>

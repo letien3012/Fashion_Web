@@ -29,12 +29,12 @@
 </template>
 
 <script>
-import axios from "axios";
 import Swal from "sweetalert2";
 import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
 import AttributeCatalogueTable from "../../components/admin/AttributeCatalogueTable.vue";
 import AttributeCatalogueForm from "../../components/admin/AttributeCatalogueForm.vue";
+import attributeCatalogueService from "../../services/attributeCatalogue.service";
 
 export default {
   name: "AttributeCatalogueList",
@@ -47,7 +47,6 @@ export default {
       catalogues: [],
       showModal: false,
       isEditing: false,
-      backendUrl: "http://localhost:3005",
       formData: {
         id: null,
         name: "",
@@ -94,20 +93,7 @@ export default {
     async fetchCatalogues() {
       try {
         this.loading = true;
-        const token = localStorage.getItem("token");
-        if (!token) {
-          toast.error("Vui lòng đăng nhập để tiếp tục");
-          this.$router.push("/admin/login");
-          return;
-        }
-
-        const response = await axios.get(
-          `${this.backendUrl}/api/attributeCatalogues`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
+        const response = await attributeCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.catalogues = response.data.data;
         } else {
@@ -141,22 +127,8 @@ export default {
         showLoaderOnConfirm: true,
         preConfirm: async () => {
           try {
-            const token = localStorage.getItem("token");
-            if (!token) {
-              throw new Error("Vui lòng đăng nhập để tiếp tục");
-            }
-
-            const response = await axios.delete(
-              `${this.backendUrl}/api/attributeCatalogues/delete/${catalogue._id}`,
-              {
-                headers: { Authorization: `Bearer ${token}` },
-              }
-            );
-
-            if (response.status === 200) {
-              return response.data;
-            }
-            throw new Error(response.data.message || "Có lỗi xảy ra");
+            await attributeCatalogueService.delete(catalogue._id);
+            return true;
           } catch (error) {
             Swal.showValidationMessage(
               error.response?.data?.message || error.message
@@ -175,24 +147,13 @@ export default {
     async handleSubmit(formData) {
       try {
         this.loading = true;
-        const token = localStorage.getItem("token");
-        if (!token) {
-          toast.error("Vui lòng đăng nhập để tiếp tục");
-          this.$router.push("/admin/login");
-          return;
-        }
-
         let response;
 
         if (this.isEditing) {
           // Update existing catalogue
-          response = await axios.put(
-            `${this.backendUrl}/api/attributeCatalogues/update/${formData.id}`,
-            { name: formData.name.trim() },
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          response = await attributeCatalogueService.update(formData.id, {
+            name: formData.name.trim(),
+          });
 
           if (response.status === 200) {
             toast.success("Cập nhật danh mục thành công");
@@ -201,13 +162,9 @@ export default {
           }
         } else {
           // Add new catalogue
-          response = await axios.post(
-            `${this.backendUrl}/api/attributeCatalogues/add`,
-            { name: formData.name.trim() },
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          response = await attributeCatalogueService.add({
+            name: formData.name.trim(),
+          });
 
           if (response.status === 201) {
             toast.success("Thêm danh mục thành công");

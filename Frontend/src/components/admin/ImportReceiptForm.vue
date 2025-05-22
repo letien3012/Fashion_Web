@@ -66,7 +66,10 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="(detail, index) in formData.import_details" :key="index">
+                  <tr
+                    v-for="(detail, index) in formData.import_details"
+                    :key="index"
+                  >
                     <td>
                       <select
                         v-model="detail.productId"
@@ -75,7 +78,8 @@
                         required
                         :disabled="isInputDisabled"
                         :class="{
-                          'is-invalid': errors[`import_details.${index}.productId`],
+                          'is-invalid':
+                            errors[`import_details.${index}.productId`],
                         }"
                       >
                         <option value="">Chọn sản phẩm</option>
@@ -101,7 +105,8 @@
                         required
                         :disabled="isInputDisabled"
                         :class="{
-                          'is-invalid': errors[`import_details.${index}.variantId`],
+                          'is-invalid':
+                            errors[`import_details.${index}.variantId`],
                         }"
                       >
                         <option value="">Chọn biến thể</option>
@@ -132,7 +137,8 @@
                         required
                         :disabled="isInputDisabled"
                         :class="{
-                          'is-invalid': errors[`import_details.${index}.quantity`],
+                          'is-invalid':
+                            errors[`import_details.${index}.quantity`],
                         }"
                       />
                       <div
@@ -193,15 +199,17 @@
 
           <!-- Status Selection -->
           <div class="form-group" v-if="isEdit">
-            <label class="form-label">Trạng thái phiếu nhập <span class="required">*</span></label>
-            <select 
-              v-model="formData.status" 
-              class="form-control" 
+            <label class="form-label"
+              >Trạng thái phiếu nhập <span class="required">*</span></label
+            >
+            <select
+              v-model="formData.status"
+              class="form-control"
               :disabled="isStatusDisabled"
             >
-              <option 
-                v-for="status in availableStatuses" 
-                :key="status.value" 
+              <option
+                v-for="status in availableStatuses"
+                :key="status.value"
                 :value="status.value"
               >
                 {{ status.label }}
@@ -302,11 +310,15 @@ export default {
     });
 
     const isUpdatable = computed(() => {
-      return formData.value.status === 'pending' && !props.isViewMode;
+      return formData.value.status === "pending" && !props.isViewMode;
     });
 
     const isStatusUpdatable = computed(() => {
-      return ['pending', 'processing', 'completed'].includes(formData.value.status) && !props.isViewMode;
+      return (
+        ["pending", "processing", "completed"].includes(
+          formData.value.status
+        ) && !props.isViewMode
+      );
     });
 
     const isFormEditable = computed(() => {
@@ -322,38 +334,39 @@ export default {
     const isStatusDisabled = computed(() => {
       if (props.isViewMode) return true;
       if (!isEdit.value) return true;
-      if (!['pending', 'processing'].includes(formData.value.status)) return true;
+      if (!["pending", "processing"].includes(formData.value.status))
+        return true;
       return false;
     });
 
     const availableStatuses = computed(() => {
       const currentStatus = formData.value.status;
       switch (currentStatus) {
-        case 'pending':
+        case "pending":
           return [
-            { value: 'pending', label: 'Chờ xử lý' },
-            { value: 'processing', label: 'Đang xử lý' },
-            { value: 'cancelled', label: 'Đã hủy' }
+            { value: "pending", label: "Chờ xử lý" },
+            { value: "processing", label: "Đang xử lý" },
+            { value: "cancelled", label: "Đã hủy" },
           ];
-        case 'processing':
+        case "processing":
           return [
-            { value: 'processing', label: 'Đang xử lý' },
-            { value: 'completed', label: 'Hoàn thành' },
-            { value: 'cancelled', label: 'Đã hủy' }
+            { value: "processing", label: "Đang xử lý" },
+            { value: "completed", label: "Hoàn thành" },
+            { value: "cancelled", label: "Đã hủy" },
           ];
         default:
           return [
-            { value: currentStatus, label: getStatusText(currentStatus) }
+            { value: currentStatus, label: getStatusText(currentStatus) },
           ];
       }
     });
 
     const getStatusText = (status) => {
       const statusMap = {
-        'pending': 'Chờ xử lý',
-        'processing': 'Đang xử lý',
-        'completed': 'Hoàn thành',
-        'cancelled': 'Đã hủy'
+        pending: "Chờ xử lý",
+        processing: "Đang xử lý",
+        completed: "Hoàn thành",
+        cancelled: "Đã hủy",
       };
       return statusMap[status] || status;
     };
@@ -407,13 +420,13 @@ export default {
 
     const getProductVariants = (productId) => {
       if (!productId) return [];
-      const product = products.value.find(p => p._id === productId);
+      const product = products.value.find((p) => p._id === productId);
       return product?.variants || [];
     };
 
     const getVariantName = (variant) => {
-      if (!variant) return '';
-      const parts = variant.sku.split('-');
+      if (!variant) return "";
+      const parts = variant.sku.split("-");
       // Lấy phần cuối và áp chót
       if (parts.length >= 3) {
         return `${parts[1]}, ${parts[2]}`;
@@ -468,16 +481,28 @@ export default {
       } catch (error) {
         console.error("Error updating status:", error);
         console.error("Backend error:", error.response?.data);
-        errors.value.submit = "Không thể cập nhật trạng thái. Vui lòng thử lại.";
+        errors.value.submit =
+          "Không thể cập nhật trạng thái. Vui lòng thử lại.";
       } finally {
         loading.value = false;
       }
     };
 
+    const generateImportReceiptCode = () => {
+      const date = new Date();
+      const year = date.getFullYear().toString().slice(-2);
+      const month = (date.getMonth() + 1).toString().padStart(2, "0");
+      const day = date.getDate().toString().padStart(2, "0");
+      const random = Math.floor(Math.random() * 1000)
+        .toString()
+        .padStart(3, "0");
+      return `PN${year}${month}${day}${random}`;
+    };
+
     const handleSubmit = async () => {
       try {
         loading.value = true;
-        const employeeId = JSON.parse(localStorage.getItem('employee'))._id;
+        const employeeId = JSON.parse(localStorage.getItem("employee"))._id;
 
         // Nếu chỉ cập nhật trạng thái
         if (isEdit.value && formData.value.status !== props.receipt.status) {
@@ -487,21 +512,26 @@ export default {
 
         // Nếu cập nhật thông tin khác
         const data = {
-          code,
-          import_details: formData.value.import_details.map(detail => ({
-            productId: detail.productId,
-            sku: variant?.sku || '',
-            quantity: detail.quantity,
-            price: detail.price,
-            attributeId1: variant?.attributeId1 || null,
-            attributeId2: variant?.attributeId2 || null,
-            variant_id: detail.variantId
-          })),
+          code: isEdit.value ? props.receipt.code : generateImportReceiptCode(),
+          import_details: formData.value.import_details.map((detail) => {
+            const variant = getProductVariants(detail.productId).find(
+              (v) => v._id === detail.variantId
+            );
+            return {
+              productId: detail.productId,
+              sku: variant?.sku || "",
+              quantity: detail.quantity,
+              price: detail.price,
+              attributeId1: variant?.attributeId1 || null,
+              attributeId2: variant?.attributeId2 || null,
+              variant_id: detail.variantId,
+            };
+          }),
           supplierId: formData.value.supplierId,
           employeeId: employeeId,
           total_price: totalAmount.value,
           status: formData.value.status,
-          note: formData.value.note
+          note: formData.value.note,
         };
 
         if (isEdit.value) {
@@ -511,11 +541,9 @@ export default {
             { headers: { Authorization: `Bearer ${token}` } }
           );
         } else {
-          await axios.post(
-            `${backendUrl}/api/import-receipts/add`,
-            data,
-            { headers: { Authorization: `Bearer ${token}` } }
-          );
+          await axios.post(`${backendUrl}/api/import-receipts/add`, data, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
         }
 
         emit("saved");
@@ -539,7 +567,11 @@ export default {
         if (newValue) {
           try {
             loading.value = true;
-            await Promise.all([fetchSuppliers(), fetchProducts(), fetchAttributes()]);
+            await Promise.all([
+              fetchSuppliers(),
+              fetchProducts(),
+              fetchAttributes(),
+            ]);
           } catch (error) {
             console.error("Error loading data:", error);
           } finally {
@@ -549,17 +581,28 @@ export default {
           if (props.receipt) {
             formData.value = {
               ...props.receipt,
-              supplierId: typeof props.receipt.supplierId === 'object' ? props.receipt.supplierId._id : props.receipt.supplierId,
+              supplierId:
+                typeof props.receipt.supplierId === "object"
+                  ? props.receipt.supplierId._id
+                  : props.receipt.supplierId,
               import_details: Array.isArray(props.receipt.import_details)
-                ? props.receipt.import_details.map(detail => ({
+                ? props.receipt.import_details.map((detail) => ({
                     ...detail,
-                    productId: typeof detail.productId === 'object' ? detail.productId._id : detail.productId,
-                    variantId: typeof detail.variant_id === 'object' ? detail.variant_id._id : (detail.variant_id || detail.variantId),
+                    productId:
+                      typeof detail.productId === "object"
+                        ? detail.productId._id
+                        : detail.productId,
+                    variantId:
+                      typeof detail.variant_id === "object"
+                        ? detail.variant_id._id
+                        : detail.variant_id || detail.variantId,
                   }))
                 : [],
             };
             // Tính lại total cho từng dòng
-            formData.value.import_details.forEach((_, idx) => calculateDetailTotal(idx));
+            formData.value.import_details.forEach((_, idx) =>
+              calculateDetailTotal(idx)
+            );
           }
         }
       },
@@ -593,7 +636,7 @@ export default {
       isInputDisabled,
       isStatusDisabled,
       availableStatuses,
-      getStatusText
+      getStatusText,
     };
   },
 };
