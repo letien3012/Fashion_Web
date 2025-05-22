@@ -4,14 +4,11 @@ import Register from "../views/Register.vue";
 import adminRoutes from "./admin";
 import ForgotPW from "../views/ForgotPW.vue";
 import Verification from "../views/OtpVerification.vue";
-<<<<<<< HEAD
 import CreatePW from "../views/CreatePW.vue";
 // import AuthCallback from "../views/AuthCallback.vue";
-=======
 import About from "../views/About.vue";
 import Home from "../views/Home.vue";
 import ProductDetail from "../views/ProductDetail.vue";
->>>>>>> 0702b8245506a64947d54814e87c734310bae32c
 
 const routes = [
   {

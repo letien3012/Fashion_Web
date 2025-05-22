@@ -44,6 +44,8 @@
 </template>
 
 <script>
+import { toast } from "vue3-toastify";
+
 export default {
   data() {
     return {
@@ -57,7 +59,7 @@ export default {
     async handleSignup() {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(this.email)) {
-        alert("Vui lòng nhập một địa chỉ email hợp lệ.");
+        toast.error("Vui lòng nhập một địa chỉ email hợp lệ.");
         return;
       }
 
@@ -77,7 +79,9 @@ export default {
         const checkData = await checkRes.json();
         if (checkRes.ok) {
           if (checkData.exists) {
-            alert("Email này đã được đăng ký. Vui lòng sử dụng email khác.");
+            toast.error(
+              "Email này đã được đăng ký. Vui lòng sử dụng email khác."
+            );
             return;
           }
 
@@ -96,16 +100,17 @@ export default {
           const data = await response.json();
           if (response.ok) {
             localStorage.setItem("signup_email", this.email);
+            toast.success("Mã xác thực đã được gửi đến email của bạn.");
             this.$router.push({ name: "VerificationOtp" });
           } else {
-            alert(data.message || "Gửi mã xác thực thất bại.");
+            toast.error(data.message || "Gửi mã xác thực thất bại.");
           }
         } else {
-          alert(checkData.message || "Lỗi kiểm tra email.");
+          toast.error(checkData.message || "Lỗi kiểm tra email.");
         }
       } catch (error) {
         console.error("Lỗi:", error);
-        alert("Lỗi kết nối đến server.");
+        toast.error("Lỗi kết nối đến server.");
       }
     },
   },
