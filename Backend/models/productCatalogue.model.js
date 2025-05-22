@@ -1,50 +1,54 @@
-const mongoose = require('mongoose');
-const ImageModel = require('./image.model');
+const mongoose = require("mongoose");
+const ImageModel = require("./image.model");
 
 const productCatalogueSchema = new mongoose.Schema({
   name: {
     type: String,
-    required: true
+    required: true,
   },
   description: {
     type: String,
-    default: ""
+    default: "",
   },
   icon: {
     type: String,
-    default: null
+    default: null,
   },
   parentId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'ProductCatalogue',
-    default: null
+    ref: "ProductCatalogue",
+    default: null,
   },
   createdAt: {
     type: Date,
-    default: Date.now
+    default: Date.now,
   },
   updatedAt: {
     type: Date,
-    default: null
+    default: null,
   },
   deletedAt: {
     type: Date,
-    default: null
-  }
+    default: null,
+  },
 });
 
 // Pre-save middleware to handle icon
-productCatalogueSchema.pre('save', async function(next) {
-  if (this.isModified('icon') && this.icon && this.icon.startsWith('data:image')) {
+productCatalogueSchema.pre("save", async function (next) {
+  if (
+    this.isModified("icon") &&
+    this.icon &&
+    this.icon.startsWith("data:image")
+  ) {
     const tempId = this._id || Date.now().toString();
-    const iconPath = await ImageModel.saveImage(this.icon, 'icon');
+    const iconPath = await ImageModel.saveImage(this.icon, "icon");
     this.icon = iconPath;
   }
   next();
 });
 
 // Static method to get catalogue by ID
-productCatalogueSchema.statics.getById = async function(id) {
+productCatalogueSchema.statics.getById = async function (id) {
   try {
     const catalogue = await this.findById(id);
     if (!catalogue) {
@@ -60,11 +64,11 @@ productCatalogueSchema.statics.getById = async function(id) {
 };
 
 // Static method to get children catalogues
-productCatalogueSchema.statics.getChildren = async function(parentId) {
+productCatalogueSchema.statics.getChildren = async function (parentId) {
   try {
     return await this.find({
       parentId,
-      deletedAt: null
+      deletedAt: null,
     });
   } catch (error) {
     throw new Error(`Error fetching child catalogues: ${error.message}`);
@@ -72,20 +76,20 @@ productCatalogueSchema.statics.getChildren = async function(parentId) {
 };
 
 // Static method to get catalogue tree
-productCatalogueSchema.statics.getTree = async function() {
+productCatalogueSchema.statics.getTree = async function () {
   try {
     const allCatalogues = await this.find({ deletedAt: null });
-    
+
     const catalogueMap = new Map();
-    allCatalogues.forEach(cat => {
+    allCatalogues.forEach((cat) => {
       catalogueMap.set(cat._id.toString(), {
         ...cat.toObject(),
-        children: []
+        children: [],
       });
     });
 
     const tree = [];
-    allCatalogues.forEach(cat => {
+    allCatalogues.forEach((cat) => {
       const catObj = catalogueMap.get(cat._id.toString());
       if (cat.parentId) {
         const parent = catalogueMap.get(cat.parentId.toString());
@@ -104,7 +108,7 @@ productCatalogueSchema.statics.getTree = async function() {
 };
 
 // Static method to get all catalogues
-productCatalogueSchema.statics.getAll = async function() {
+productCatalogueSchema.statics.getAll = async function () {
   try {
     return await this.find({ deletedAt: null });
   } catch (error) {
@@ -112,6 +116,9 @@ productCatalogueSchema.statics.getAll = async function() {
   }
 };
 
-const ProductCatalogue = mongoose.model('ProductCatalogue', productCatalogueSchema);
+const ProductCatalogue = mongoose.model(
+  "ProductCatalogue",
+  productCatalogueSchema
+);
 
-module.exports = ProductCatalogue; 
+module.exports = ProductCatalogue;

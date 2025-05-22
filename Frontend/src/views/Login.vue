@@ -4,12 +4,14 @@
     <div class="login-page">
       <FormLogin :loading="loading" @submit-login="handleLogin" />
     </div>
+    <Footer></Footer>
   </div>
 </template>
 
 <script>
 import FormLogin from "../components/FormLogin.vue";
 import Header from "../components/Header.vue";
+import Footer from "../components/Footer.vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
 
@@ -18,6 +20,7 @@ export default {
   components: {
     FormLogin,
     Header,
+    Footer,
   },
   data() {
     return {
