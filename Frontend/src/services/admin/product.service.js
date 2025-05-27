@@ -10,24 +10,20 @@ const getAuthHeaders = () => {
   };
 };
 
-const attributeService = {
+const AdminProductService = {
   backendUrl,
 
   async getAll() {
-    return axios.get(`${backendUrl}/api/attributes`, getAuthHeaders());
+    return axios.get(`${backendUrl}/api/products`, getAuthHeaders());
   },
 
   async add(data) {
-    return axios.post(
-      `${backendUrl}/api/attributes/add`,
-      data,
-      getAuthHeaders()
-    );
+    return axios.post(`${backendUrl}/api/products/add`, data, getAuthHeaders());
   },
 
   async update(id, data) {
     return axios.put(
-      `${backendUrl}/api/attributes/update/${id}`,
+      `${backendUrl}/api/products/update/${id}`,
       data,
       getAuthHeaders()
     );
@@ -35,10 +31,10 @@ const attributeService = {
 
   async delete(id) {
     return axios.delete(
-      `${backendUrl}/api/attributes/delete/${id}`,
+      `${backendUrl}/api/products/delete/${id}`,
       getAuthHeaders()
     );
   },
 };
 
-export default attributeService;
+export default AdminProductService;

@@ -1,12 +1,23 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3005/api";
+const backendUrl = "http://localhost:3005";
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  };
+};
 
-export const productService = {
+const productService = {
+  backendUrl,
+
   async getNewArrivals() {
     try {
-      const response = await axios.get(`${API_URL}/products`, {
+      const response = await axios.get(`${backendUrl}/api/products`, {
         params: { sort: "createdAt", order: "desc" },
+        ...getAuthHeaders(),
       });
       return response.data;
     } catch (error) {
@@ -18,7 +29,8 @@ export const productService = {
   async getProductsByCategory(categoryId) {
     try {
       const response = await axios.get(
-        `${API_URL}/products/category/${categoryId}`
+        `${backendUrl}/api/products/category/${categoryId}`,
+        getAuthHeaders()
       );
       return response.data;
     } catch (error) {
@@ -29,7 +41,7 @@ export const productService = {
 
   async getProductById(id) {
     try {
-      const response = await axios.get(`${API_URL}/products/${id}`);
+      const response = await axios.get(`${backendUrl}/api/products/${id}`);
       console.log("Product response:", response); // Debug log
       if (response.data && response.data.data) {
         return response.data;
@@ -47,7 +59,7 @@ export const productService = {
   async getProductVariants(productId, size, color) {
     try {
       const response = await axios.get(
-        `${API_URL}/products/${productId}/variants`,
+        `${backendUrl}/api/products/${productId}/variants`,
         {
           params: { size, color },
         }
@@ -61,7 +73,7 @@ export const productService = {
   async getProductVariantDetails(productId, size, color) {
     try {
       const response = await axios.get(
-        `${API_URL}/products/${productId}/variant-details`,
+        `${backendUrl}/api/products/${productId}/variant-details`,
         {
           params: { size, color },
         }
@@ -82,7 +94,7 @@ export const productService = {
 
   async searchProducts(query) {
     try {
-      const response = await axios.get(`${API_URL}/products/search`, {
+      const response = await axios.get(`${backendUrl}/api/products/search`, {
         params: { q: query },
       });
       return response.data;
@@ -94,7 +106,7 @@ export const productService = {
 
   async getProductPromotions(productId, variantId) {
     try {
-      const response = await axios.get(`${API_URL}/promotions/active`);
+      const response = await axios.get(`${backendUrl}/api/promotions/active`);
       if (response.data && response.data.data) {
         const promotions = response.data.data;
         const now = new Date();
@@ -180,4 +192,75 @@ export const productService = {
       return [];
     }
   },
+
+  async getVariantConsignment(variantId) {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/variants/${variantId}/consignment`,
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getVariantStock(productId, variantId) {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/consignments/product/${productId}/variant/${variantId}/stock`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching variant stock:", error);
+      throw error;
+    }
+  },
+
+  async getAttributeById(id) {
+    try {
+      const response = await axios.get(`${backendUrl}/api/attributes/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getAttributeCatalogueById(id) {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/attributeCatalogues/${id}`
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async getAttributeWithCatalogue(id) {
+    try {
+      const attribute = await this.getAttributeById(id);
+      if (attribute && attribute.data) {
+        const catalogue = await this.getAttributeCatalogueById(
+          attribute.data.attributeCatalogueId
+        );
+        return {
+          ...attribute.data,
+          group: catalogue,
+        };
+      }
+      return null;
+    } catch (error) {
+      throw error;
+    }
+  },
 };
+
+export const getVariantPrice = async (productId, variantId) => {
+  const res = await axios.get(
+    `${backendUrl}/api/products/variant-price/${productId}/${variantId}`
+  );
+  return res.data; // { price, priceSale }
+};
+
+export { productService };

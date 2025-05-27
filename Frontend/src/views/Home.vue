@@ -1,199 +1,225 @@
 <template>
-  <div>
-    <Header />
-    <div class="home">
-      <!-- Banner Slider -->
-      <div class="banner-slider">
-        <div class="slider-container">
-          <div
-            class="slide"
+  <Header />
+  <div class="home">
+    <!-- Banner Slider -->
+    <div class="banner-slider">
+      <div class="slider-container">
+        <div
+          class="slide"
+          v-for="(slide, index) in slides"
+          :key="index"
+          :class="{ active: currentSlide === index }"
+        >
+          <img :src="slide.image" :alt="slide.title" />
+          <div class="slide-content">
+            <h2>{{ slide.title }}</h2>
+            <p>{{ slide.description }}</p>
+            <router-link :to="slide.link" class="slide-btn"
+              >Shop Now</router-link
+            >
+          </div>
+        </div>
+        <button class="slider-btn prev" @click="prevSlide">
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <button class="slider-btn next" @click="nextSlide">
+          <i class="fas fa-chevron-right"></i>
+        </button>
+        <div class="slider-dots">
+          <span
             v-for="(slide, index) in slides"
             :key="index"
             :class="{ active: currentSlide === index }"
-          >
-            <img :src="slide.image" :alt="slide.title" />
-            <div class="slide-content">
-              <h2>{{ slide.title }}</h2>
-              <p>{{ slide.description }}</p>
-              <router-link :to="slide.link" class="slide-btn"
-                >Shop Now</router-link
+            @click="currentSlide = index"
+          ></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Featured Categories -->
+    <section class="categories">
+      <h2 class="section-title">Shop by Category</h2>
+      <div class="category-grid">
+        <div
+          class="category-card"
+          v-for="category in categories"
+          :key="category.id"
+        >
+          <div class="category-image">
+            <img :src="category.image" :alt="category.name" />
+            <div class="category-overlay">
+              <router-link :to="category.link" class="category-btn"
+                >View Collection</router-link
               >
             </div>
           </div>
-          <button class="slider-btn prev" @click="prevSlide">
-            <i class="fas fa-chevron-left"></i>
-          </button>
-          <button class="slider-btn next" @click="nextSlide">
-            <i class="fas fa-chevron-right"></i>
-          </button>
-          <div class="slider-dots">
-            <span
-              v-for="(slide, index) in slides"
-              :key="index"
-              :class="{ active: currentSlide === index }"
-              @click="currentSlide = index"
-            ></span>
-          </div>
+          <h3 class="category-name">{{ category.name }}</h3>
+          <p class="category-count">{{ category.count }} Products</p>
         </div>
       </div>
+    </section>
 
-      <!-- Featured Categories -->
-      <section class="categories">
-        <h2 class="section-title">Shop by Category</h2>
-        <div class="category-grid">
-          <div
-            class="category-card"
-            v-for="category in categories"
-            :key="category.id"
-          >
-            <div class="category-image">
-              <img :src="category.image" :alt="category.name" />
-              <div class="category-overlay">
-                <router-link :to="category.link" class="category-btn"
-                  >View Collection</router-link
+    <!-- Featured Products -->
+    <section class="featured-products">
+      <h2 class="section-title">Featured Products</h2>
+      <div class="slide-controls">
+        <button @click="prevFeatured" :disabled="featuredStart === 0">
+          Prev
+        </button>
+        <button
+          @click="nextFeatured"
+          :disabled="featuredStart + featuredPerPage >= featuredProducts.length"
+        >
+          Next
+        </button>
+      </div>
+      <div class="product-grid">
+        <router-link
+          v-for="product in featuredProducts.slice(
+            featuredStart,
+            featuredStart + featuredPerPage
+          )"
+          :key="product.id"
+          :to="getProductDetailLink(product)"
+          class="product-card"
+        >
+          <div class="product-image">
+            <img :src="product.image" :alt="product.name" />
+            <div class="product-badge" v-if="product.badge">
+              {{ product.badge }}
+            </div>
+            <div class="product-overlay">
+              <button class="add-to-cart-btn" @click.prevent>
+                <i class="fas fa-cart-plus"></i>
+              </button>
+            </div>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name" :title="product.name">
+              {{ product.name }}
+            </h3>
+            <div class="product-meta">
+              <span class="product-rating">
+                <i
+                  class="fas fa-star"
+                  v-for="n in 5"
+                  :key="n"
+                  :class="{ active: n <= product.rating }"
+                ></i>
+              </span>
+              <div class="product-price-container">
+                <span
+                  class="product-price"
+                  :class="{ 'has-sale': product.salePrice }"
                 >
+                  {{ formatVND(product.salePrice || product.price) }}
+                </span>
+                <span v-if="product.salePrice" class="product-sale-price">
+                  {{ formatVND(product.price) }}
+                </span>
               </div>
             </div>
-            <h3 class="category-name">{{ category.name }}</h3>
-            <p class="category-count">{{ category.count }} Products</p>
           </div>
-        </div>
-      </section>
+        </router-link>
+      </div>
+    </section>
 
-      <!-- Featured Products -->
-      <section class="featured-products">
-        <h2 class="section-title">Featured Products</h2>
-        <div class="slide-controls">
-          <button @click="prevFeatured" :disabled="featuredStart === 0">
-            Prev
-          </button>
-          <button
-            @click="nextFeatured"
-            :disabled="
-              featuredStart + featuredPerPage >= featuredProducts.length
-            "
-          >
-            Next
-          </button>
-        </div>
-        <div class="product-grid">
-          <router-link
-            v-for="product in featuredProducts.slice(
-              featuredStart,
-              featuredStart + featuredPerPage
-            )"
-            :key="product.id"
-            :to="getProductDetailLink(product)"
-            class="product-card"
-          >
-            <div class="product-image">
-              <img :src="product.image" :alt="product.name" />
-              <div class="product-badge" v-if="product.badge">
-                {{ product.badge }}
-              </div>
-              <div class="product-overlay">
-                <button class="add-to-cart-btn" @click.prevent>
-                  <i class="fas fa-cart-plus"></i>
-                </button>
-              </div>
-            </div>
-            <div class="product-info">
-              <h3 class="product-name" :title="product.name">
-                {{ product.name }}
-              </h3>
-              <div class="product-meta">
-                <span class="product-price">${{ product.price }}</span>
-                <span class="product-rating">
-                  <i
-                    class="fas fa-star"
-                    v-for="n in 5"
-                    :key="n"
-                    :class="{ active: n <= product.rating }"
-                  ></i>
-                </span>
-              </div>
-            </div>
-          </router-link>
-        </div>
-      </section>
-
-      <!-- New Arrivals -->
-      <section class="new-arrivals" v-if="!loading && !error">
+    <!-- New Arrivals -->
+    <section class="new-arrivals" v-if="!loading && !error">
+      <div class="section-header">
         <h2 class="section-title">New Arrivals</h2>
-        <div v-if="newArrivals && newArrivals.length > 0" class="product-grid">
-          <router-link
-            v-for="product in newArrivals"
-            :key="product._id"
-            :to="getProductDetailLink(product)"
-            class="product-card"
-          >
-            <div class="product-image">
-              <img
-                :src="product.image"
-                :alt="product.name"
-                @error="
-                  (e) => {
-                    console.error('Image load error:', e);
-                    product.image = '/images/placeholder.jpg';
-                  }
-                "
-              />
-              <div class="discount-badge" v-if="product.discountPercentage">
-                -{{ product.discountPercentage }}%
-              </div>
-              <div class="product-overlay">
-                <button class="add-to-cart-btn" @click.prevent>
+        <p class="section-subtitle">Discover our latest collection</p>
+      </div>
+      <div v-if="newArrivals && newArrivals.length > 0" class="product-grid">
+        <router-link
+          v-for="product in newArrivals"
+          :key="product._id"
+          :to="getProductDetailLink(product)"
+          class="product-card"
+        >
+          <div class="product-image">
+            <img
+              :src="product.image"
+              :alt="product.name"
+              @error="
+                (e) => {
+                  console.error('Image load error:', e);
+                  product.image = '/images/placeholder.jpg';
+                }
+              "
+            />
+            <div class="discount-badge" v-if="product.discountPercentage">
+              <span class="discount-text"
+                >-{{ product.discountPercentage }}%</span
+              >
+            </div>
+            <div class="product-overlay">
+              <div class="overlay-buttons">
+                <!-- <button class="overlay-btn add-to-cart-btn" @click.prevent>
                   <i class="fas fa-cart-plus"></i>
+                </button>
+                <button class="overlay-btn wishlist-btn" @click.prevent>
+                  <i class="fas fa-heart"></i>
+                </button> -->
+                <button class="overlay-btn quick-view-btn">
+                  <i class="fas fa-eye"></i>
                 </button>
               </div>
             </div>
-            <div class="product-info">
-              <h3 class="product-name" :title="product.name">
-                {{ product.name }}
-              </h3>
-              <div class="product-meta">
-                <div class="product-price-container">
-                  <span
-                    class="product-price"
-                    :class="{ 'has-sale': product.salePrice }"
-                  >
-                    ${{ (product.salePrice || product.price).toFixed(2) }}
-                  </span>
-                  <span v-if="product.salePrice" class="product-sale-price">
-                    ${{ product.price.toFixed(2) }}
-                  </span>
-                </div>
-                <span class="product-rating">
-                  <i
-                    class="fas fa-star"
-                    v-for="n in 5"
-                    :key="n"
-                    :class="{ active: n <= (product.favorite_count || 0) }"
-                  ></i>
+          </div>
+          <div class="product-info">
+            <h3 class="product-name" :title="product.name">
+              {{ product.name }}
+            </h3>
+            <div class="product-meta">
+              <span class="product-rating">
+                <i
+                  class="fas fa-star"
+                  v-for="n in 5"
+                  :key="n"
+                  :class="{ active: n <= (product.favorite_count || 0) }"
+                ></i>
+              </span>
+              <div class="product-price-container">
+                <span
+                  class="product-price"
+                  :class="{ 'has-sale': product.salePrice }"
+                >
+                  {{ formatVND(product.salePrice || product.price) }}
+                </span>
+                <span v-if="product.salePrice" class="product-sale-price">
+                  {{ formatVND(product.price) }}
                 </span>
               </div>
             </div>
-          </router-link>
-        </div>
-        <div v-else class="no-products">No new arrivals available</div>
-      </section>
-      <div v-else-if="loading" class="loading-section">
-        <div class="loading">Loading new arrivals...</div>
+          </div>
+        </router-link>
       </div>
-      <div v-else-if="error" class="error-section">
-        <div class="error">{{ error }}</div>
+      <div v-else class="no-products">
+        <i class="fas fa-box-open"></i>
+        <p>No new arrivals available</p>
       </div>
+    </section>
+    <div v-else-if="loading" class="loading-section">
+      <div class="loading">Loading new arrivals...</div>
+    </div>
+    <div v-else-if="error" class="error-section">
+      <div class="error">{{ error }}</div>
     </div>
   </div>
+  <ChatBot />
+  <Footer />
 </template>
 
 <script>
 import Header from "../components/Header.vue";
+import Footer from "../components/Footer.vue";
 import { productService } from "../services/product.service";
+import ChatBot from "../components/ChatBot.vue";
 
 export default {
   name: "Home",
-  components: { Header },
+  components: { Header, Footer, ChatBot },
   data() {
     return {
       currentSlide: 0,
@@ -202,19 +228,22 @@ export default {
         {
           title: "Summer Collection 2024",
           description: "Discover the latest trends in summer fashion",
-          image: "/images/slider1.jpg",
+          image:
+            "https://simplepage.vn/blog/wp-content/uploads/simplepage.vn_.png",
           link: "/collections/summer",
         },
         {
           title: "New Arrivals",
           description: "Check out our newest additions",
-          image: "/images/slider2.jpg",
+          image:
+            "https://d32q3bqti6sa3p.cloudfront.net/uploads/cach-quang-cao-quan-ao-tren-facebook-meta-1608514388.png",
           link: "/collections/new-arrivals",
         },
         {
           title: "Special Offers",
           description: "Limited time deals on selected items",
-          image: "/images/slider3.jpg",
+          image:
+            "https://uix.vn/wp-content/uploads/2020/09/Gold-Pink-and-Blue-Shapes-Wellness-Influencer-Youtube-Thumbnail-Set-4-2-1024x576.png",
           link: "/collections/special-offers",
         },
       ],
@@ -379,6 +408,10 @@ export default {
         0,
         this.featuredStart - this.featuredPerPage
       );
+    },
+    formatVND(value) {
+      if (typeof value !== "number") return "";
+      return value.toLocaleString("vi-VN") + "đ";
     },
   },
   mounted() {
@@ -733,7 +766,9 @@ router-link {
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.3rem;
+  background: white;
+  min-height: 120px;
 }
 
 .product-name {
@@ -741,39 +776,58 @@ router-link {
   font-weight: 600;
   color: #333;
   margin: 0;
-  white-space: nowrap;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.product-card:hover .product-name {
+  color: #ff6b6b;
 }
 
 .product-meta {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
 }
 
 .product-price-container {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .product-price {
-  color: #ff6b6b;
-  font-size: 1.2rem;
+  color: #ff6b6b !important;
+  font-size: 1.3rem;
   font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
 }
 
 .product-sale-price {
   color: #999;
   text-decoration: line-through;
-  font-size: 1rem;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  margin-left: 0.5rem;
 }
 
 .product-rating {
   color: #ffd700;
   font-size: 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .product-rating i {
@@ -821,11 +875,35 @@ router-link {
     font-size: 2rem;
   }
   .product-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(1, 1fr);
   }
 
   .new-arrivals {
     padding: 2rem 1rem;
+  }
+
+  .product-info {
+    gap: 0.2rem;
+  }
+
+  .product-name {
+    font-size: 1rem;
+    line-height: 1.3;
+    margin: 0;
+  }
+
+  .product-rating {
+    font-size: 0.8rem;
+    text-align: left;
+    justify-content: flex-start;
+  }
+
+  .product-price {
+    font-size: 1.2rem;
+  }
+
+  .product-sale-price {
+    font-size: 0.9rem;
   }
 }
 
@@ -855,5 +933,275 @@ router-link {
   font-size: 1.2rem;
   color: #666;
   grid-column: 1 / -1;
+}
+
+.section-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.section-subtitle {
+  color: #666;
+  font-size: 1.1rem;
+  margin-top: 0.5rem;
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+.product-card {
+  background: #fff;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.product-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.15);
+}
+
+.product-image {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  overflow: hidden;
+  background: #f7f7f7;
+}
+
+.product-image img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-card:hover .product-image img {
+  transform: scale(1.1);
+}
+
+.discount-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: linear-gradient(45deg, #ff6b6b, #ff8787);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.3);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.product-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.4s ease;
+}
+
+.product-card:hover .product-overlay {
+  opacity: 1;
+}
+
+.overlay-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  transform: translateY(0);
+  transition: transform 0.4s ease;
+}
+
+.product-card:hover .overlay-buttons {
+  transform: translateY(0);
+}
+
+.overlay-btn {
+  background: white;
+  border: none;
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #333;
+  font-size: 1.2rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.overlay-btn:hover {
+  background: #ff6b6b;
+  color: white;
+  transform: scale(1.1);
+}
+
+.product-info {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: white;
+  min-height: 120px;
+}
+
+.product-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 0.3s ease;
+}
+
+.product-card:hover .product-name {
+  color: #ff6b6b;
+}
+
+.product-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.product-price-container {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.product-price {
+  color: #ff6b6b !important;
+  font-size: 1.3rem;
+  font-weight: 700;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+
+.product-sale-price {
+  color: #999;
+  text-decoration: line-through;
+  font-size: 1.05rem;
+  white-space: nowrap;
+  margin-left: 0.5rem;
+}
+
+.product-rating {
+  color: #ffd700;
+  font-size: 0.9rem;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.product-rating i {
+  margin-right: 2px;
+}
+
+.product-rating i.active {
+  color: #ffd700;
+}
+
+.no-products {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: #666;
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.no-products i {
+  font-size: 3rem;
+  color: #ddd;
+}
+
+@media (max-width: 1200px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 992px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 576px) {
+  .product-grid {
+    grid-template-columns: repeat(1, 1fr);
+  }
+
+  .section-title {
+    font-size: 1.8rem;
+  }
+
+  .section-subtitle {
+    font-size: 1rem;
+  }
+
+  .overlay-buttons {
+    gap: 0.5rem;
+  }
+
+  .overlay-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  .product-rating {
+    font-size: 0.8rem;
+  }
 }
 </style>

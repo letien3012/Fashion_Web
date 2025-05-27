@@ -8,6 +8,11 @@ import CreatePW from "../views/CreatePW.vue";
 import About from "../views/About.vue";
 import Home from "../views/Home.vue";
 import ProductDetail from "../views/ProductDetail.vue";
+import CartDetail from "../views/CartDetail.vue";
+import Checkout from "../views/Checkout.vue";
+import Customer from "../views/Customer.vue";
+import Profile from "../components/Profile.vue";
+import ChangePW from "../views/ChangePW.vue";
 
 const routes = [
   {
@@ -38,6 +43,39 @@ const routes = [
     name: "ProductDetail",
     component: ProductDetail,
   },
+  {
+    path: "/cart",
+    name: "Cart",
+    component: CartDetail,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/checkout",
+    name: "Checkout",
+    component: Checkout,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/user",
+    name: "Customer",
+    component: Customer,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/profile",
+    name: "Profile",
+    component: Profile,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/change-password",
+    name: "ChangePW",
+    component: ChangePW,
+  },
   ...adminRoutes,
 ];
 
@@ -48,11 +86,11 @@ const router = createRouter({
 
 // Navigation guard
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem("token");
+  const userStr = localStorage.getItem("user");
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next("/admin/login");
+  if (to.meta.requiresAuth && !userStr) {
+    next("/login");
   } else if (to.meta.requiresAdmin && !isAdmin) {
     next("/admin/login");
   } else {

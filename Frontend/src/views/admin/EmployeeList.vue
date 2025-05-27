@@ -34,7 +34,7 @@ import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
 import EmployeeTable from "../../components/admin/EmployeeTable.vue";
 import EmployeeForm from "../../components/admin/EmployeeForm.vue";
-import employeeService from "../../services/employee.service";
+import AdminEmployeeService from "../../services/admin/employee.service";
 
 export default {
   name: "EmployeeList",
@@ -115,7 +115,7 @@ export default {
     async fetchEmployees() {
       try {
         this.loading = true;
-        const response = await employeeService.getAll();
+        const response = await AdminEmployeeService.getAll();
         if (response.data && response.data.data) {
           this.employees = response.data.data;
         } else {
@@ -149,7 +149,7 @@ export default {
         showLoaderOnConfirm: true,
         preConfirm: async () => {
           try {
-            await employeeService.delete(employee._id);
+            await AdminEmployeeService.delete(employee._id);
             return true;
           } catch (error) {
             Swal.showValidationMessage(
@@ -173,7 +173,7 @@ export default {
 
         if (this.isEditing) {
           // Update existing employee
-          response = await employeeService.update(formData._id, {
+          response = await AdminEmployeeService.update(formData._id, {
             fullname: formData.fullname.trim(),
             email: formData.email.trim(),
             phone: formData.phone.trim(),
@@ -190,7 +190,7 @@ export default {
           }
         } else {
           // Add new employee
-          response = await employeeService.add({
+          response = await AdminEmployeeService.add({
             fullname: formData.fullname.trim(),
             email: formData.email.trim(),
             phone: formData.phone.trim(),
@@ -198,7 +198,6 @@ export default {
             address: formData.address.trim(),
             role: formData.role,
             image: formData.image,
-            publish: formData.publish,
           });
 
           if (response.status === 201) {

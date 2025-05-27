@@ -10,16 +10,16 @@ const getAuthHeaders = () => {
   };
 };
 
-const productCatalogueService = {
+const AdminEmployeeService = {
   backendUrl,
 
   async getAll() {
-    return axios.get(`${backendUrl}/api/productCatalogues`, getAuthHeaders());
+    return axios.get(`${backendUrl}/api/employees`, getAuthHeaders());
   },
 
   async add(data) {
     return axios.post(
-      `${backendUrl}/api/productCatalogues/add`,
+      `${backendUrl}/api/employees/add`,
       data,
       getAuthHeaders()
     );
@@ -27,7 +27,7 @@ const productCatalogueService = {
 
   async update(id, data) {
     return axios.put(
-      `${backendUrl}/api/productCatalogues/update/${id}`,
+      `${backendUrl}/api/employees/update/${id}`,
       data,
       getAuthHeaders()
     );
@@ -35,10 +35,21 @@ const productCatalogueService = {
 
   async delete(id) {
     return axios.delete(
-      `${backendUrl}/api/productCatalogues/delete/${id}`,
+      `${backendUrl}/api/employees/delete/${id}`,
       getAuthHeaders()
     );
   },
+
+  async search(query) {
+    return axios.get(`${backendUrl}/api/employees/search`, {
+      params: { query },
+      ...getAuthHeaders(),
+    });
+  },
+
+  async getStats() {
+    return axios.get(`${backendUrl}/api/employees/stats`, getAuthHeaders());
+  },
 };
 
-export default productCatalogueService;
+export default AdminEmployeeService;

@@ -1,11 +1,9 @@
 <template>
-  <div class="login-container">
-    <Header></Header>
-    <div class="login-page">
-      <FormLogin :loading="loading" @submit-login="handleLogin" />
-    </div>
-    <Footer></Footer>
+  <Header></Header>
+  <div class="login-page">
+    <FormLogin :loading="loading" @submit-login="handleLogin" />
   </div>
+  <Footer></Footer>
 </template>
 
 <script>
@@ -39,6 +37,7 @@ export default {
 
         if (response.data.token) {
           localStorage.setItem("token", response.data.token);
+          localStorage.setItem("user", JSON.stringify(response.data.customer));
           toast.success("Đăng nhập thành công!");
           this.$router.push("/");
         }

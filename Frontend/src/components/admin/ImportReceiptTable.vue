@@ -13,7 +13,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="receipt in importReceipts" :key="receipt._id" :class="{ 'highlight-row': receipt.status === 'pending' }">
+          <tr
+            v-for="receipt in importReceipts"
+            :key="receipt._id"
+            :class="{ 'highlight-row': receipt.status === 'pending' }"
+          >
             <td>{{ receipt.code }}</td>
             <td>{{ receipt.supplierId?.name }}</td>
             <td>{{ formatDate(receipt.createdAt) }}</td>
@@ -25,28 +29,32 @@
             </td>
             <td>
               <div class="actions">
-                <button class="edit-btn" @click="viewDetails(receipt)" title="Xem chi tiết">
+                <button
+                  class="edit-btn"
+                  @click="viewDetails(receipt)"
+                  title="Xem chi tiết"
+                >
                   <i class="fas fa-eye"></i>
                 </button>
-                <button 
-                  class="edit-btn" 
-                  @click="editReceipt(receipt)" 
+                <button
+                  class="edit-btn"
+                  @click="editReceipt(receipt)"
                   v-if="receipt.status === 'pending'"
                   title="Chỉnh sửa"
                 >
                   <i class="fas fa-edit"></i>
                 </button>
-                <button 
-                  class="edit-btn" 
-                  @click="updateStatus(receipt)" 
+                <button
+                  class="edit-btn"
+                  @click="updateStatus(receipt)"
                   v-if="receipt.status === 'processing'"
                   title="Cập nhật trạng thái"
                 >
                   <i class="fas fa-arrow-right"></i>
                 </button>
-                <button 
-                  class="delete-btn" 
-                  @click="confirmDelete(receipt)" 
+                <button
+                  class="delete-btn"
+                  @click="confirmDelete(receipt)"
                   v-if="receipt.status === 'pending'"
                   title="Xóa"
                 >
@@ -71,36 +79,38 @@
 
 <script>
 import { ref } from "vue";
-import '../../assets/styles/admin/list.css';
-import '../../assets/styles/admin/table.css';
+import "../../assets/styles/admin/list.css";
+import "../../assets/styles/admin/table.css";
 
 export default {
   name: "ImportReceiptTable",
   props: {
     importReceipts: {
       type: Array,
-      required: true
-    }
+      required: true,
+    },
   },
-  emits: ['edit', 'delete', 'view', 'update-status'],
+  emits: ["edit", "delete", "view", "update-status"],
   setup(props, { emit }) {
     const formatDate = (date) => {
-      if (!date) return '';
+      if (!date) return "";
       const d = new Date(date);
-      return isNaN(d.getTime()) ? '' : d.toLocaleDateString('vi-VN', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+      return isNaN(d.getTime())
+        ? ""
+        : d.toLocaleDateString("vi-VN", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+            hour: "2-digit",
+            minute: "2-digit",
+          });
     };
 
     const formatCurrency = (amount) => {
-      if (typeof amount !== 'number' || isNaN(amount)) return '0 ₫';
-      return new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
+      if (typeof amount !== "number" || isNaN(amount)) return "0 ₫";
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
       }).format(amount);
     };
 
@@ -115,20 +125,20 @@ export default {
     };
 
     const updateStatus = (receipt) => {
-      emit('update-status', receipt);
+      emit("update-status", receipt);
     };
 
     const viewDetails = (receipt) => {
-      emit('view', receipt);
+      emit("view", receipt);
     };
 
     const editReceipt = (receipt) => {
-      emit('edit', receipt);
+      emit("edit", receipt);
     };
 
     const confirmDelete = (receipt) => {
       if (confirm("Bạn có chắc chắn muốn xóa phiếu nhập này?")) {
-        emit('delete', receipt);
+        emit("delete", receipt);
       }
     };
 
@@ -139,7 +149,7 @@ export default {
       viewDetails,
       editReceipt,
       confirmDelete,
-      updateStatus
+      updateStatus,
     };
   },
 };
@@ -216,7 +226,8 @@ export default {
   gap: 8px;
 }
 
-.edit-btn, .delete-btn {
+.edit-btn,
+.delete-btn {
   padding: 6px;
   border: none;
   border-radius: 4px;

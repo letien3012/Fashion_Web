@@ -327,3 +327,16 @@ exports.findVariantIndex = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+// Lấy giá gốc và giá giảm của 1 variant
+exports.getVariantPrice = async (req, res) => {
+  try {
+    const { productId, variantId } = req.params;
+    console.log("getVariantPrice called with:", productId, variantId);
+    const result = await Product.getVariantPrice(productId, variantId);
+    res.json(result);
+  } catch (error) {
+    console.error("getVariantPrice error:", error);
+    res.status(400).json({ message: error.message });
+  }
+};

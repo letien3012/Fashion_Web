@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema({
       image: { type: String, required: true },
       attributeId1: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
       attributeId2: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
-      publish: { type: Boolean, default: true }
+      publish: { type: Boolean, default: true },
     },
   ],
   publish: { type: Boolean, default: false },
@@ -284,7 +284,7 @@ Product.update = async function (id, data) {
     // Handle variants update
     if (data.variants && data.variants.length > 0) {
       const oldProduct = await Product.findById(id);
-      
+
       // Delete old variant images
       if (oldProduct.variants && oldProduct.variants.length > 0) {
         const oldVariantImages = oldProduct.variants
@@ -304,13 +304,11 @@ Product.update = async function (id, data) {
     }
 
     updateData.updatedAt = new Date();
-    
+
     // Use findByIdAndUpdate with new: true to get the updated document
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    ).populate('variants.attributeId1 variants.attributeId2');
+    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).populate("variants.attributeId1 variants.attributeId2");
 
     console.log("Product updated:", updatedProduct);
     return updatedProduct;
@@ -458,5 +456,22 @@ Product.decrementFavoriteCount = async function (id) {
 Product.checkVariantQuantity = null;
 Product.updateVariantQuantity = null;
 Product.checkAndUpdateVariantQuantity = null;
+
+// Lấy giá gốc và giá giảm của 1 variant
+Product.getVariantPrice = async function (productId, variantId) {
+  const product = await this.findById(productId);
+  if (!product) throw new Error("Product not found");
+  const variant =
+    product.variants.id(variantId) ||
+    product.variants.find((v) => v._id.toString() === variantId.toString());
+  if (!variant) {
+    console.log("Variant not found in product:", productId, variantId);
+    throw new Error("Variant not found");
+  }
+  return {
+    price: variant.price,
+    priceSale: product.priceSale || null,
+  };
+};
 
 module.exports = Product;

@@ -34,7 +34,7 @@ import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
 import AttributeCatalogueTable from "../../components/admin/AttributeCatalogueTable.vue";
 import AttributeCatalogueForm from "../../components/admin/AttributeCatalogueForm.vue";
-import attributeCatalogueService from "../../services/attributeCatalogue.service";
+import AdminAttributeCatalogueService from "../../services/admin/attributeCatalogue.service";
 
 export default {
   name: "AttributeCatalogueList",
@@ -93,7 +93,7 @@ export default {
     async fetchCatalogues() {
       try {
         this.loading = true;
-        const response = await attributeCatalogueService.getAll();
+        const response = await AdminAttributeCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.catalogues = response.data.data;
         } else {
@@ -127,7 +127,7 @@ export default {
         showLoaderOnConfirm: true,
         preConfirm: async () => {
           try {
-            await attributeCatalogueService.delete(catalogue._id);
+            await AdminAttributeCatalogueService.delete(catalogue._id);
             return true;
           } catch (error) {
             Swal.showValidationMessage(
@@ -151,7 +151,7 @@ export default {
 
         if (this.isEditing) {
           // Update existing catalogue
-          response = await attributeCatalogueService.update(formData.id, {
+          response = await AdminAttributeCatalogueService.update(formData.id, {
             name: formData.name.trim(),
           });
 
@@ -162,7 +162,7 @@ export default {
           }
         } else {
           // Add new catalogue
-          response = await attributeCatalogueService.add({
+          response = await AdminAttributeCatalogueService.add({
             name: formData.name.trim(),
           });
 

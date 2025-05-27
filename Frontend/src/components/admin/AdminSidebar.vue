@@ -9,6 +9,10 @@
         <i class="fas fa-home"></i>
         <span>Dashboard</span>
       </router-link>
+      <router-link to="/admin/orders" class="nav-item">
+        <i class="fas fa-shopping-cart"></i>
+        <span>Quản lý đơn hàng</span>
+      </router-link>
       <router-link to="/admin/employees" class="nav-item">
         <i class="fas fa-users"></i>
         <span>Quản lý nhân viên</span>

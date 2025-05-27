@@ -71,8 +71,18 @@ const adminRoutes = [
         component: () => import("../views/admin/PromotionList.vue"),
         meta: {
           requiresAuth: true,
-          requiresAdmin: true
-        }
+          requiresAdmin: true,
+        },
+      },
+      {
+        path: "orders",
+        name: "OrderList",
+        component: () => import("../views/admin/OrderList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý đơn hàng",
+        },
       },
     ],
   },

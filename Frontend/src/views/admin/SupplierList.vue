@@ -28,10 +28,10 @@
 
 <script>
 import { ref, onMounted } from "vue";
-import axios from "axios";
 import { toast } from "vue3-toastify";
 import SupplierTable from "../../components/admin/SupplierTable.vue";
 import SupplierForm from "../../components/admin/SupplierForm.vue";
+import { AdminSupplierService } from "../../services/admin/supplier.service";
 
 export default {
   name: "SupplierList",
@@ -43,15 +43,10 @@ export default {
     const suppliers = ref([]);
     const showForm = ref(false);
     const selectedSupplier = ref(null);
-    const backendUrl = "http://localhost:3005";
 
     const fetchSuppliers = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(`${backendUrl}/api/suppliers`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        suppliers.value = response.data.data || response.data;
+        suppliers.value = await AdminSupplierService.getAllSuppliers();
       } catch (error) {
         console.error("Error fetching suppliers:", error);
         toast.error("Không thể tải danh sách nhà cung cấp");
@@ -64,7 +59,14 @@ export default {
     };
 
     const handleDelete = async (supplierId) => {
-      suppliers.value = suppliers.value.filter((s) => s._id !== supplierId);
+      try {
+        await AdminSupplierService.deleteSupplier(supplierId);
+        suppliers.value = suppliers.value.filter((s) => s._id !== supplierId);
+        toast.success("Xóa nhà cung cấp thành công");
+      } catch (error) {
+        console.error("Error deleting supplier:", error);
+        toast.error("Không thể xóa nhà cung cấp");
+      }
     };
 
     const closeForm = () => {

@@ -8,6 +8,15 @@ const consignmentSchema = new mongoose.Schema(
       unique: true,
       trim: true,
     },
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
+    variantId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+    },
     price: {
       type: Number,
       required: true,
@@ -32,7 +41,7 @@ const consignmentSchema = new mongoose.Schema(
 );
 
 // Static method to get consignment by ID
-consignmentSchema.statics.getById = async function(id) {
+consignmentSchema.statics.getById = async function (id) {
   try {
     const consignment = await this.findById(id);
     if (!consignment) {
@@ -45,7 +54,7 @@ consignmentSchema.statics.getById = async function(id) {
 };
 
 // Static method to get all consignments
-consignmentSchema.statics.getAll = async function() {
+consignmentSchema.statics.getAll = async function () {
   try {
     return await this.find();
   } catch (error) {
@@ -54,7 +63,10 @@ consignmentSchema.statics.getAll = async function() {
 };
 
 // Static method to update current quantity
-consignmentSchema.statics.updateCurrentQuantity = async function(id, current_quantity) {
+consignmentSchema.statics.updateCurrentQuantity = async function (
+  id,
+  current_quantity
+) {
   try {
     const consignment = await this.findById(id);
     if (!consignment) {
@@ -78,7 +90,10 @@ consignmentSchema.statics.updateCurrentQuantity = async function(id, current_qua
 };
 
 // Static method to check if consignment has enough quantity
-consignmentSchema.statics.checkQuantity = async function(id, requiredQuantity) {
+consignmentSchema.statics.checkQuantity = async function (
+  id,
+  requiredQuantity
+) {
   try {
     const consignment = await this.findById(id);
     if (!consignment) {
@@ -92,7 +107,7 @@ consignmentSchema.statics.checkQuantity = async function(id, requiredQuantity) {
 };
 
 // Static method to decrease current quantity
-consignmentSchema.statics.decreaseQuantity = async function(id, amount) {
+consignmentSchema.statics.decreaseQuantity = async function (id, amount) {
   try {
     const consignment = await this.findById(id);
     if (!consignment) {
@@ -116,7 +131,7 @@ consignmentSchema.statics.decreaseQuantity = async function(id, amount) {
 };
 
 // Static method to increase current quantity
-consignmentSchema.statics.increaseQuantity = async function(id, amount) {
+consignmentSchema.statics.increaseQuantity = async function (id, amount) {
   try {
     const consignment = await this.findById(id);
     if (!consignment) {
@@ -136,6 +151,56 @@ consignmentSchema.statics.increaseQuantity = async function(id, amount) {
     return consignment;
   } catch (error) {
     throw new Error(`Error increasing quantity: ${error.message}`);
+  }
+};
+
+// Static method to get consignment by product and variant
+consignmentSchema.statics.getByProductAndVariant = async function (
+  productId,
+  variantId
+) {
+  try {
+    const consignment = await this.findOne({
+      productId,
+      variantId,
+      publish: true,
+    });
+    return consignment;
+  } catch (error) {
+    throw new Error(
+      `Error getting consignment by product and variant: ${error.message}`
+    );
+  }
+};
+
+// Static method to get all consignments by product
+consignmentSchema.statics.getByProduct = async function (productId) {
+  try {
+    const consignments = await this.find({
+      productId,
+      publish: true,
+    });
+    return consignments;
+  } catch (error) {
+    throw new Error(`Error getting consignments by product: ${error.message}`);
+  }
+};
+
+// Static method to get stock quantity for a variant
+consignmentSchema.statics.getVariantStock = async function (
+  productId,
+  variantId
+) {
+  try {
+    const consignment = await this.findOne({
+      productId,
+      variantId,
+      publish: true,
+    }).select("current_quantity");
+
+    return consignment ? consignment.current_quantity : 0;
+  } catch (error) {
+    throw new Error(`Error getting variant stock: ${error.message}`);
   }
 };
 

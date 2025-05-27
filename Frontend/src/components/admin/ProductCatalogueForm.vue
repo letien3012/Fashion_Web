@@ -78,7 +78,7 @@
 </template>
 
 <script>
-import productCatalogueService from "../../services/productCatalogue.service";
+import AdminProductCatalogueService from "../../services/admin/productCatalogue.service";
 
 export default {
   name: "ProductCatalogueForm",
@@ -113,7 +113,7 @@ export default {
   methods: {
     async fetchParentCatalogues() {
       try {
-        const response = await productCatalogueService.getAll();
+        const response = await AdminProductCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.parentCatalogues = response.data.data.filter(
             (catalogue) => catalogue._id !== this.formData._id
@@ -145,18 +145,48 @@ export default {
       this.$refs.fileInput.click();
     },
 
-    handleSubmit() {
-      if (!this.validateForm()) {
-        return;
+    async handleSubmit() {
+      try {
+        this.loading = true;
+        let response;
+
+        if (this.isEditing) {
+          // Update existing catalogue
+          response = await AdminProductCatalogueService.update(
+            this.formData.id,
+            {
+              name: this.formData.name.trim(),
+            }
+          );
+
+          if (response.status === 200) {
+            this.$emit("submit", this.formData);
+            this.closeModal();
+          }
+        } else {
+          // Add new catalogue
+          response = await AdminProductCatalogueService.add({
+            name: this.formData.name.trim(),
+          });
+
+          if (response.status === 201) {
+            this.$emit("submit", this.formData);
+            this.closeModal();
+          }
+        }
+      } catch (error) {
+        console.error("Submit error:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập đã hết hạn");
+          this.$router.push("/admin/login");
+        } else if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        } else {
+          toast.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+        }
+      } finally {
+        this.loading = false;
       }
-
-      const submitData = {
-        ...this.formData,
-        parentId: this.formData.parentId || null,
-      };
-
-      console.log("Submit Data:", submitData);
-      this.$emit("submitCatalogue", submitData);
     },
 
     validateForm() {
@@ -186,7 +216,7 @@ export default {
             !newVal.icon.startsWith("data:")
           ) {
             this.previewImage =
-              productCatalogueService.backendUrl + newVal.icon;
+              AdminProductCatalogueService.backendUrl + newVal.icon;
           } else if (newVal.icon && newVal.icon.startsWith("data:")) {
             this.previewImage = newVal.icon;
           } else {

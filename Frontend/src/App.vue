@@ -11,12 +11,14 @@
   justify-content: center;
 
   min-height: 100vh;
-  background: linear-gradient(
+  /* background: linear-gradient(
       to bottom,
       rgba(65, 184, 131, 0.6) 0%,
       rgba(131, 197, 190, 0.6) 100%
     ),
-    url("./assets/images/bg.jpg");
+    url("./assets/images/bg.jpg"); */
+  background-color: white;
+
   background-position: center;
   background-repeat: no-repeat;
   background-size: cover;

@@ -37,12 +37,8 @@
 </template>
 
 <script>
-import axios from "axios";
 import { toast } from "vue3-toastify";
-
-// Cấu hình axios mặc định
-axios.defaults.withCredentials = true;
-axios.defaults.headers.common["Content-Type"] = "application/json";
+import AdminAuthService from "../../services/admin/auth.service";
 
 export default {
   name: "AdminLogin",
@@ -57,44 +53,13 @@ export default {
     async handleLogin() {
       try {
         this.loading = true;
-        console.log(this.email);
-        console.log(this.password);
-        const response = await axios.post(
-          "http://localhost:3005/api/employees/login",
-          {
-            email: this.email,
-            password: this.password,
-          },
-          {
-            withCredentials: true,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
+        const response = await AdminAuthService.login(
+          this.email,
+          this.password
         );
-        console.log(response.data);
 
-        if (
-          response.data.success &&
-          response.data.token &&
-          response.data.employee
-        ) {
-          // Lưu token và thông tin employee
-          localStorage.setItem("token", response.data.token);
-          localStorage.setItem(
-            "employee",
-            JSON.stringify(response.data.employee)
-          );
-          localStorage.setItem("isAdmin", "true");
-
-          // Cập nhật header mặc định cho axios
-          axios.defaults.headers.common[
-            "Authorization"
-          ] = `Bearer ${response.data.token}`;
-
+        if (response.success) {
           toast.success("Đăng nhập thành công!");
-
-          // Chuyển hướng sau khi đăng nhập thành công
           await this.$router.push("/admin/dashboard");
         } else {
           toast.error("Thông tin đăng nhập không hợp lệ!");
@@ -117,9 +82,7 @@ export default {
   },
   created() {
     // Kiểm tra nếu đã đăng nhập thì chuyển hướng
-    const token = localStorage.getItem("token");
-    const isAdmin = localStorage.getItem("isAdmin");
-    if (token && isAdmin === "true") {
+    if (AdminAuthService.isAuthenticated()) {
       this.$router.push("/admin/dashboard");
     }
   },

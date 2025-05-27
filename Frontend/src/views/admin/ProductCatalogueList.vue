@@ -32,7 +32,7 @@ import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
 import ProductCatalogueTable from "../../components/admin/ProductCatalogueTable.vue";
 import ProductCatalogueForm from "../../components/admin/ProductCatalogueForm.vue";
-import productCatalogueService from "../../services/productCatalogue.service";
+import AdminProductCatalogueService from "../../services/admin/productCatalogue.service";
 
 export default {
   name: "ProductCatalogueList",
@@ -69,7 +69,7 @@ export default {
 
     async fetchCatalogues() {
       try {
-        const response = await productCatalogueService.getAll();
+        const response = await AdminProductCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.catalogues = response.data.data;
         } else {
@@ -113,7 +113,9 @@ export default {
 
     async handleDelete(catalogue) {
       try {
-        const response = await productCatalogueService.delete(catalogue._id);
+        const response = await AdminProductCatalogueService.delete(
+          catalogue._id
+        );
         if (response.status === 200) {
           toast.success("Xóa danh mục thành công");
           this.fetchCatalogues();
@@ -133,24 +135,30 @@ export default {
 
     async handleSubmit(formData) {
       try {
+        this.loading = true;
+        let response;
+
         if (this.isEditing) {
           // Update existing catalogue
-          const response = await productCatalogueService.update(
-            formData._id,
-            formData
-          );
+          response = await AdminProductCatalogueService.update(formData.id, {
+            name: formData.name.trim(),
+          });
+
           if (response.status === 200) {
             toast.success("Cập nhật danh mục thành công");
             this.closeModal();
-            this.fetchCatalogues();
+            await this.fetchCatalogues();
           }
         } else {
           // Add new catalogue
-          const response = await productCatalogueService.add(formData);
+          response = await AdminProductCatalogueService.add({
+            name: formData.name.trim(),
+          });
+
           if (response.status === 201) {
             toast.success("Thêm danh mục thành công");
             this.closeModal();
-            this.fetchCatalogues();
+            await this.fetchCatalogues();
           }
         }
       } catch (error) {
@@ -158,11 +166,13 @@ export default {
         if (error.response?.status === 401) {
           toast.error("Phiên đăng nhập đã hết hạn");
           this.$router.push("/admin/login");
-        } else if (error.response?.status === 500) {
-          toast.error("Lỗi server");
+        } else if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
         } else {
-          toast.error(error.response?.data?.message || "Có lỗi xảy ra");
+          toast.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
         }
+      } finally {
+        this.loading = false;
       }
     },
 

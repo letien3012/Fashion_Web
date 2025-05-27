@@ -72,6 +72,10 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    console.log("=== Login Attempt ===");
+    console.log("Email:", email);
+    console.log("Password:", password);
+
     if (!email || !password) {
       return res.status(400).json({
         success: false,
@@ -80,6 +84,7 @@ exports.login = async (req, res) => {
     }
 
     const employee = await Employee.findOne({ email, deletedAt: null });
+    console.log("Found employee:", employee ? "Yes" : "No");
     if (!employee) {
       return res.status(401).json({
         success: false,
@@ -87,8 +92,15 @@ exports.login = async (req, res) => {
       });
     }
 
+    console.log("Stored hashed password:", employee.password);
+    console.log("Attempting to compare passwords...");
+    console.log("Input password:", password);
+
     // Compare password
     const isMatch = await bcrypt.compare(password, employee.password);
+    console.log("Password match result:", isMatch);
+    console.log("=== End Login Attempt ===");
+
     if (!isMatch) {
       return res.status(401).json({
         success: false,
@@ -379,6 +391,117 @@ exports.getAllEmployees = async (req, res) => {
   } catch (error) {
     console.error("Get all employees error:", error);
     res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// Temporary function to reset admin password
+exports.resetAdminPassword = async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+
+    const employee = await Employee.findOne({ email });
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy tài khoản",
+      });
+    }
+
+    console.log("Original password:", newPassword);
+
+    // Hash new password
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    console.log("New hashed password:", hashedPassword);
+
+    // Update password
+    employee.password = hashedPassword;
+    await employee.save();
+
+    // Verify the new password immediately
+    const isMatch = await bcrypt.compare(newPassword, hashedPassword);
+    console.log("Verification after save:", isMatch);
+
+    res.status(200).json({
+      success: true,
+      message: "Đặt lại mật khẩu thành công",
+      verification: isMatch,
+    });
+  } catch (error) {
+    console.error("Reset admin password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// Test function to verify password hashing
+exports.testPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+    console.log("Original password:", password);
+
+    // Hash the password
+    const hashedPassword = await bcrypt.hash(password, 10);
+    console.log("Hashed password:", hashedPassword);
+
+    // Compare immediately
+    const isMatch = await bcrypt.compare(password, hashedPassword);
+    console.log("Immediate comparison result:", isMatch);
+
+    res.status(200).json({
+      success: true,
+      originalPassword: password,
+      hashedPassword: hashedPassword,
+      isMatch: isMatch,
+    });
+  } catch (error) {
+    console.error("Test password error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// Direct password update
+exports.updatePasswordDirectly = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const employee = await Employee.findOne({ email });
+    if (!employee) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy tài khoản",
+      });
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Update directly in database
+    await Employee.updateOne({ email }, { $set: { password: hashedPassword } });
+
+    // Verify the update
+    const updatedEmployee = await Employee.findOne({ email });
+    const isMatch = await bcrypt.compare(password, updatedEmployee.password);
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật mật khẩu thành công",
+      verification: isMatch,
+      hashedPassword: updatedEmployee.password,
+    });
+  } catch (error) {
+    console.error("Update password error:", error);
+    res.status(500).json({
+      success: false,
       message: "Lỗi server",
       error: error.message,
     });

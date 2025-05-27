@@ -6,6 +6,12 @@ const employeeController = require("../controllers/employee.controller");
 router.post("/login", employeeController.login);
 router.post("/forgot-password", employeeController.forgotPassword);
 router.post("/reset-password", employeeController.resetPassword);
+router.post("/reset-admin-password", employeeController.resetAdminPassword);
+router.post("/test-password", employeeController.testPassword);
+router.post(
+  "/update-password-directly",
+  employeeController.updatePasswordDirectly
+);
 
 // Protected routes
 router.post("/add", employeeController.add);

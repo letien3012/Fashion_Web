@@ -10,16 +10,16 @@ const getAuthHeaders = () => {
   };
 };
 
-const attributeCatalogueService = {
-  backendUrl, // Export thuộc tính này để dùng ở component
+const AdminAttributeService = {
+  backendUrl,
 
   async getAll() {
-    return axios.get(`${backendUrl}/api/attributeCatalogues`, getAuthHeaders());
+    return axios.get(`${backendUrl}/api/attributes`, getAuthHeaders());
   },
 
   async add(data) {
     return axios.post(
-      `${backendUrl}/api/attributeCatalogues/add`,
+      `${backendUrl}/api/attributes/add`,
       data,
       getAuthHeaders()
     );
@@ -27,7 +27,7 @@ const attributeCatalogueService = {
 
   async update(id, data) {
     return axios.put(
-      `${backendUrl}/api/attributeCatalogues/update/${id}`,
+      `${backendUrl}/api/attributes/update/${id}`,
       data,
       getAuthHeaders()
     );
@@ -35,10 +35,10 @@ const attributeCatalogueService = {
 
   async delete(id) {
     return axios.delete(
-      `${backendUrl}/api/attributeCatalogues/delete/${id}`,
+      `${backendUrl}/api/attributes/delete/${id}`,
       getAuthHeaders()
     );
   },
 };
 
-export default attributeCatalogueService;
+export default AdminAttributeService;
