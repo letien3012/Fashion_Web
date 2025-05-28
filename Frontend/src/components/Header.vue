@@ -24,7 +24,7 @@
     <router-link to="/" class="logo">JUNO</router-link>
     <nav class="nav-menu">
       <router-link to="/hang-moi" class="nav-item">HÀNG MỚI</router-link>
-      <router-link to="/san-pham" class="nav-item">SẢN PHẨM</router-link>
+      <router-link to="/products" class="nav-item">SẢN PHẨM</router-link>
       <router-link to="/bst-he-nonstop" class="nav-item"
         >BST HÈ NONSTOP</router-link
       >

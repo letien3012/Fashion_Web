@@ -13,6 +13,7 @@ import Checkout from "../views/Checkout.vue";
 import Customer from "../views/Customer.vue";
 import Profile from "../components/Profile.vue";
 import ChangePW from "../views/ChangePW.vue";
+import Products from "../views/Products.vue";
 
 const routes = [
   {
@@ -76,6 +77,12 @@ const routes = [
     name: "ChangePW",
     component: ChangePW,
   },
+  {
+    path: "/products",
+    name: "Products",
+    component: Products,
+  },
+
   ...adminRoutes,
 ];
 
