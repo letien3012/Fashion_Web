@@ -669,15 +669,50 @@ export default {
       }
     },
     buyNow() {
-      const orderItem = {
-        productId: this.$route.params.id,
-        size: this.selectedAttribute2,
-        color: this.selectedAttribute1,
-        quantity: this.quantity,
-        price: this.displayPrice,
-      };
-      // TODO: Implement buy now functionality
-      alert(`Bạn đã chọn mua ngay ${this.quantity} sản phẩm!`);
+      try {
+        // Check if user is logged in using localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để mua hàng");
+          this.$router.push("/login");
+          return;
+        }
+
+        if (!this.selectedAttribute1 || !this.selectedAttribute2) {
+          toast.error("Vui lòng chọn kích thước và màu sắc");
+          return;
+        }
+
+        const orderItem = {
+          productId: {
+            _id: this.$route.params.id,
+            name: this.product.name,
+            image: this.displayImages[0],
+          },
+          variant: {
+            _id: this.currentVariant._id,
+            sku: `${
+              this.attributes.attribute1[this.selectedAttribute1]?.name || ""
+            } - ${
+              this.attributes.attribute2[this.selectedAttribute2]?.name || ""
+            }`,
+            quantity: this.quantity,
+            price: this.salePrice || this.displayPrice,
+            originPrice: this.displayPrice,
+          },
+          variantId: this.currentVariant._id,
+          quantity: this.quantity,
+          price: this.salePrice || this.displayPrice,
+        };
+
+        // Store order item in localStorage for checkout
+        localStorage.setItem("checkoutItems", JSON.stringify([orderItem]));
+
+        // Navigate to checkout page
+        this.$router.push("/checkout");
+      } catch (error) {
+        toast.error(error.message || "Có lỗi xảy ra khi xử lý đơn hàng");
+      }
     },
     formatDate(dateString) {
       const date = new Date(dateString);

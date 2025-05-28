@@ -250,23 +250,13 @@ const isAllSelected = computed(() => {
 
 const selectedTotalPrice = computed(() => {
   return selectedItems.value.reduce((total, item) => {
-    return (
-      total +
-      item.variants.reduce((itemTotal, variant) => {
-        return itemTotal + variant.price * variant.quantity;
-      }, 0)
-    );
+    return total + item.variant.price * item.variant.quantity;
   }, 0);
 });
 
 const selectedTotalOldPrice = computed(() => {
   return selectedItems.value.reduce((total, item) => {
-    return (
-      total +
-      item.variants.reduce((itemTotal, variant) => {
-        return itemTotal + variant.originPrice * variant.quantity;
-      }, 0)
-    );
+    return total + item.variant.originPrice * item.variant.quantity;
   }, 0);
 });
 

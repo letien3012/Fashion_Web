@@ -38,7 +38,7 @@
 
     <!-- Featured Categories -->
     <section class="categories">
-      <h2 class="section-title">Shop by Category</h2>
+      <h2 class="section-title">Mua Theo Danh Mục</h2>
       <div class="category-grid">
         <div
           class="category-card"
@@ -49,28 +49,28 @@
             <img :src="category.image" :alt="category.name" />
             <div class="category-overlay">
               <router-link :to="category.link" class="category-btn"
-                >View Collection</router-link
+                >Xem Bộ Sưu Tập</router-link
               >
             </div>
           </div>
           <h3 class="category-name">{{ category.name }}</h3>
-          <p class="category-count">{{ category.count }} Products</p>
+          <p class="category-count">{{ category.count }} Sản Phẩm</p>
         </div>
       </div>
     </section>
 
     <!-- Featured Products -->
     <section class="featured-products">
-      <h2 class="section-title">Featured Products</h2>
+      <h2 class="section-title">Sản Phẩm Nổi Bật</h2>
       <div class="slide-controls">
         <button @click="prevFeatured" :disabled="featuredStart === 0">
-          Prev
+          Trước
         </button>
         <button
           @click="nextFeatured"
           :disabled="featuredStart + featuredPerPage >= featuredProducts.length"
         >
-          Next
+          Sau
         </button>
       </div>
       <div class="product-grid">
@@ -127,81 +127,25 @@
     <!-- New Arrivals -->
     <section class="new-arrivals" v-if="!loading && !error">
       <div class="section-header">
-        <h2 class="section-title">New Arrivals</h2>
-        <p class="section-subtitle">Discover our latest collection</p>
+        <h2 class="section-title">Sản Phẩm Mới</h2>
+        <p class="section-subtitle">
+          Khám phá bộ sưu tập mới nhất của chúng tôi
+        </p>
       </div>
       <div v-if="newArrivals && newArrivals.length > 0" class="product-grid">
-        <router-link
+        <ProductItem
           v-for="product in newArrivals"
           :key="product._id"
-          :to="getProductDetailLink(product)"
-          class="product-card"
-        >
-          <div class="product-image">
-            <img
-              :src="product.image"
-              :alt="product.name"
-              @error="
-                (e) => {
-                  console.error('Image load error:', e);
-                  product.image = '/images/placeholder.jpg';
-                }
-              "
-            />
-            <div class="discount-badge" v-if="product.discountPercentage">
-              <span class="discount-text"
-                >-{{ product.discountPercentage }}%</span
-              >
-            </div>
-            <div class="product-overlay">
-              <div class="overlay-buttons">
-                <!-- <button class="overlay-btn add-to-cart-btn" @click.prevent>
-                  <i class="fas fa-cart-plus"></i>
-                </button>
-                <button class="overlay-btn wishlist-btn" @click.prevent>
-                  <i class="fas fa-heart"></i>
-                </button> -->
-                <button class="overlay-btn quick-view-btn">
-                  <i class="fas fa-eye"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-          <div class="product-info">
-            <h3 class="product-name" :title="product.name">
-              {{ product.name }}
-            </h3>
-            <div class="product-meta">
-              <span class="product-rating">
-                <i
-                  class="fas fa-star"
-                  v-for="n in 5"
-                  :key="n"
-                  :class="{ active: n <= (product.favorite_count || 0) }"
-                ></i>
-              </span>
-              <div class="product-price-container">
-                <span
-                  class="product-price"
-                  :class="{ 'has-sale': product.salePrice }"
-                >
-                  {{ formatVND(product.salePrice || product.price) }}
-                </span>
-                <span v-if="product.salePrice" class="product-sale-price">
-                  {{ formatVND(product.price) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </router-link>
+          :product="product"
+        />
       </div>
       <div v-else class="no-products">
         <i class="fas fa-box-open"></i>
-        <p>No new arrivals available</p>
+        <p>Không có sản phẩm mới</p>
       </div>
     </section>
     <div v-else-if="loading" class="loading-section">
-      <div class="loading">Loading new arrivals...</div>
+      <div class="loading">Đang tải sản phẩm mới...</div>
     </div>
     <div v-else-if="error" class="error-section">
       <div class="error">{{ error }}</div>
@@ -216,32 +160,33 @@ import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
 import { productService } from "../services/product.service";
 import ChatBot from "../components/ChatBot.vue";
+import ProductItem from "../components/ProductItem.vue";
 
 export default {
   name: "Home",
-  components: { Header, Footer, ChatBot },
+  components: { Header, Footer, ChatBot, ProductItem },
   data() {
     return {
       currentSlide: 0,
       baseUrl: "http://localhost:3005",
       slides: [
         {
-          title: "Summer Collection 2024",
-          description: "Discover the latest trends in summer fashion",
+          title: "Bộ Sưu Tập Mùa Hè 2024",
+          description: "Khám phá xu hướng thời trang mùa hè mới nhất",
           image:
             "https://simplepage.vn/blog/wp-content/uploads/simplepage.vn_.png",
           link: "/collections/summer",
         },
         {
-          title: "New Arrivals",
-          description: "Check out our newest additions",
+          title: "Sản Phẩm Mới",
+          description: "Xem ngay những sản phẩm mới nhất của chúng tôi",
           image:
             "https://d32q3bqti6sa3p.cloudfront.net/uploads/cach-quang-cao-quan-ao-tren-facebook-meta-1608514388.png",
           link: "/collections/new-arrivals",
         },
         {
-          title: "Special Offers",
-          description: "Limited time deals on selected items",
+          title: "Ưu Đãi Đặc Biệt",
+          description: "Giảm giá có hạn cho các sản phẩm được chọn",
           image:
             "https://uix.vn/wp-content/uploads/2020/09/Gold-Pink-and-Blue-Shapes-Wellness-Influencer-Youtube-Thumbnail-Set-4-2-1024x576.png",
           link: "/collections/special-offers",
@@ -250,28 +195,28 @@ export default {
       categories: [
         {
           id: 1,
-          name: "Men's Fashion",
+          name: "Thời Trang Nam",
           image: "/images/mens.jpg",
           count: 120,
           link: "/category/mens",
         },
         {
           id: 2,
-          name: "Women's Fashion",
+          name: "Thời Trang Nữ",
           image: "/images/womens.jpg",
           count: 150,
           link: "/category/womens",
         },
         {
           id: 3,
-          name: "Accessories",
+          name: "Phụ Kiện",
           image: "/images/accessories.jpg",
           count: 80,
           link: "/category/accessories",
         },
         {
           id: 4,
-          name: "Footwear",
+          name: "Giày Dép",
           image: "/images/footwear.jpg",
           count: 90,
           link: "/category/footwear",

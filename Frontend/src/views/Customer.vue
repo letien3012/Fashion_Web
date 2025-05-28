@@ -44,7 +44,7 @@
       <div v-for="order in filteredOrders" :key="order.id" class="order-group">
         <div class="order-header">
           <div class="order-info">
-            <span class="order-id">Đơn hàng #{{ order.id.slice(-6) }}</span>
+            <span class="order-id">Đơn hàng #{{ order.code }}</span>
             <span class="order-date">{{ order.date }}</span>
           </div>
           <span class="order-status" :class="order.statusClass">
@@ -232,6 +232,7 @@ onMounted(async () => {
           id: order._id,
           date: new Date(order.createdAt).toLocaleDateString(),
           status: order.status,
+          code: order.code,
           statusClass: order.status,
           statusText: getStatusText(order.status),
           total: order.total_price,
