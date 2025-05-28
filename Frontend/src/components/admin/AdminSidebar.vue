@@ -13,6 +13,10 @@
         <i class="fas fa-shopping-cart"></i>
         <span>Quản lý đơn hàng</span>
       </router-link>
+      <router-link to="/admin/reviews" class="nav-item">
+        <i class="fas fa-star"></i>
+        <span>Quản lý đánh giá</span>
+      </router-link>
       <router-link to="/admin/employees" class="nav-item">
         <i class="fas fa-users"></i>
         <span>Quản lý nhân viên</span>

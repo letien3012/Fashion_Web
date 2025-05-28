@@ -43,10 +43,12 @@ const reviewSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  image: {
-    type: String,
-    default: null,
-  },
+  images: [
+    {
+      type: String,
+      default: [],
+    },
+  ],
   reply: [replySchema],
   createdAt: {
     type: Date,
@@ -60,20 +62,23 @@ const reviewSchema = new mongoose.Schema({
   },
 });
 
-// Pre-save middleware to handle image
+// Pre-save middleware to handle images
 reviewSchema.pre("save", async function (next) {
   try {
     console.log("Pre-save middleware - Processing review:", this._id);
 
-    // Handle image
-    if (
-      this.isModified("image") &&
-      this.image &&
-      this.image.startsWith("data:image")
-    ) {
-      console.log("Processing review image");
-      const imagePath = await ImageModel.saveImage(this.image, "review");
-      this.image = imagePath;
+    // Handle images
+    if (this.isModified("images") && this.images && this.images.length > 0) {
+      console.log("Processing review images");
+      const processedImages = await Promise.all(
+        this.images.map(async (image) => {
+          if (image.startsWith("data:image")) {
+            return await ImageModel.saveImage(image, "review");
+          }
+          return image;
+        })
+      );
+      this.images = processedImages;
     }
 
     next();
@@ -86,9 +91,11 @@ reviewSchema.pre("save", async function (next) {
 // Pre-remove middleware to handle image deletion
 reviewSchema.pre("remove", async function (next) {
   try {
-    // Delete image
-    if (this.image) {
-      await ImageModel.deleteImage(this.image);
+    // Delete images
+    if (this.images && this.images.length > 0) {
+      await Promise.all(
+        this.images.map((image) => ImageModel.deleteImage(image))
+      );
     }
     next();
   } catch (error) {
@@ -134,7 +141,7 @@ Review.getByProductId = async function (productId) {
       productId,
       deletedAt: null,
     })
-      .populate("customerId", "name email")
+      .populate("customerId", "fullname avatar")
       .populate("reply.employeeId", "name")
       .sort({ createdAt: -1 });
   } catch (error) {

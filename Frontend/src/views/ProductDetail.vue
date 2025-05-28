@@ -175,82 +175,25 @@
   </div>
 
   <!-- Đánh giá sản phẩm -->
-  <!-- <div class="product-review-section">
-    <h2>Đánh giá sản phẩm</h2>
-    <div v-if="product.reviews.length">
-      <div
-        class="review-item"
-        v-for="(review, idx) in product.reviews"
-        :key="idx"
-      >
-        <img :src="userAvatar" alt="User Avatar" class="user-avatar" />
-        <div class="review-header">
-          <b>{{ review.user }}</b>
-          <span class="review-rating">
-            <i
-              class="fas fa-star"
-              v-for="n in 5"
-              :key="n"
-              :class="{ active: n <= review.rating }"
-            ></i>
-          </span>
-        </div>
-        <div class="review-content">{{ review.content }}</div>
-        <img
-          v-if="review.image"
-          :src="review.image"
-          alt="Review Image"
-          class="review-image"
-        />
-        <div v-if="idx === 0" class="admin-reply">
-          <b>Admin:</b> {{ adminReply }}
-        </div>
-      </div>
-    </div>
-    <div v-else>
-      <i>Chưa có đánh giá nào cho sản phẩm này.</i>
-    </div>
-    <div class="new-review-form">
-      <h3>Gửi đánh giá của bạn</h3>
-      <div class="new-review-rating">
-        <label>Đánh giá của bạn:</label>
-        <div class="option-list">
-          <button
-            v-for="n in 5"
-            :key="n"
-            :class="{ active: newReview.rating >= n }"
-            @click="newReview.rating = n"
-          >
-            ★
-          </button>
-        </div>
-      </div>
-      <textarea
-        v-model="newReview.content"
-        placeholder="Nhập nội dung đánh giá của bạn"
-        rows="3"
-        class="new-review-content"
-      ></textarea>
-      <div class="new-review-image-upload">
-        <label>Chọn ảnh (nếu có):</label>
-        <input type="file" accept="image/*" @change="handleNewReviewImage" />
-      </div>
-      <button @click="submitNewReview" class="submit-review-btn">
-        Gửi đánh giá
-      </button>
-    </div>
-  </div> -->
+  <Review_ProductDetail
+    :product="product"
+    @submit-review="handleReviewSubmit"
+  />
 </template>
 
 <script>
 import Header from "../components/Header.vue";
+import Review_ProductDetail from "../components/Review_ProductDetail.vue";
 import { productService } from "../services/product.service";
 import { cartService } from "../services/cart.service";
 import { toast } from "vue3-toastify";
 
 export default {
   name: "ProductDetail",
-  components: { Header },
+  components: {
+    Header,
+    Review_ProductDetail,
+  },
   data() {
     return {
       activeImage: 0,
@@ -291,6 +234,7 @@ export default {
     };
   },
   async created() {
+    console.log("ProductDetail created hook running.");
     try {
       this.loading = true;
       const productId = this.$route.params.id;
@@ -301,6 +245,7 @@ export default {
 
       if (response && response.data) {
         const productData = response.data;
+        console.log("Product data received:", productData);
         // Xử lý ảnh chính và album
         const mainImage = productData.image.startsWith("http")
           ? productData.image
@@ -337,6 +282,7 @@ export default {
           attributes1: Array.from(attribute1Ids),
           attributes2: Array.from(attribute2Ids),
         };
+        console.log("Product data assigned to this.product:", this.product);
 
         // Set initial attributes if available
         if (this.product.variants.length > 0) {
@@ -351,6 +297,7 @@ export default {
         }
       } else {
         this.error = "Không tìm thấy thông tin sản phẩm";
+        console.log("Product fetch successful but no data received.", response);
       }
     } catch (error) {
       console.error("Error in created hook:", error);
@@ -368,6 +315,7 @@ export default {
     } finally {
       this.loading = false;
       this.attributesLoaded = true;
+      console.log("ProductDetail created hook finished.");
     }
   },
   watch: {
@@ -755,6 +703,15 @@ export default {
         this.thumbnailStartIndex = Math.max(0, this.thumbnailStartIndex - 5);
       }
     },
+    async handleReviewSubmit(review) {
+      try {
+        // Implement review submission logic here
+        // You can call your API service to submit the review
+        toast.success("Đánh giá của bạn đã được gửi thành công!");
+      } catch (error) {
+        toast.error("Có lỗi xảy ra khi gửi đánh giá");
+      }
+    },
   },
 };
 </script>
@@ -1061,90 +1018,5 @@ export default {
   font-style: italic;
   text-align: center;
   padding: 20px 0;
-}
-
-/* Review section styles */
-.product-review-section {
-  max-width: 1100px;
-  margin: 32px auto 40px auto;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  padding: 24px 32px;
-}
-.product-review-section h2 {
-  font-size: 1.3rem;
-  margin-bottom: 10px;
-}
-.review-item {
-  border-bottom: 1px solid #eee;
-  padding: 12px 0;
-  display: flex;
-  flex-direction: column;
-}
-.user-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin-right: 10px;
-}
-.review-header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-weight: 600;
-}
-.review-rating i {
-  color: #ffd700;
-  font-size: 1rem;
-}
-.review-content {
-  margin-top: 4px;
-  color: #444;
-}
-.admin-reply {
-  margin-top: 8px;
-  padding: 8px;
-  background: #f9f9f9;
-  border-radius: 4px;
-}
-.review-image {
-  max-width: 150px;
-  max-height: 150px;
-  border-radius: 4px;
-  margin-top: 8px;
-}
-.new-review-form {
-  margin-top: 24px;
-  padding: 16px;
-  border: 1px solid #eee;
-  border-radius: 8px;
-}
-.new-review-form h3 {
-  font-size: 1.2rem;
-  margin-bottom: 12px;
-}
-.new-review-rating {
-  margin-bottom: 12px;
-}
-.new-review-content {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-family: inherit;
-}
-.new-review-image-upload {
-  margin-top: 12px;
-}
-.submit-review-btn {
-  margin-top: 12px;
-  background: #ff6b6b;
-  color: #fff;
-  border: none;
-  border-radius: 4px;
-  padding: 8px 16px;
-  font-weight: 600;
-  cursor: pointer;
 }
 </style>

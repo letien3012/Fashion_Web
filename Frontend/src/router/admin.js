@@ -84,6 +84,16 @@ const adminRoutes = [
           title: "Quản lý đơn hàng",
         },
       },
+      {
+        path: "reviews",
+        name: "ReviewList",
+        component: () => import("../views/admin/ReviewList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý đánh giá",
+        },
+      },
     ],
   },
 ];
