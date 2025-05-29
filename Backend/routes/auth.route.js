@@ -295,7 +295,6 @@ router.get(
   }
 );
 //Route: VerifyToken
-<<<<<<< HEAD
 router.post("/verifyToken", async (req, res) => {
   const { idToken } = req.body; // thực chất là JWT bạn tạo
 
@@ -327,39 +326,6 @@ router.post("/verifyToken", async (req, res) => {
     return res.status(401).json({ message: "Token không hợp lệ" });
   }
 });
-=======
-// router.post("/verifyToken", async (req, res) => {
-//   const { idToken } = req.body;
-//   try {
-//     const decodedToken = await firebase.admin.auth().verifyIdToken(idToken);
-//     const uid = decodedToken.uid;
-//     const user = await firebase.auth.getUser(uid);
-//     const email = user.email;
-//     let customer = await Customer.getByEmail(email);
-//     console.log(customer);
-//     if (!customer) {
-//       axios
-//         .post("http:localhost:3005/api/customers/add", {
-//           fullname: user.displayName,
-//           email: user.email,
-//           image: user.photoURL,
-//           phone: user.phoneNumber,
-//         })
-//         .then((response) => {
-//           console.log("Response:", response.data);
-//         })
-//         .catch((error) => {
-//           console.error("Error:", error);
-//         });
-//     }
-//     // Tuỳ bạn: lấy thêm email, name...
-//     return res.status(200).json({ uid });
-//   } catch (error) {
-//     console.error("Xác thực token thất bại:", error);
-//     return res.status(401).json({ message: "Token không hợp lệ" });
-//   }
-// });
->>>>>>> 0702b8245506a64947d54814e87c734310bae32c
 
 // module.exports = router;
 // Route: Lấy thông tin user sau đăng nhập
