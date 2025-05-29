@@ -262,4 +262,41 @@ exports.getVariantStock = async (req, res) => {
   }
 };
 
+// Update consignment publish status
+exports.updatePublishStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { publish } = req.body;
+
+    if (typeof publish !== "boolean") {
+      return res.status(400).json({
+        message: "Invalid publish status",
+        required: {
+          publish: "Publish status must be a boolean value",
+        },
+      });
+    }
+
+    const consignment = await Consignment.findById(id);
+    if (!consignment) {
+      return res.status(404).json({
+        message: "Consignment not found",
+      });
+    }
+
+    consignment.publish = publish;
+    await consignment.save();
+
+    res.status(200).json({
+      message: "Consignment publish status updated successfully",
+      data: consignment,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error updating consignment publish status",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = exports;

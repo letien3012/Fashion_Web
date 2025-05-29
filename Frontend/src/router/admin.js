@@ -68,6 +68,16 @@ const adminRoutes = [
         },
       },
       {
+        path: "consignments",
+        name: "ConsignmentList",
+        component: () => import("../views/admin/ConsignmentList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý kho hàng",
+        },
+      },
+      {
         path: "promotions",
         name: "AdminPromotions",
         component: () => import("../views/admin/PromotionList.vue"),
@@ -99,6 +109,16 @@ const adminRoutes = [
         name: "UserList",
         component: UserList,
         meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: "reviews",
+        name: "ReviewList",
+        component: () => import("../views/admin/ReviewList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý đánh giá",
+        },
       },
     ],
   },

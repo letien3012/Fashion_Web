@@ -113,6 +113,54 @@
         </div>
       </div>
     </div>
+
+    <!-- Product Selection Modal -->
+    <div v-if="showProductSelectionModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Chọn sản phẩm để đánh giá</h3>
+          <button class="close-btn" @click="closeProductSelectionModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="product-list">
+            <div
+              v-for="product in availableProducts"
+              :key="product.productId._id"
+              class="product-item"
+              @click="selectProductForReview(product)"
+            >
+              <img
+                :src="
+                  product.productId.image.startsWith('http')
+                    ? product.productId.image
+                    : `http://localhost:3005/${product.productId.image}`
+                "
+                class="product-image"
+              />
+              <div class="product-info">
+                <div class="product-name">{{ product.productId.name }}</div>
+                <div class="product-variants">
+                  {{ product.variants.length }} biến thể
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Review Modal -->
+    <Review
+      v-if="showReviewModal"
+      :show="showReviewModal"
+      :order="selectedOrder"
+      :product="selectedProduct"
+      @close="closeReviewModal"
+      @review-submitted="handleReviewSubmitted"
+    />
   </div>
   <Footer />
 </template>
@@ -122,6 +170,7 @@ import { ref, onMounted, computed } from "vue";
 import SidebarProfile from "../components/SidebarProfile.vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Review from "./Review.vue";
 import { orderService } from "../services/order.service";
 import { productService, getVariantPrice } from "../services/product.service";
 import { toast } from "vue3-toastify";
@@ -290,12 +339,168 @@ const confirmReceived = async (orderId) => {
   }
 };
 
+// Review modal state
+const showReviewModal = ref(false);
+const selectedOrder = ref(null);
+const selectedProduct = ref(null);
+
 const reviewOrder = async (orderId) => {
   try {
-    // TODO: Implement review order logic
-    toast.info("Chức năng đánh giá đơn hàng đang được phát triển");
+    loading.value = true;
+    const orderData = await orderService.getOrderById(orderId);
+    if (!orderData) {
+      throw new Error("Không tìm thấy thông tin đơn hàng");
+    }
+
+    // Kiểm tra số lượng sản phẩm khác nhau trong đơn hàng
+    const uniqueProducts = new Map();
+    orderData.order_detail.forEach((item) => {
+      const productId = item.productId._id;
+      if (!uniqueProducts.has(productId)) {
+        uniqueProducts.set(productId, {
+          productId: item.productId,
+          variants: item.variants,
+          quantity: item.quantity,
+        });
+      }
+    });
+
+    // Nếu chỉ có 1 sản phẩm, mở modal đánh giá trực tiếp
+    if (uniqueProducts.size === 1) {
+      selectedOrder.value = orderData;
+      // Lấy tất cả biến thể của sản phẩm từ order_detail
+      const orderItem = orderData.order_detail.find(
+        (item) =>
+          item.productId._id ===
+          Array.from(uniqueProducts.values())[0].productId._id
+      );
+      selectedProduct.value = {
+        productId: orderItem.productId,
+        variants: orderItem.variants,
+      };
+      showReviewModal.value = true;
+    } else {
+      // Nếu có nhiều sản phẩm, hiển thị modal chọn sản phẩm
+      showProductSelectionModal.value = true;
+      selectedOrder.value = orderData;
+      availableProducts.value = Array.from(uniqueProducts.values());
+    }
   } catch (error) {
+    console.error("Error fetching order:", error);
     toast.error("Không thể mở form đánh giá");
+  } finally {
+    loading.value = false;
+  }
+};
+
+const closeReviewModal = () => {
+  showReviewModal.value = false;
+  selectedOrder.value = null;
+  selectedProduct.value = null;
+};
+
+// Thêm state cho modal chọn sản phẩm
+const showProductSelectionModal = ref(false);
+const availableProducts = ref([]);
+
+const selectProductForReview = (product) => {
+  // Lấy tất cả biến thể của sản phẩm từ order_detail
+  const orderItem = selectedOrder.value.order_detail.find(
+    (item) => item.productId._id === product.productId._id
+  );
+  selectedProduct.value = {
+    productId: orderItem.productId,
+    variants: orderItem.variants,
+  };
+  showProductSelectionModal.value = false;
+  showReviewModal.value = true;
+};
+
+const closeProductSelectionModal = () => {
+  showProductSelectionModal.value = false;
+  selectedOrder.value = null;
+  availableProducts.value = [];
+};
+
+const handleReviewSubmitted = async () => {
+  try {
+    // Close the review modal
+    closeReviewModal();
+    // Refresh the orders list after successful review
+    loading.value = true;
+    const orderData = await orderService.getCustomerOrders();
+    orders.value = await Promise.all(
+      orderData.map(async (order) => {
+        // Process each order detail to get complete product information
+        const orderDetails = await Promise.all(
+          order.order_detail.map(async (item) => {
+            try {
+              // Get complete product information
+              const productResponse = await productService.getProductById(
+                item.productId
+              );
+              const product = productResponse.data;
+
+              return {
+                _id: item._id,
+                productId: {
+                  _id: product._id,
+                  name: product.name,
+                  image: `http://localhost:3005/${product.image}`,
+                  variant: item.variants[0]?.sku || "Default",
+                },
+                quantity: item.quantity,
+                price: item.price,
+                variants: item.variants.map((v) => ({
+                  sku: v.sku,
+                  quantity: v.quantity,
+                  price: v.price,
+                })),
+              };
+            } catch (error) {
+              console.error("Error fetching product details:", error);
+              return {
+                _id: item._id,
+                productId: {
+                  _id: item.productId,
+                  name: "Product not found",
+                  image: "",
+                  variant: item.variants[0]?.sku || "Default",
+                },
+                quantity: item.quantity,
+                price: item.price,
+                variants: item.variants.map((v) => ({
+                  sku: v.sku,
+                  quantity: v.quantity,
+                  price: v.price,
+                })),
+              };
+            }
+          })
+        );
+
+        return {
+          id: order._id,
+          date: new Date(order.createdAt).toLocaleDateString(),
+          status: order.status,
+          code: order.code,
+          statusClass: order.status,
+          statusText: getStatusText(order.status),
+          total: order.total_price,
+          total_product_price: order.total_product_price,
+          discount: order.discount,
+          total_ship_fee: order.total_ship_fee,
+          method: order.method,
+          order_detail: orderDetails,
+          canReview: order.status === "completed",
+        };
+      })
+    );
+  } catch (error) {
+    console.error("Error refreshing orders:", error);
+    toast.error("Không thể cập nhật danh sách đơn hàng");
+  } finally {
+    loading.value = false;
   }
 };
 </script>
@@ -640,5 +845,235 @@ const reviewOrder = async (orderId) => {
   background: #ff4d4f;
   border-color: #ff4d4f;
   color: white;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #333;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.modal-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.cancel-btn {
+  padding: 8px 16px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.cancel-btn:hover {
+  background: #e8e8e8;
+}
+
+.submit-btn {
+  padding: 8px 16px;
+  background: #ee4d2d;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.submit-btn:hover:not(:disabled) {
+  background: #f05d40;
+}
+
+.submit-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+/* Review Form Styles */
+.rating-section,
+.content-section,
+.image-section {
+  margin-bottom: 24px;
+}
+
+h4 {
+  color: #333;
+  margin-bottom: 16px;
+  font-size: 1rem;
+}
+
+.star-rating {
+  display: flex;
+  gap: 8px;
+}
+
+.star-rating i {
+  font-size: 24px;
+  color: #ddd;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.star-rating i.active {
+  color: #ffc107;
+}
+
+textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.image-upload {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.upload-area {
+  width: 120px;
+  height: 120px;
+  border: 2px dashed #ddd;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.upload-area:hover {
+  border-color: #ee4d2d;
+  color: #ee4d2d;
+}
+
+.upload-area i {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.image-preview {
+  position: relative;
+  width: 120px;
+  height: 120px;
+}
+
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.remove-image {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 24px;
+  height: 24px;
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.product-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.product-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.product-item:hover {
+  border-color: #ee4d2d;
+  background: #fff5f5;
+}
+
+.product-image {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 16px;
+}
+
+.product-info {
+  flex: 1;
+}
+
+.product-name {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+.product-variants {
+  color: #666;
+  font-size: 0.9rem;
 }
 </style>
