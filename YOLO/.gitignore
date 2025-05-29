@@ -1,0 +1,15 @@
+# Bỏ qua thư mục virtual environment
+venv/
+
+# Bỏ qua file tạm của Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Bỏ qua file model lớn
+*.pt
+
+# Bỏ qua file tạm khác
+*.log
+.DS_Store 

@@ -5,6 +5,11 @@ import adminRoutes from "./admin";
 import ForgotPW from "../views/ForgotPW.vue";
 import Verification from "../views/OtpVerification.vue";
 import CreatePW from "../views/CreatePW.vue";
+// import AuthCallback from "../views/AuthCallback.vue";
+import About from "../views/About.vue";
+import Home from "../views/Home.vue";
+import ProductDetail from "../views/ProductDetail.vue";
+import ImageSearch from "../views/ImageSearch.vue";
 import About from "../views/About.vue";
 import Home from "../views/Home.vue";
 import ProductDetail from "../views/ProductDetail.vue";
@@ -45,6 +50,11 @@ const routes = [
     component: ProductDetail,
   },
   {
+    path: "/imageSearch",
+    name: "ImageSearch",
+    component: ImageSearch,
+  },
+  {
     path: "/cart",
     name: "Cart",
     component: CartDetail,
@@ -82,7 +92,6 @@ const routes = [
     name: "Products",
     component: Products,
   },
-
   ...adminRoutes,
 ];
 
