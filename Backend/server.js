@@ -24,6 +24,8 @@ const routes = {
   mail: require("./routes/mail.route"),
   verify: require("./routes/verify.route"),
   imageService: require("./routes/imageService"),
+  banner: require("./routes/banner.route"),
+  review: require("./routes/review.route"),
 };
 
 // Đăng ký các route API
@@ -43,6 +45,8 @@ app.use("/api/promotions", routes.promotion);
 app.use("/api/mail", routes.mail);
 app.use("/api/verify", routes.verify);
 app.use("/api/imageService", routes.imageService);
+app.use("/api/banners", routes.banner);
+app.use("/api/reviews", routes.review);
 
 // Middleware xử lý lỗi
 app.use((err, req, res, next) => {

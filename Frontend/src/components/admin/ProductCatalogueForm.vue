@@ -41,11 +41,7 @@
               class="file-input"
             />
             <div class="icon-preview" @click="triggerFileInput">
-              <img
-                v-if="previewImage"
-                :src="previewImage"
-                alt="Icon preview"
-              />
+              <img v-if="previewImage" :src="previewImage" alt="Icon preview" />
               <div v-else class="upload-placeholder">
                 <i class="fas fa-upload"></i>
                 <span>Chọn icon</span>
@@ -82,19 +78,13 @@
 </template>
 
 <script>
-import axios from "axios";
+import AdminProductCatalogueService from "../../services/admin/productCatalogue.service";
 
 export default {
   name: "ProductCatalogueForm",
   props: {
-    show: {
-      type: Boolean,
-      required: true,
-    },
-    isEditing: {
-      type: Boolean,
-      default: false,
-    },
+    show: { type: Boolean, required: true },
+    isEditing: { type: Boolean, default: false },
     initialData: {
       type: Object,
       default: () => ({
@@ -108,26 +98,25 @@ export default {
   },
   data() {
     return {
-      formData: { ...this.initialData },
+      formData: {
+        _id: null,
+        name: "",
+        slug: "",
+        description: "",
+        parentId: "",
+        publish: true,
+      },
       parentCatalogues: [],
-      backendUrl: "http://localhost:3005",
       previewImage: null,
     };
   },
   methods: {
     async fetchParentCatalogues() {
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.get(
-          `${this.backendUrl}/api/productCatalogues`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
+        const response = await AdminProductCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.parentCatalogues = response.data.data.filter(
-            (cat) => cat._id !== this.formData.id
+            (catalogue) => catalogue._id !== this.formData._id
           );
         }
       } catch (error) {
@@ -158,45 +147,96 @@ export default {
 
     async handleSubmit() {
       try {
-        // Prepare data for submission
-        const submitData = {
-          id: this.formData.id,
-          name: this.formData.name,
-          description: this.formData.description,
-          parentId: this.formData.parentId || null
-        };
+        this.loading = true;
+        let response;
 
-        // Handle icon
         if (this.isEditing) {
-          // If editing and no new icon selected, keep the old icon path
-          if (!this.previewImage && this.formData.icon && !this.formData.icon.startsWith('data:')) {
-            submitData.icon = this.formData.icon;
-          } else if (this.previewImage) {
-            // If new icon selected, use the new icon
-            submitData.icon = this.formData.icon;
+          // Update existing catalogue
+          response = await AdminProductCatalogueService.update(
+            this.formData.id,
+            {
+              name: this.formData.name.trim(),
+            }
+          );
+
+          if (response.status === 200) {
+            this.$emit("submit", this.formData);
+            this.closeModal();
           }
         } else {
-          // For new catalogue, use the selected icon if any
-          submitData.icon = this.formData.icon;
-        }
+          // Add new catalogue
+          response = await AdminProductCatalogueService.add({
+            name: this.formData.name.trim(),
+          });
 
-        this.$emit("submitCatalogue", submitData);
+          if (response.status === 201) {
+            this.$emit("submit", this.formData);
+            this.closeModal();
+          }
+        }
       } catch (error) {
-        console.error("Submit form error:", error);
-        this.$emit("error", "Có lỗi xảy ra khi gửi form");
+        console.error("Submit error:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập đã hết hạn");
+          this.$router.push("/admin/login");
+        } else if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
+        } else {
+          toast.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
+        }
+      } finally {
+        this.loading = false;
       }
+    },
+
+    validateForm() {
+      if (!this.formData.name.trim()) {
+        this.$emit("error", "Vui lòng nhập tên danh mục");
+        return false;
+      }
+      return true;
     },
   },
   watch: {
     initialData: {
       handler(newVal) {
-        this.formData = { ...newVal };
-        this.previewImage = null;
+        if (newVal) {
+          console.log("Initial Data:", newVal);
+          this.formData = {
+            _id: newVal._id || null,
+            name: newVal.name || "",
+            slug: newVal.slug || "",
+            description: newVal.description || "",
+            parentId: newVal.parentId || "",
+            publish: newVal.publish !== undefined ? newVal.publish : true,
+          };
+          if (
+            newVal.icon &&
+            typeof newVal.icon === "string" &&
+            !newVal.icon.startsWith("data:")
+          ) {
+            this.previewImage =
+              AdminProductCatalogueService.backendUrl + newVal.icon;
+          } else if (newVal.icon && newVal.icon.startsWith("data:")) {
+            this.previewImage = newVal.icon;
+          } else {
+            this.previewImage = null;
+          }
+        }
       },
+      immediate: true,
       deep: true,
     },
     show(newVal) {
       if (!newVal) {
+        this.formData = {
+          _id: null,
+          name: "",
+          slug: "",
+          description: "",
+          parentId: "",
+          publish: true,
+        };
         this.previewImage = null;
         if (this.$refs.fileInput) {
           this.$refs.fileInput.value = "";

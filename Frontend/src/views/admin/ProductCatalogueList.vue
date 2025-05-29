@@ -27,12 +27,12 @@
 </template>
 
 <script>
-import axios from "axios";
 import Swal from "sweetalert2";
 import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
 import ProductCatalogueTable from "../../components/admin/ProductCatalogueTable.vue";
 import ProductCatalogueForm from "../../components/admin/ProductCatalogueForm.vue";
+import AdminProductCatalogueService from "../../services/admin/productCatalogue.service";
 
 export default {
   name: "ProductCatalogueList",
@@ -45,7 +45,6 @@ export default {
       catalogues: [],
       showAddModal: false,
       isEditing: false,
-      backendUrl: "http://localhost:3005",
       formData: {
         id: null,
         name: "",
@@ -70,17 +69,7 @@ export default {
 
     async fetchCatalogues() {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          toast.error("Vui lòng đăng nhập để tiếp tục");
-          this.$router.push("/admin/login");
-          return;
-        }
-
-        const response = await axios.get(`${this.backendUrl}/api/productCatalogues`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
+        const response = await AdminProductCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.catalogues = response.data.data;
         } else {
@@ -124,14 +113,9 @@ export default {
 
     async handleDelete(catalogue) {
       try {
-        const token = localStorage.getItem("token");
-        const response = await axios.delete(
-          `${this.backendUrl}/api/productCatalogues/delete/${catalogue._id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
+        const response = await AdminProductCatalogueService.delete(
+          catalogue._id
         );
-
         if (response.status === 200) {
           toast.success("Xóa danh mục thành công");
           this.fetchCatalogues();
@@ -142,49 +126,39 @@ export default {
           toast.error("Phiên đăng nhập hết hạn");
           this.$router.push("/admin/login");
         } else {
-          toast.error(error.response?.data?.message || "Có lỗi xảy ra khi xóa danh mục");
+          toast.error(
+            error.response?.data?.message || "Có lỗi xảy ra khi xóa danh mục"
+          );
         }
       }
     },
 
     async handleSubmit(formData) {
       try {
-        const token = localStorage.getItem("token");
-        if (!token) {
-          toast.error("Vui lòng đăng nhập để tiếp tục");
-          this.$router.push("/admin/login");
-          return;
-        }
+        this.loading = true;
+        let response;
 
         if (this.isEditing) {
           // Update existing catalogue
-          const response = await axios.put(
-            `${this.backendUrl}/api/productCatalogues/update/${formData._id}`,
-            formData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          response = await AdminProductCatalogueService.update(formData.id, {
+            name: formData.name.trim(),
+          });
 
           if (response.status === 200) {
             toast.success("Cập nhật danh mục thành công");
             this.closeModal();
-            this.fetchCatalogues();
+            await this.fetchCatalogues();
           }
         } else {
           // Add new catalogue
-          const response = await axios.post(
-            `${this.backendUrl}/api/productCatalogues/add`,
-            formData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
+          response = await AdminProductCatalogueService.add({
+            name: formData.name.trim(),
+          });
 
           if (response.status === 201) {
             toast.success("Thêm danh mục thành công");
             this.closeModal();
-            this.fetchCatalogues();
+            await this.fetchCatalogues();
           }
         }
       } catch (error) {
@@ -192,11 +166,13 @@ export default {
         if (error.response?.status === 401) {
           toast.error("Phiên đăng nhập đã hết hạn");
           this.$router.push("/admin/login");
-        } else if (error.response?.status === 500) {
-          toast.error("Lỗi server");
+        } else if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
         } else {
-          toast.error(error.response?.data?.message || "Có lỗi xảy ra");
+          toast.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
         }
+      } finally {
+        this.loading = false;
       }
     },
 

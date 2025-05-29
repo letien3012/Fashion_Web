@@ -1,5 +1,7 @@
 import AdminLogin from "../views/admin/AdminLogin.vue";
 import AdminDashboard from "../views/admin/Dashboard.vue";
+import BannerList from "../views/admin/BannerList.vue";
+import UserList from "../views/admin/UserList.vue";
 
 const adminRoutes = [
   {
@@ -66,13 +68,57 @@ const adminRoutes = [
         },
       },
       {
+        path: "consignments",
+        name: "ConsignmentList",
+        component: () => import("../views/admin/ConsignmentList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý kho hàng",
+        },
+      },
+      {
         path: "promotions",
         name: "AdminPromotions",
         component: () => import("../views/admin/PromotionList.vue"),
         meta: {
           requiresAuth: true,
-          requiresAdmin: true
-        }
+          requiresAdmin: true,
+        },
+      },
+      {
+        path: "orders",
+        name: "OrderList",
+        component: () => import("../views/admin/OrderList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý đơn hàng",
+        },
+      },
+      {
+        path: "banners",
+        name: "AdminBannerList",
+        component: BannerList,
+        meta: {
+          requiresAdmin: true,
+        },
+      },
+      {
+        path: "users",
+        name: "UserList",
+        component: UserList,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: "reviews",
+        name: "ReviewList",
+        component: () => import("../views/admin/ReviewList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý đánh giá",
+        },
       },
     ],
   },

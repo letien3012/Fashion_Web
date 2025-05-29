@@ -10,6 +10,16 @@ import About from "../views/About.vue";
 import Home from "../views/Home.vue";
 import ProductDetail from "../views/ProductDetail.vue";
 import ImageSearch from "../views/ImageSearch.vue";
+import About from "../views/About.vue";
+import Home from "../views/Home.vue";
+import ProductDetail from "../views/ProductDetail.vue";
+import CartDetail from "../views/CartDetail.vue";
+import Checkout from "../views/Checkout.vue";
+import Customer from "../views/Customer.vue";
+import Profile from "../components/Profile.vue";
+import ChangePW from "../views/ChangePW.vue";
+import Products from "../views/Products.vue";
+
 const routes = [
   {
     path: "/login",
@@ -24,11 +34,6 @@ const routes = [
   { path: "/forgotpw", name: "ForgotPW", component: ForgotPW },
   { path: "/verification", name: "VerificationOtp", component: Verification },
   { path: "/createpw", name: "CreatePW", component: CreatePW },
-  {
-    path: "/forgotpw",
-    name: "ForgotPW",
-    component: ForgotPW,
-  },
   {
     path: "/about",
     name: "About",
@@ -46,8 +51,46 @@ const routes = [
   },
   {
     path: "/imageSearch",
-    name: "ProductDetail",
+    name: "ImageSearch",
     component: ImageSearch,
+  },
+  {
+    path: "/cart",
+    name: "Cart",
+    component: CartDetail,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/checkout",
+    name: "Checkout",
+    component: Checkout,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/user",
+    name: "Customer",
+    component: Customer,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/profile",
+    name: "Profile",
+    component: Profile,
+    meta: {
+      requiresAuth: true,
+    },
+  },
+  {
+    path: "/change-password",
+    name: "ChangePW",
+    component: ChangePW,
+  },
+  {
+    path: "/products",
+    name: "Products",
+    component: Products,
   },
   ...adminRoutes,
 ];
@@ -59,11 +102,11 @@ const router = createRouter({
 
 // Navigation guard
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem("token");
+  const userStr = localStorage.getItem("user");
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next("/admin/login");
+  if (to.meta.requiresAuth && !userStr) {
+    next("/login");
   } else if (to.meta.requiresAdmin && !isAdmin) {
     next("/admin/login");
   } else {

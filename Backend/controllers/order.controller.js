@@ -1,15 +1,61 @@
 const Order = require("../models/order.model");
+const Customer = require("../models/customer.model");
+
+// Generate unique order code
+const generateOrderCode = () => {
+  const timestamp = Date.now().toString();
+  const random = Math.floor(Math.random() * 1000)
+    .toString()
+    .padStart(3, "0");
+  return `ORD${timestamp}${random}`;
+};
 
 // Create new order
 exports.create = async (req, res) => {
   try {
-    const order = new Order(req.body);
-    const id = await order.save();
+    const {
+      customerInfo,
+      items,
+      total_product_price,
+      total_price,
+      discount,
+      method,
+      note,
+    } = req.body;
+
+    // Create order
+    const order = new Order({
+      customerId: customerInfo.customerId,
+      code: generateOrderCode(),
+      fullname: customerInfo.name,
+      phone: customerInfo.phone,
+      address: customerInfo.address,
+      order_detail: items,
+      total_product_price,
+      total_price,
+      discount: discount || 0,
+      method: method || "COD",
+      note: note || "",
+      status: "pending",
+    });
+
+    // Update customer information if provided
+    if (customerInfo) {
+      await Customer.findByIdAndUpdate(customerInfo.customerId, {
+        fullname: customerInfo.name,
+        phone: customerInfo.phone,
+        address: customerInfo.address,
+        updatedAt: new Date(),
+      });
+    }
+
+    const savedOrder = await order.save();
     res.status(201).json({
       message: "Order created successfully",
-      id
+      order: savedOrder,
     });
   } catch (error) {
+    console.error("Error creating order:", error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -38,7 +84,7 @@ exports.update = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
-    const employeeId = req.user.id; // Assuming you have authentication middleware
+    const { employeeId } = req.body; // Get employeeId from request body
 
     await Order.updateStatusByEmployee(req.params.id, employeeId, status);
     res.status(200).json({ message: "Order status updated successfully" });
@@ -65,4 +111,31 @@ exports.delete = async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
-}; 
+};
+
+// Lấy tất cả đơn hàng của khách hàng đang đăng nhập
+exports.getOrdersByCustomer = async (req, res) => {
+  try {
+    // Lấy id từ token đã decode
+    const customerId = req.customer.id;
+    // Tùy theo model, ví dụ:
+    const orders = await Order.find({ customerId }).sort({ createdAt: -1 });
+    res.status(200).json(orders);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Lấy tất cả đơn hàng (cho admin)
+exports.getAllOrders = async (req, res) => {
+  try {
+    const orders = await Order.find()
+      .populate("customerId", "email fullname phone address")
+      .populate("employeeId", "email fullname")
+      .populate("order_detail.productId", "name image")
+      .sort({ createdAt: -1 }); // Sắp xếp theo thời gian tạo mới nhất
+    res.status(200).json(orders);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};

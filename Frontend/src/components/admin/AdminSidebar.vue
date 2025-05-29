@@ -1,13 +1,29 @@
 <template>
-  <aside class="admin-sidebar" :class="{ collapsed: isCollapsed }">
+  <aside
+    class="admin-sidebar"
+    :class="{ collapsed: isCollapsed || (isSmallScreen && !isExpanded) }"
+  >
     <div class="sidebar-header">
       <h2>Admin Panel</h2>
+      <button class="toggle-btn" @click="toggleExpand">
+        <i
+          :class="isExpanded ? 'fas fa-chevron-left' : 'fas fa-chevron-right'"
+        ></i>
+      </button>
     </div>
 
     <nav class="sidebar-nav">
       <router-link to="/admin/dashboard" class="nav-item">
         <i class="fas fa-home"></i>
         <span>Dashboard</span>
+      </router-link>
+      <router-link to="/admin/orders" class="nav-item">
+        <i class="fas fa-shopping-cart"></i>
+        <span>Quản lý đơn hàng</span>
+      </router-link>
+      <router-link to="/admin/reviews" class="nav-item">
+        <i class="fas fa-star"></i>
+        <span>Quản lý đánh giá</span>
       </router-link>
       <router-link to="/admin/employees" class="nav-item">
         <i class="fas fa-users"></i>
@@ -33,9 +49,20 @@
         <i class="fas fa-file-import"></i>
         <span>Phiếu nhập hàng</span>
       </router-link>
+      <router-link to="/admin/consignments" class="nav-item">
+        <i class="fas fa-warehouse"></i>
+        <span>Quản lý kho hàng</span>
+      </router-link>
       <router-link to="/admin/promotions" class="nav-item">
         <i class="fas fa-percent"></i>
         <span>Khuyến mãi</span>
+      </router-link>
+      <router-link to="/admin/banners" class="nav-item">
+        <i class="fas fa-images"></i>
+        <span>Quản lý banner</span>
+      </router-link>
+      <router-link to="/admin/users" class="nav-item">
+        <i class="fas fa-users me-2"></i>Quản lý người dùng
       </router-link>
     </nav>
 
@@ -59,7 +86,29 @@ export default {
       default: false,
     },
   },
+  data() {
+    return {
+      isSmallScreen: false,
+      isExpanded: false,
+    };
+  },
+  mounted() {
+    this.checkScreenSize();
+    window.addEventListener("resize", this.checkScreenSize);
+  },
+  beforeUnmount() {
+    window.removeEventListener("resize", this.checkScreenSize);
+  },
   methods: {
+    checkScreenSize() {
+      this.isSmallScreen = window.innerWidth < 1200;
+      if (!this.isSmallScreen) {
+        this.isExpanded = false;
+      }
+    },
+    toggleExpand() {
+      this.isExpanded = !this.isExpanded;
+    },
     handleLogout() {
       localStorage.removeItem("token");
       localStorage.removeItem("employee");
@@ -95,6 +144,7 @@ export default {
   height: 80px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
 }
 
 .sidebar-header h2 {
@@ -102,6 +152,23 @@ export default {
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.toggle-btn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
 }
 
 .sidebar-nav {
@@ -182,5 +249,36 @@ export default {
   width: 0;
   opacity: 0;
   margin-left: 0;
+}
+
+@media screen and (max-width: 1200px) {
+  .admin-sidebar {
+    width: 80px;
+  }
+
+  .admin-sidebar:not(.collapsed) {
+    width: 280px;
+  }
+
+  .admin-sidebar.collapsed .nav-item span {
+    display: none;
+  }
+
+  .admin-sidebar.collapsed .sidebar-header h2 {
+    display: none;
+  }
+
+  .admin-sidebar.collapsed .logout-text {
+    display: none;
+  }
+
+  .admin-sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 16px;
+  }
+
+  .admin-sidebar.collapsed .nav-item i {
+    margin-right: 0;
+  }
 }
 </style>

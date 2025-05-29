@@ -22,7 +22,7 @@ const productSchema = new mongoose.Schema({
       image: { type: String, required: true },
       attributeId1: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
       attributeId2: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
-      publish: { type: Boolean, default: true }
+      publish: { type: Boolean, default: true },
     },
   ],
   publish: { type: Boolean, default: false },
@@ -201,12 +201,9 @@ Product.getByCatalogueId = async function (catalogueId) {
 
 Product.prototype.save = async function () {
   try {
-    let imagePath = null;
-    let albumPaths = [];
-
     // Handle main image
     if (this.image && this.image.startsWith("data:image")) {
-      imagePath = await ImageModel.saveImage(this.image, "product");
+      this.image = await ImageModel.saveImage(this.image, "product");
     }
 
     // Handle album images
@@ -215,34 +212,27 @@ Product.prototype.save = async function () {
         img.startsWith("data:image")
       );
       if (base64Images.length > 0) {
-        albumPaths = await ImageModel.saveMultipleImages(
+        const albumPaths = await ImageModel.saveMultipleImages(
           base64Images,
           "product"
         );
+        this.album = albumPaths;
       }
     }
 
-    const productData = {
-      code: this.code,
-      name: this.name,
-      content: this.content,
-      description: this.description,
-      view_count: this.view_count,
-      favorite_count: this.favorite_count,
-      image: imagePath,
-      album: albumPaths,
-      catalogueId: this.catalogueId,
-      variants: this.variants,
-      publish: this.publish,
-      createdAt: this.createdAt,
-      updatedAt: null,
-      deletedAt: null,
-    };
+    // Handle variant images
+    if (this.variants && this.variants.length > 0) {
+      for (let variant of this.variants) {
+        if (variant.image && variant.image.startsWith("data:image")) {
+          variant.image = await ImageModel.saveImage(variant.image, "product");
+        }
+      }
+    }
 
-    // Use create instead of save to avoid recursion
-    const product = await Product.create(productData);
-    console.log("Product saved:", product);
-    return product._id;
+    // Use save instead of create to trigger pre-save middleware
+    const savedProduct = await this.save();
+    console.log("Product saved:", savedProduct);
+    return savedProduct._id;
   } catch (error) {
     throw new Error(`Error saving product: ${error.message}`);
   }
@@ -284,7 +274,7 @@ Product.update = async function (id, data) {
     // Handle variants update
     if (data.variants && data.variants.length > 0) {
       const oldProduct = await Product.findById(id);
-      
+
       // Delete old variant images
       if (oldProduct.variants && oldProduct.variants.length > 0) {
         const oldVariantImages = oldProduct.variants
@@ -304,13 +294,11 @@ Product.update = async function (id, data) {
     }
 
     updateData.updatedAt = new Date();
-    
+
     // Use findByIdAndUpdate with new: true to get the updated document
-    const updatedProduct = await Product.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true }
-    ).populate('variants.attributeId1 variants.attributeId2');
+    const updatedProduct = await Product.findByIdAndUpdate(id, updateData, {
+      new: true,
+    }).populate("variants.attributeId1 variants.attributeId2");
 
     console.log("Product updated:", updatedProduct);
     return updatedProduct;
@@ -458,5 +446,22 @@ Product.decrementFavoriteCount = async function (id) {
 Product.checkVariantQuantity = null;
 Product.updateVariantQuantity = null;
 Product.checkAndUpdateVariantQuantity = null;
+
+// Lấy giá gốc và giá giảm của 1 variant
+Product.getVariantPrice = async function (productId, variantId) {
+  const product = await this.findById(productId);
+  if (!product) throw new Error("Product not found");
+  const variant =
+    product.variants.id(variantId) ||
+    product.variants.find((v) => v._id.toString() === variantId.toString());
+  if (!variant) {
+    console.log("Variant not found in product:", productId, variantId);
+    throw new Error("Variant not found");
+  }
+  return {
+    price: variant.price,
+    priceSale: product.priceSale || null,
+  };
+};
 
 module.exports = Product;

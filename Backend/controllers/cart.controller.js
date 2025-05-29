@@ -5,7 +5,7 @@ exports.getCart = async (req, res) => {
   try {
     const { customerId } = req.params;
     const cart = await Cart.getByCustomerId(customerId);
-    
+
     if (!cart) {
       return res.status(404).json({ message: "Cart not found" });
     }
@@ -22,11 +22,11 @@ exports.createCart = async (req, res) => {
     const { customerId, cart_detail } = req.body;
 
     if (!customerId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         message: "Customer ID is required",
         required: {
-          customerId: "Customer ID is required"
-        }
+          customerId: "Customer ID is required",
+        },
       });
     }
 
@@ -35,7 +35,7 @@ exports.createCart = async (req, res) => {
 
     res.status(201).json({
       message: "Cart created successfully",
-      id
+      id,
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -58,34 +58,161 @@ exports.addToCart = async (req, res) => {
 // Cập nhật số lượng sản phẩm trong giỏ hàng
 exports.updateCartItemQuantity = async (req, res) => {
   try {
-    const { cartId, productId, variantSku } = req.params;
-    const { quantity } = req.body;
+    const { cartId } = req.params;
+    const { productId, variantId, quantity } = req.body;
 
-    if (!quantity || quantity < 0) {
-      return res.status(400).json({ 
-        message: "Invalid quantity",
+    console.log("Update cart request:", {
+      cartId,
+      productId,
+      variantId,
+      quantity,
+    });
+
+    if (!productId || !variantId) {
+      return res.status(400).json({
+        message: "Missing required fields",
         required: {
-          quantity: "Quantity must be a non-negative number"
-        }
+          productId: "Product ID is required",
+          variantId: "Variant ID is required",
+        },
       });
     }
 
-    await Cart.updateCartItemQuantity(cartId, productId, variantSku, quantity);
-    res.status(200).json({ message: "Cart item quantity updated successfully" });
+    if (!quantity || quantity < 0) {
+      return res.status(400).json({
+        message: "Invalid quantity",
+        required: {
+          quantity: "Quantity must be a non-negative number",
+        },
+      });
+    }
+
+    const cart = await Cart.findById(cartId);
+    if (!cart) {
+      console.log("Cart not found:", cartId);
+      return res.status(404).json({ message: "Cart not found" });
+    }
+
+    console.log("Found cart:", cart);
+
+    const itemIndex = cart.items.findIndex(
+      (item) => item.productId.toString() === productId.toString()
+    );
+
+    if (itemIndex === -1) {
+      console.log("Item not found in cart:", productId);
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    const item = cart.items[itemIndex];
+    console.log("Found item:", item);
+
+    const variantIndex = item.variants.findIndex(
+      (v) => v._id.toString() === variantId.toString()
+    );
+
+    if (variantIndex === -1) {
+      console.log("Variant not found in item:", variantId);
+      return res
+        .status(404)
+        .json({ message: "Variant not found in cart item" });
+    }
+
+    console.log("Found variant at index:", variantIndex);
+
+    if (quantity === 0) {
+      // Remove variant if quantity is 0
+      item.variants.splice(variantIndex, 1);
+
+      // Remove item if no variants left
+      if (item.variants.length === 0) {
+        cart.items.splice(itemIndex, 1);
+      }
+    } else {
+      // Update quantity
+      item.variants[variantIndex].quantity = quantity;
+    }
+
+    cart.updatedAt = new Date();
+    await cart.save();
+
+    console.log("Updated cart:", cart);
+
+    res.status(200).json({
+      success: true,
+      message: "Cart item quantity updated successfully",
+      data: cart,
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("Error updating cart item quantity:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
 // Xóa sản phẩm khỏi giỏ hàng
 exports.removeFromCart = async (req, res) => {
   try {
-    const { cartId, productId, variantSku } = req.params;
+    const { cartId, productId, variantId } = req.params;
 
-    await Cart.removeFromCart(cartId, productId, variantSku);
-    res.status(200).json({ message: "Item removed from cart successfully" });
+    console.log("Remove from cart request:", {
+      cartId,
+      productId,
+      variantId,
+    });
+
+    const cart = await Cart.findById(cartId);
+    if (!cart) {
+      console.log("Cart not found:", cartId);
+      return res.status(404).json({ message: "Cart not found" });
+    }
+
+    const itemIndex = cart.items.findIndex(
+      (item) => item.productId.toString() === productId.toString()
+    );
+
+    if (itemIndex === -1) {
+      console.log("Item not found in cart:", productId);
+      return res.status(404).json({ message: "Item not found in cart" });
+    }
+
+    const item = cart.items[itemIndex];
+    const variantIndex = item.variants.findIndex(
+      (v) => v._id.toString() === variantId.toString()
+    );
+
+    if (variantIndex === -1) {
+      console.log("Variant not found in item:", variantId);
+      return res
+        .status(404)
+        .json({ message: "Variant not found in cart item" });
+    }
+
+    // Remove only the specific variant
+    item.variants.splice(variantIndex, 1);
+
+    // Update the total quantity of the product
+    item.quantity = item.variants.reduce(
+      (total, variant) => total + variant.quantity,
+      0
+    );
+
+    cart.updatedAt = new Date();
+    await cart.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Variant removed from cart successfully",
+      data: cart,
+    });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("Error removing from cart:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };
 
@@ -99,4 +226,4 @@ exports.deleteCart = async (req, res) => {
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
-}; 
+};

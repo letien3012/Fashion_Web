@@ -9,7 +9,7 @@
 
     <ProductTable
       :products="products"
-      :catalogues="attributeCatalogues"
+      :product-catalogues="productCatalogues"
       :loading="loading"
       @edit="handleEdit"
       @delete="handleDelete"
@@ -47,7 +47,7 @@ export default {
       loading: false,
       showForm: false,
       selectedProduct: null,
-      backendUrl: "http://localhost:3005"
+      backendUrl: "http://localhost:3005",
     };
   },
   methods: {
@@ -62,7 +62,7 @@ export default {
         }
 
         const response = await axios.get(`${this.backendUrl}/api/products`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
 
         if (response.data && response.data.data) {
@@ -76,7 +76,9 @@ export default {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
           this.$router.push("/admin/login");
         } else {
-          toast.error("Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.");
+          toast.error(
+            "Không thể tải danh sách sản phẩm. Vui lòng thử lại sau."
+          );
         }
       } finally {
         this.loading = false;
@@ -86,9 +88,12 @@ export default {
     async fetchProductCatalogues() {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${this.backendUrl}/api/productCatalogues`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get(
+          `${this.backendUrl}/api/productCatalogues`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (response.data && response.data.data) {
           this.productCatalogues = response.data.data;
@@ -101,7 +106,9 @@ export default {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
           this.$router.push("/admin/login");
         } else {
-          toast.error("Không thể tải danh sách danh mục. Vui lòng thử lại sau.");
+          toast.error(
+            "Không thể tải danh sách danh mục. Vui lòng thử lại sau."
+          );
         }
       }
     },
@@ -109,9 +116,12 @@ export default {
     async fetchAttributeCatalogues() {
       try {
         const token = localStorage.getItem("token");
-        const response = await axios.get(`${this.backendUrl}/api/attributeCatalogues`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get(
+          `${this.backendUrl}/api/attributeCatalogues`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
 
         if (response.data && response.data.data) {
           this.attributeCatalogues = response.data.data;
@@ -124,7 +134,9 @@ export default {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
           this.$router.push("/admin/login");
         } else {
-          toast.error("Không thể tải danh sách thuộc tính. Vui lòng thử lại sau.");
+          toast.error(
+            "Không thể tải danh sách thuộc tính. Vui lòng thử lại sau."
+          );
         }
       }
     },
@@ -143,7 +155,7 @@ export default {
       try {
         const token = localStorage.getItem("token");
         await axios.delete(`${this.backendUrl}/api/products/${id}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
         toast.success("Xóa sản phẩm thành công");
         await this.fetchProducts();
@@ -166,13 +178,13 @@ export default {
     async handleSubmit() {
       await this.fetchProducts();
       this.closeForm();
-    }
+    },
   },
   created() {
     this.fetchProducts();
     this.fetchProductCatalogues();
     this.fetchAttributeCatalogues();
-  }
+  },
 };
 </script>
 

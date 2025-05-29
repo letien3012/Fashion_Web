@@ -1345,4 +1345,49 @@ export default {
   justify-content: center;
   border-radius: 50%;
 }
+
+.ckeditor-container {
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ckeditor-container :deep(.ck.ck-editor) {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 300px;
+  box-sizing: border-box;
+}
+
+.ckeditor-container :deep(.ck.ck-editor__main) {
+  width: 100%;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.ckeditor-container :deep(.ck-editor__editable) {
+  min-height: 200px;
+  max-height: 400px;
+  display: block;
+  width: 100%;
+  overflow-y: auto;
+  padding: 10px;
+  box-sizing: border-box;
+}
+
+.ckeditor-container :deep(.ck-editor__editable_inline) {
+  padding: 0 10px;
+}
+
+.ckeditor-container :deep(.ck.ck-toolbar) {
+  display: flex;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
 </style>

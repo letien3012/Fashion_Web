@@ -30,11 +30,19 @@
       </div>
     </div>
 
-    <div class="products-grid">
+    <div v-if="loading" class="loading">
+      Loading products...
+    </div>
+
+    <div v-else-if="error" class="error">
+      {{ error }}
+    </div>
+
+    <div v-else class="products-grid">
       <div
         class="product-card"
         v-for="product in filteredProducts"
-        :key="product.id"
+        :key="product._id"
       >
         <div class="product-image">
           <img :src="product.image" :alt="product.name" />
@@ -45,13 +53,18 @@
         </div>
         <div class="product-info">
           <h3 class="product-name">{{ product.name }}</h3>
-          <p class="product-price">${{ product.price }}</p>
+          <div class="product-price-container">
+            <p class="product-price">${{ product.variants[0]?.price || 0 }}</p>
+            <p v-if="product.variants[0]?.salePrice" class="product-sale-price">
+              ${{ product.variants[0].salePrice }}
+            </p>
+          </div>
           <div class="product-rating">
             <i
               class="fas fa-star"
               v-for="n in 5"
               :key="n"
-              :class="{ active: n <= product.rating }"
+              :class="{ active: n <= (product.rating || 0) }"
             ></i>
           </div>
         </div>
@@ -61,6 +74,8 @@
 </template>
 
 <script>
+import { productService } from '@/services/product.service';
+
 export default {
   name: "NewArrivals",
   data() {
@@ -74,93 +89,70 @@ export default {
         { id: 4, name: "Bottoms" },
         { id: 5, name: "Accessories" },
       ],
-      products: [
-        {
-          id: 1,
-          name: "Embroidered Maxi Dress",
-          price: 89.99,
-          image:
-            "https://images.unsplash.com/photo-1612336307429-8a898d10e223?w=800&auto=format&fit=crop&q=60",
-          rating: 5,
-          category: 2,
-        },
-        {
-          id: 2,
-          name: "Designer Handbag",
-          price: 129.99,
-          image:
-            "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=800&auto=format&fit=crop&q=60",
-          rating: 4,
-          category: 5,
-        },
-        {
-          id: 3,
-          name: "Silk Blouse",
-          price: 69.99,
-          image:
-            "https://images.unsplash.com/photo-1604575396136-79d175778d1d?w=800&auto=format&fit=crop&q=60",
-          rating: 5,
-          category: 3,
-        },
-        {
-          id: 4,
-          name: "High-Waisted Jeans",
-          price: 79.99,
-          image:
-            "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=800&auto=format&fit=crop&q=60",
-          rating: 4,
-          category: 4,
-        },
-        {
-          id: 5,
-          name: "Statement Necklace",
-          price: 45.99,
-          image:
-            "https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=800&auto=format&fit=crop&q=60",
-          rating: 5,
-          category: 5,
-        },
-        {
-          id: 6,
-          name: "Pleated Midi Skirt",
-          price: 59.99,
-          image:
-            "https://images.unsplash.com/photo-1583496661160-fb5886a0aaaa?w=800&auto=format&fit=crop&q=60",
-          rating: 4,
-          category: 4,
-        },
-      ],
+      products: [],
+      loading: false,
+      error: null
     };
+  },
+  async created() {
+    await this.fetchProducts();
+  },
+  methods: {
+    async fetchProducts() {
+      this.loading = true;
+      try {
+        if (this.selectedCategory && this.selectedCategory !== 1) {
+          this.products = await productService.getProductsByCategory(this.selectedCategory);
+        } else {
+          this.products = await productService.getNewArrivals();
+        }
+      } catch (error) {
+        this.error = 'Failed to load products';
+        console.error('Error:', error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async handleCategoryChange() {
+      await this.fetchProducts();
+    }
   },
   computed: {
     filteredProducts() {
       let filtered = [...this.products];
 
-      // Filter by category
-      if (this.selectedCategory && this.selectedCategory !== 1) {
-        filtered = filtered.filter(
-          (product) => product.category === this.selectedCategory
-        );
-      }
-
       // Sort products
       switch (this.sortBy) {
         case "price-low":
-          filtered.sort((a, b) => a.price - b.price);
+          filtered.sort((a, b) => {
+            const priceA = a.variants[0]?.price || 0;
+            const priceB = b.variants[0]?.price || 0;
+            return priceA - priceB;
+          });
           break;
         case "price-high":
-          filtered.sort((a, b) => b.price - a.price);
+          filtered.sort((a, b) => {
+            const priceA = a.variants[0]?.price || 0;
+            const priceB = b.variants[0]?.price || 0;
+            return priceB - priceA;
+          });
           break;
         case "popular":
-          filtered.sort((a, b) => b.rating - a.rating);
+          filtered.sort((a, b) => b.favorite_count - a.favorite_count);
           break;
         default: // newest
-          filtered.sort((a, b) => b.id - a.id);
+          filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       }
 
       return filtered;
     },
   },
+  watch: {
+    selectedCategory: {
+      handler: 'handleCategoryChange',
+      immediate: true
+    }
+  }
 };
 </script>
 
@@ -313,11 +305,24 @@ export default {
   color: #333;
 }
 
+.product-price-container {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
 .product-price {
   font-size: 1.3rem;
   color: #ff6b6b;
   font-weight: 600;
   margin-bottom: 0.5rem;
+}
+
+.product-sale-price {
+  color: #ff6b6b;
+  text-decoration: line-through;
+  font-size: 1rem;
+  opacity: 0.8;
 }
 
 .product-rating {
@@ -330,6 +335,16 @@ export default {
 
 .product-rating i.active {
   color: #ffd700;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 2rem;
+  font-size: 1.2rem;
+}
+
+.error {
+  color: #ff6b6b;
 }
 
 @media (max-width: 768px) {

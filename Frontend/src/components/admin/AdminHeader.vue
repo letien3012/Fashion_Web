@@ -6,6 +6,12 @@
       </button>
     </div>
     <div class="header-right">
+      <div class="admin-image">
+        <img
+          :src="employeeImage || '../../assets/images/avatar_default.jpg'"
+          alt="Admin Avatar"
+        />
+      </div>
       <div class="admin-profile">
         <span>{{ employeeName }}</span>
       </div>
@@ -15,14 +21,18 @@
 
 <script>
 export default {
-  name: 'AdminHeader',
+  name: "AdminHeader",
   props: {
     employeeName: {
       type: String,
-      required: true
-    }
-  }
-}
+      required: true,
+    },
+    employeeImage: {
+      type: String,
+      default: "",
+    },
+  },
+};
 </script>
 
 <style scoped>
@@ -37,6 +47,45 @@ export default {
   position: sticky;
   top: 0;
   z-index: 100;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.admin-image {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid #f0f0f0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.admin-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.admin-image img:hover {
+  transform: scale(1.05);
+}
+
+.admin-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-profile span {
+  font-weight: 600;
+  color: #333;
+  font-size: 15px;
 }
 
 .menu-toggle {
@@ -47,21 +96,11 @@ export default {
   color: #333;
   padding: 8px;
   border-radius: 4px;
-  transition: background-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .menu-toggle:hover {
   background-color: #f5f5f5;
+  transform: scale(1.05);
 }
-
-.admin-profile {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.admin-profile span {
-  font-weight: 500;
-  color: #333;
-}
-</style> 
+</style>

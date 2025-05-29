@@ -70,12 +70,19 @@
 </template>
 
 <script>
+import { toast } from "vue3-toastify";
+import { useRouter } from "vue-router";
+
 export default {
   props: {
     loading: {
       type: Boolean,
       default: false,
     },
+  },
+  setup() {
+    const router = useRouter();
+    return { router };
   },
   data() {
     return {
@@ -109,13 +116,19 @@ export default {
         if (event.origin !== "http://localhost:3005") return;
 
         const { token, user } = event.data;
+        console.log("Received data from Google login:", { token, user });
 
         if (token) {
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(user));
+          console.log("Stored token:", token);
+          console.log("Stored user:", user);
 
-          alert("Đăng nhập thành công!");
-          // hoặc this.$router.push("/") nếu dùng Vue Router
+          toast.success("Đăng nhập thành công!");
+          this.router.push("/");
+        } else {
+          console.error("No token received from Google login");
+          toast.error("Đăng nhập thất bại. Vui lòng thử lại!");
         }
       });
     },
@@ -138,8 +151,8 @@ export default {
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(user));
 
-          alert("Đăng nhập bằng Facebook thành công!");
-          // hoặc this.$router.push("/") nếu dùng Vue Router
+          toast.success("Đăng nhập bằng Facebook thành công!");
+          this.router.push("/");
         }
       });
     },
