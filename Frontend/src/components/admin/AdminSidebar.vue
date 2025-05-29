@@ -61,7 +61,7 @@
         <i class="fas fa-images"></i>
         <span>Quản lý banner</span>
       </router-link>
-      <router-link to="/admin/users" class="nav-item">
+      <router-link to="/admin/customers" class="nav-item">
         <i class="fas fa-users me-2"></i>Quản lý người dùng
       </router-link>
     </nav>

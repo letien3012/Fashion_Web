@@ -26,6 +26,7 @@ exports.register = async (req, res) => {
       phone,
       address,
       image: image ? await ImageModel.saveImage(image, "customers") : undefined,
+      status: "active", // Mặc định active khi tạo mới
     });
 
     // Tạo JWT token
@@ -45,6 +46,7 @@ exports.register = async (req, res) => {
         phone: customer.phone,
         address: customer.address,
         image: customer.image,
+        status: customer.status,
       },
     });
   } catch (error) {
@@ -61,6 +63,11 @@ exports.login = async (req, res) => {
     const customer = await Customer.findOne({ email });
     if (!customer) {
       return res.status(400).json({ message: "Invalid email or password" });
+    }
+
+    // Kiểm tra trạng thái tài khoản
+    if (customer.status === "inactive") {
+      return res.status(403).json({ message: "Account is inactive" });
     }
 
     // Kiểm tra mật khẩu
@@ -86,6 +93,7 @@ exports.login = async (req, res) => {
         phone: customer.phone,
         address: customer.address,
         image: customer.image,
+        status: customer.status,
       },
     });
   } catch (error) {
@@ -111,7 +119,7 @@ exports.getProfile = async (req, res) => {
 // Cập nhật thông tin khách hàng
 exports.updateProfile = async (req, res) => {
   try {
-    const { fullname, phone, address, image } = req.body;
+    const { fullname, phone, address, image, status } = req.body;
     const customer = await Customer.findById(req.customer.id);
 
     if (!customer) {
@@ -122,6 +130,9 @@ exports.updateProfile = async (req, res) => {
     customer.fullname = fullname || customer.fullname;
     customer.phone = phone || customer.phone;
     customer.address = address || customer.address;
+    if (status && ["active", "inactive"].includes(status)) {
+      customer.status = status;
+    }
 
     // Xử lý ảnh
     if (image && image !== customer.image) {
@@ -163,6 +174,7 @@ exports.updateProfile = async (req, res) => {
         phone: customer.phone,
         address: customer.address,
         image: customer.image,
+        status: customer.status,
       },
     });
   } catch (error) {
@@ -190,6 +202,7 @@ exports.deleteAccount = async (req, res) => {
 
     // Soft delete
     customer.deletedAt = new Date();
+    customer.status = "inactive"; // Set status to inactive when deleting
     await customer.save();
 
     res.json({ message: "Account deleted successfully" });
@@ -310,25 +323,28 @@ exports.resetPassword = async (req, res) => {
 // Lấy danh sách khách hàng
 exports.getAllCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find({ deletedAt: null }).select(
-      "-password"
-    );
+    const customers = await Customer.getAllActive();
     res.status(200).json({
-      message: "Customers retrieved successfully",
+      success: true,
       data: customers.map((customer) => ({
         id: customer._id,
         email: customer.email,
         fullname: customer.fullname,
         phone: customer.phone,
         address: customer.address,
-        isActive: customer.isActive,
         image: customer.image,
+        status: customer.status,
         createdAt: customer.createdAt,
         updatedAt: customer.updatedAt,
       })),
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Get all customers error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };
 
@@ -336,10 +352,10 @@ exports.getAllCustomers = async (req, res) => {
 exports.updateStatus = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isActive } = req.body;
+    const { status } = req.body;
 
     // Validate input
-    if (typeof isActive !== "boolean") {
+    if (!["active", "inactive"].includes(status)) {
       return res.status(400).json({
         message: "Trạng thái tài khoản không hợp lệ",
       });
@@ -354,7 +370,7 @@ exports.updateStatus = async (req, res) => {
     }
 
     // Update status
-    customer.isActive = isActive;
+    customer.status = status;
     customer.updatedAt = new Date();
     await customer.save();
 
@@ -364,7 +380,7 @@ exports.updateStatus = async (req, res) => {
         id: customer._id,
         email: customer.email,
         fullname: customer.fullname,
-        isActive: customer.isActive,
+        status: customer.status,
       },
     });
   } catch (error) {
@@ -372,6 +388,61 @@ exports.updateStatus = async (req, res) => {
     res.status(500).json({
       message: "Lỗi server",
       error: error.message,
+    });
+  }
+};
+
+// Soft delete customer
+exports.softDelete = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "ID khách hàng không hợp lệ",
+      });
+    }
+
+    // Find active customer
+    const customer = await Customer.findActiveById(id);
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy khách hàng",
+      });
+    }
+
+    // Check if trying to delete self
+    if (req.customer && req.customer.id && req.customer.id.toString() === id) {
+      return res.status(400).json({
+        success: false,
+        message: "Không thể xóa tài khoản của chính mình",
+      });
+    }
+
+    // Soft delete by setting deletedAt and status
+    customer.deletedAt = new Date();
+    customer.status = "inactive";
+    customer.updatedAt = new Date();
+    await customer.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Xóa khách hàng thành công",
+      customer: {
+        id: customer._id,
+        email: customer.email,
+        fullname: customer.fullname,
+        status: customer.status,
+      },
+    });
+  } catch (error) {
+    console.error("Soft delete customer error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Lỗi server",
     });
   }
 };

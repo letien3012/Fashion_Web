@@ -2,15 +2,30 @@ import axios from "axios";
 
 const backendUrl = "http://localhost:3005";
 
+// Configure axios defaults
+axios.defaults.withCredentials = true;
+axios.defaults.headers.common["Content-Type"] = "application/json";
+axios.defaults.headers.common["Accept"] = "application/json";
+
 const AdminAuthService = {
   backendUrl,
 
   async login(email, password) {
     try {
-      const response = await axios.post(`${backendUrl}/api/employees/login`, {
-        email,
-        password,
-      });
+      const response = await axios.post(
+        `${backendUrl}/api/employees/login`,
+        {
+          email,
+          password,
+        },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+        }
+      );
 
       if (response.data.success && response.data.token) {
         // Store token and employee info

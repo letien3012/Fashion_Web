@@ -1,7 +1,7 @@
 import AdminLogin from "../views/admin/AdminLogin.vue";
 import AdminDashboard from "../views/admin/Dashboard.vue";
 import BannerList from "../views/admin/BannerList.vue";
-import UserList from "../views/admin/UserList.vue";
+import CustomerList from "../views/admin/CustomerList.vue";
 
 const adminRoutes = [
   {
@@ -105,9 +105,9 @@ const adminRoutes = [
         },
       },
       {
-        path: "users",
-        name: "UserList",
-        component: UserList,
+        path: "Customers",
+        name: "CustomerList",
+        component: CustomerList,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
