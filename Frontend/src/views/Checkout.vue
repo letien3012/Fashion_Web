@@ -13,8 +13,9 @@
         >
           <img
             :src="
-              'http://localhost:3005/' +
-              (item.variant.image || item.productId.image)
+              item.productId.image.startsWith('http')
+                ? item.productId.image
+                : `http://localhost:3005/${item.productId.image}`
             "
             alt=""
           />
@@ -254,6 +255,23 @@ const submitOrder = async () => {
     if (response) {
       // Clear checkout items from localStorage
       localStorage.removeItem("checkoutItems");
+
+      // Try to remove items from cart if cart exists
+      try {
+        const cart = await cartService.getCart();
+        if (cart) {
+          for (const item of checkoutItems.value) {
+            await cartService.removeFromCart(
+              cart._id,
+              item.productId._id,
+              item.variantId
+            );
+          }
+        }
+      } catch {
+        // Silently handle cart removal error
+      }
+
       toast.success("Đặt hàng thành công!");
       router.push("/");
     }

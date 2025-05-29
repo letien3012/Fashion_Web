@@ -1,12 +1,13 @@
 const Customer = require("../models/customer.model");
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const ImageModel = require("../models/image.model");
 
 // Đăng ký tài khoản khách hàng mới
 exports.register = async (req, res) => {
   try {
-    const { email, password, fullname, phone, address } = req.body;
-    
+    const { email, password, fullname, phone, address, image } = req.body;
+
     // Kiểm tra email đã tồn tại
     const existingCustomer = await Customer.findOne({ email });
     if (existingCustomer) {
@@ -23,14 +24,15 @@ exports.register = async (req, res) => {
       password: hashedPassword,
       fullname,
       phone,
-      address
+      address,
+      image: image ? await ImageModel.saveImage(image, "customers") : undefined,
     });
 
     // Tạo JWT token
     const token = jwt.sign(
       { id: customer._id, email: customer.email },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
 
     res.status(201).json({
@@ -41,8 +43,9 @@ exports.register = async (req, res) => {
         email: customer.email,
         fullname: customer.fullname,
         phone: customer.phone,
-        address: customer.address
-      }
+        address: customer.address,
+        image: customer.image,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -70,7 +73,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { id: customer._id, email: customer.email },
       process.env.JWT_SECRET,
-      { expiresIn: '24h' }
+      { expiresIn: "24h" }
     );
 
     res.json({
@@ -81,8 +84,9 @@ exports.login = async (req, res) => {
         email: customer.email,
         fullname: customer.fullname,
         phone: customer.phone,
-        address: customer.address
-      }
+        address: customer.address,
+        image: customer.image,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -92,7 +96,9 @@ exports.login = async (req, res) => {
 // Lấy thông tin khách hàng theo ID
 exports.getProfile = async (req, res) => {
   try {
-    const customer = await Customer.findById(req.customer.id).select('-password');
+    const customer = await Customer.findById(req.customer.id).select(
+      "-password"
+    );
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
@@ -105,17 +111,45 @@ exports.getProfile = async (req, res) => {
 // Cập nhật thông tin khách hàng
 exports.updateProfile = async (req, res) => {
   try {
-    const { fullname, phone, address } = req.body;
+    const { fullname, phone, address, image } = req.body;
     const customer = await Customer.findById(req.customer.id);
-    
+
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
-    
+
     // Update fields
     customer.fullname = fullname || customer.fullname;
     customer.phone = phone || customer.phone;
     customer.address = address || customer.address;
+
+    // Xử lý ảnh
+    if (image && image !== customer.image) {
+      // Xóa ảnh cũ nếu tồn tại và không phải là ảnh mặc định hoặc ảnh từ nguồn ngoài
+      if (
+        customer.image &&
+        !customer.image.startsWith("http") &&
+        !customer.image.startsWith("data:image")
+      ) {
+        await ImageModel.deleteImage(customer.image);
+      }
+      // Lưu ảnh mới
+      customer.image = await ImageModel.saveImage(image, "customers");
+    } else if (
+      image === null &&
+      customer.image &&
+      !customer.image.startsWith("http") &&
+      !customer.image.startsWith("data:image")
+    ) {
+      // Xóa ảnh cũ
+      await ImageModel.deleteImage(customer.image);
+      customer.image = null;
+    } else if (image && image.startsWith("http")) {
+      customer.image = image;
+    } else if (image === undefined) {
+      // Giữ nguyên ảnh cũ
+    }
+
     customer.updatedAt = new Date();
 
     await customer.save();
@@ -127,8 +161,9 @@ exports.updateProfile = async (req, res) => {
         email: customer.email,
         fullname: customer.fullname,
         phone: customer.phone,
-        address: customer.address
-      }
+        address: customer.address,
+        image: customer.image,
+      },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -139,11 +174,20 @@ exports.updateProfile = async (req, res) => {
 exports.deleteAccount = async (req, res) => {
   try {
     const customer = await Customer.findById(req.customer.id);
-    
+
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
-    
+
+    // Xóa file ảnh nếu có và không phải là ảnh mạng hoặc base64
+    if (
+      customer.image &&
+      !customer.image.startsWith("http") &&
+      !customer.image.startsWith("data:image")
+    ) {
+      await ImageModel.deleteImage(customer.image);
+    }
+
     // Soft delete
     customer.deletedAt = new Date();
     await customer.save();
@@ -169,7 +213,7 @@ exports.changePassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
     const customer = await Customer.findById(req.customer.id);
-    
+
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
@@ -204,11 +248,9 @@ exports.requestPasswordReset = async (req, res) => {
     }
 
     // Generate reset token
-    const resetToken = jwt.sign(
-      { id: customer._id },
-      process.env.JWT_SECRET,
-      { expiresIn: "1h" }
-    );
+    const resetToken = jwt.sign({ id: customer._id }, process.env.JWT_SECRET, {
+      expiresIn: "1h",
+    });
 
     // Store reset token in customer document
     customer.resetToken = resetToken;
@@ -219,7 +261,7 @@ exports.requestPasswordReset = async (req, res) => {
     // For now, just return the token
     res.json({
       message: "Password reset token generated",
-      resetToken
+      resetToken,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -239,8 +281,13 @@ exports.resetPassword = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    if (customer.resetToken !== resetToken || customer.resetTokenExpiry < Date.now()) {
-      return res.status(400).json({ message: "Invalid or expired reset token" });
+    if (
+      customer.resetToken !== resetToken ||
+      customer.resetTokenExpiry < Date.now()
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or expired reset token" });
     }
 
     // Hash new password
@@ -263,12 +310,68 @@ exports.resetPassword = async (req, res) => {
 // Lấy danh sách khách hàng
 exports.getAllCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find({ deletedAt: null }).select('-password');
+    const customers = await Customer.find({ deletedAt: null }).select(
+      "-password"
+    );
     res.status(200).json({
       message: "Customers retrieved successfully",
-      data: customers
+      data: customers.map((customer) => ({
+        id: customer._id,
+        email: customer.email,
+        fullname: customer.fullname,
+        phone: customer.phone,
+        address: customer.address,
+        isActive: customer.isActive,
+        image: customer.image,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+      })),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Cập nhật trạng thái tài khoản khách hàng
+exports.updateStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isActive } = req.body;
+
+    // Validate input
+    if (typeof isActive !== "boolean") {
+      return res.status(400).json({
+        message: "Trạng thái tài khoản không hợp lệ",
+      });
+    }
+
+    // Find customer
+    const customer = await Customer.findById(id);
+    if (!customer) {
+      return res.status(404).json({
+        message: "Không tìm thấy khách hàng",
+      });
+    }
+
+    // Update status
+    customer.isActive = isActive;
+    customer.updatedAt = new Date();
+    await customer.save();
+
+    res.status(200).json({
+      message: "Cập nhật trạng thái tài khoản thành công",
+      customer: {
+        id: customer._id,
+        email: customer.email,
+        fullname: customer.fullname,
+        isActive: customer.isActive,
+      },
+    });
+  } catch (error) {
+    console.error("Update customer status error:", error);
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
   }
 };

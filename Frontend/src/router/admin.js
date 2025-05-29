@@ -1,5 +1,7 @@
 import AdminLogin from "../views/admin/AdminLogin.vue";
 import AdminDashboard from "../views/admin/Dashboard.vue";
+import BannerList from "../views/admin/BannerList.vue";
+import UserList from "../views/admin/UserList.vue";
 
 const adminRoutes = [
   {
@@ -83,6 +85,20 @@ const adminRoutes = [
           requiresAdmin: true,
           title: "Quản lý đơn hàng",
         },
+      },
+      {
+        path: "banners",
+        name: "AdminBannerList",
+        component: BannerList,
+        meta: {
+          requiresAdmin: true,
+        },
+      },
+      {
+        path: "users",
+        name: "UserList",
+        component: UserList,
+        meta: { requiresAuth: true, requiresAdmin: true },
       },
     ],
   },

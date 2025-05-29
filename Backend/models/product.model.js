@@ -201,12 +201,9 @@ Product.getByCatalogueId = async function (catalogueId) {
 
 Product.prototype.save = async function () {
   try {
-    let imagePath = null;
-    let albumPaths = [];
-
     // Handle main image
     if (this.image && this.image.startsWith("data:image")) {
-      imagePath = await ImageModel.saveImage(this.image, "product");
+      this.image = await ImageModel.saveImage(this.image, "product");
     }
 
     // Handle album images
@@ -215,34 +212,27 @@ Product.prototype.save = async function () {
         img.startsWith("data:image")
       );
       if (base64Images.length > 0) {
-        albumPaths = await ImageModel.saveMultipleImages(
+        const albumPaths = await ImageModel.saveMultipleImages(
           base64Images,
           "product"
         );
+        this.album = albumPaths;
       }
     }
 
-    const productData = {
-      code: this.code,
-      name: this.name,
-      content: this.content,
-      description: this.description,
-      view_count: this.view_count,
-      favorite_count: this.favorite_count,
-      image: imagePath,
-      album: albumPaths,
-      catalogueId: this.catalogueId,
-      variants: this.variants,
-      publish: this.publish,
-      createdAt: this.createdAt,
-      updatedAt: null,
-      deletedAt: null,
-    };
+    // Handle variant images
+    if (this.variants && this.variants.length > 0) {
+      for (let variant of this.variants) {
+        if (variant.image && variant.image.startsWith("data:image")) {
+          variant.image = await ImageModel.saveImage(variant.image, "product");
+        }
+      }
+    }
 
-    // Use create instead of save to avoid recursion
-    const product = await Product.create(productData);
-    console.log("Product saved:", product);
-    return product._id;
+    // Use save instead of create to trigger pre-save middleware
+    const savedProduct = await this.save();
+    console.log("Product saved:", savedProduct);
+    return savedProduct._id;
   } catch (error) {
     throw new Error(`Error saving product: ${error.message}`);
   }

@@ -41,6 +41,13 @@
         <i class="fas fa-percent"></i>
         <span>Khuyến mãi</span>
       </router-link>
+      <router-link to="/admin/banners" class="nav-item">
+        <i class="fas fa-images"></i>
+        <span>Quản lý banner</span>
+      </router-link>
+      <router-link to="/admin/users" class="nav-item">
+        <i class="fas fa-users me-2"></i>Quản lý người dùng
+      </router-link>
     </nav>
 
     <div class="sidebar-footer">
