@@ -5,6 +5,7 @@
     <main class="admin-main">
       <AdminHeader
         :employee-name="employeeName"
+        :employee-image="employeeImage"
         @toggle-sidebar="toggleSidebar"
       />
 
@@ -30,6 +31,7 @@ export default {
     return {
       isSidebarCollapsed: false,
       employeeName: "",
+      employeeImage: "",
     };
   },
   created() {
@@ -38,6 +40,9 @@ export default {
 
     if (employee && token) {
       this.employeeName = employee.fullname;
+      this.employeeImage = employee.image
+        ? `http://localhost:3005/${employee.image}`
+        : "";
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }
   },

@@ -7,6 +7,7 @@ router.put(
   "/:id/current-quantity",
   consignmentController.updateCurrentQuantity
 );
+router.put("/:id/publish", consignmentController.updatePublishStatus);
 router.get("/", consignmentController.getAllConsignments);
 router.get("/:id", consignmentController.getConsignmentById);
 router.get("/product/:productId", consignmentController.getByProduct);

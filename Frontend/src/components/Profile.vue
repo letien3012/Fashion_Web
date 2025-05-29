@@ -2,10 +2,9 @@
   <Header />
   <SidebarProfile />
   <div class="main-content">
-    <h1>Thông Tin Cá Nhân</h1>
+    <h3>Thông Tin Cá Nhân</h3>
     <div class="profile-details">
       <div class="detail-section">
-        <h2>Thông Tin Cá Nhân</h2>
         <div class="info-grid">
           <div class="info-item">
             <label>Họ và Tên</label>
@@ -41,6 +40,15 @@
             ></textarea>
           </div>
         </div>
+        <div class="button-group">
+          <button
+            class="save-button"
+            @click="updateProfile"
+            :disabled="isUpdating"
+          >
+            {{ isUpdating ? "Đang cập nhật..." : "Cập nhật thông tin" }}
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -54,8 +62,10 @@ import { toast } from "vue3-toastify";
 import Header from "./Header.vue";
 import Footer from "./Footer.vue";
 import SidebarProfile from "./SidebarProfile.vue";
+import { customerService } from "../services/customer.service";
 
 const router = useRouter();
+const isUpdating = ref(false);
 const userInfo = ref({
   name: "",
   email: "",
@@ -94,6 +104,36 @@ onMounted(async () => {
     }
   }
 });
+
+const updateProfile = async () => {
+  try {
+    isUpdating.value = true;
+    const response = await customerService.updateProfile({
+      fullname: userInfo.value.name,
+      phone: userInfo.value.phone,
+      address: userInfo.value.address,
+    });
+
+    // Update local storage with new user info
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      const user = JSON.parse(userStr);
+      user.fullname = userInfo.value.name;
+      user.phone = userInfo.value.phone;
+      user.address = userInfo.value.address;
+      localStorage.setItem("user", JSON.stringify(user));
+    }
+
+    toast.success("Cập nhật thông tin thành công!");
+  } catch (error) {
+    console.error("Error updating profile:", error);
+    toast.error(
+      error.response?.data?.message || "Có lỗi xảy ra khi cập nhật thông tin"
+    );
+  } finally {
+    isUpdating.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -154,5 +194,31 @@ textarea {
 textarea {
   height: 100px;
   resize: vertical;
+}
+
+.button-group {
+  margin-top: 20px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.save-button {
+  padding: 10px 20px;
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.save-button:hover {
+  background-color: #45a049;
+}
+
+.save-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 </style>

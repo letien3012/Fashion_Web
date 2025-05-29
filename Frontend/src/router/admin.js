@@ -66,6 +66,16 @@ const adminRoutes = [
         },
       },
       {
+        path: "consignments",
+        name: "ConsignmentList",
+        component: () => import("../views/admin/ConsignmentList.vue"),
+        meta: {
+          requiresAuth: true,
+          requiresAdmin: true,
+          title: "Quản lý kho hàng",
+        },
+      },
+      {
         path: "promotions",
         name: "AdminPromotions",
         component: () => import("../views/admin/PromotionList.vue"),

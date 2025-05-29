@@ -258,7 +258,7 @@ exports.updateStatus = async (req, res) => {
           }
 
           const consignmentData = {
-            code: `${importReceipt.code}-${detail.sku}`,
+            code: `${importReceipt.code}`,
             productId: detail.productId,
             variantId: variantId,
             quantity: detail.quantity,

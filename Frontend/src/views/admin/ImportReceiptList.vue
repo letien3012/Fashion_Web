@@ -11,9 +11,9 @@
 
     <div class="search-filter">
       <div class="search-box">
-        <input 
-          type="text" 
-          v-model="searchQuery" 
+        <input
+          type="text"
+          v-model="searchQuery"
           placeholder="Tìm kiếm theo mã phiếu, nhà cung cấp..."
           @input="handleSearch"
         />
@@ -76,14 +76,17 @@ export default {
 
       if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase();
-        filtered = filtered.filter(receipt => 
-          receipt.code?.toLowerCase().includes(query) ||
-          receipt.supplier?.name?.toLowerCase().includes(query)
+        filtered = filtered.filter(
+          (receipt) =>
+            receipt.code?.toLowerCase().includes(query) ||
+            receipt.supplier?.name?.toLowerCase().includes(query)
         );
       }
 
       if (statusFilter.value) {
-        filtered = filtered.filter(receipt => receipt.status === statusFilter.value);
+        filtered = filtered.filter(
+          (receipt) => receipt.status === statusFilter.value
+        );
       }
 
       return filtered;
