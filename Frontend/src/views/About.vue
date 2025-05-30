@@ -113,7 +113,6 @@ export default {
 </script>
 
 <style scoped>
-@import "leaflet/dist/leaflet.css";
 .about-container {
   max-width: 1200px;
   margin: 0 auto;

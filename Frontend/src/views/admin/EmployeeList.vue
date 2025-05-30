@@ -1,30 +1,40 @@
 <template>
-  <div class="list-container">
-    <div class="header">
-      <h2>Quản lý nhân viên</h2>
-      <button class="add-btn" @click="openAddModal">
+  <div class="employee-list">
+    <div class="page-header">
+      <h1>Quản lý nhân viên</h1>
+      <button class="btn btn-primary" @click="openAddModal">
         <i class="fas fa-plus"></i> Thêm nhân viên
       </button>
     </div>
 
-    <div class="content">
+    <div class="table-container">
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Đang tải dữ liệu...</p>
+      </div>
+      <div v-else-if="error" class="error-state">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>{{ error }}</p>
+        <button class="btn btn-primary" @click="fetchEmployees">Thử lại</button>
+      </div>
       <EmployeeTable
+        v-else
         :employees="employees"
         :loading="loading"
         @edit="editEmployee"
         @delete="confirmDelete"
       />
-
-      <EmployeeForm
-        :show="showModal"
-        :is-editing="isEditing"
-        :initial-data="formData"
-        :loading="loading"
-        @close="closeModal"
-        @submitEmployee="handleSubmit"
-        @error="handleFormError"
-      />
     </div>
+
+    <EmployeeForm
+      :show="showModal"
+      :is-editing="isEditing"
+      :initial-data="formData"
+      :loading="loading"
+      @close="closeModal"
+      @submitEmployee="handleSubmit"
+      @error="handleFormError"
+    />
   </div>
 </template>
 
@@ -57,6 +67,7 @@ export default {
         status: "active",
       },
       loading: false,
+      error: null,
     };
   },
   created() {
@@ -115,21 +126,24 @@ export default {
     async fetchEmployees() {
       try {
         this.loading = true;
+        this.error = null;
         const response = await AdminEmployeeService.getAll();
         if (response.data && response.data.data) {
           this.employees = response.data.data;
         } else {
-          toast.error("Dữ liệu trả về không đúng định dạng");
+          this.error = "Dữ liệu trả về không đúng định dạng";
+          toast.error(this.error);
         }
       } catch (error) {
         console.error("Fetch employees error:", error);
         if (error.response?.status === 401) {
-          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.error = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại";
+          toast.error(this.error);
           this.$router.push("/admin/login");
         } else {
-          toast.error(
-            "Không thể tải danh sách nhân viên. Vui lòng thử lại sau."
-          );
+          this.error =
+            "Không thể tải danh sách nhân viên. Vui lòng thử lại sau.";
+          toast.error(this.error);
         }
       } finally {
         this.loading = false;
@@ -229,47 +243,83 @@ export default {
 </script>
 
 <style scoped>
-@import "../../assets/styles/admin/common.css";
-
-.list-container {
+.employee-list {
   padding: 24px;
 }
 
-.header {
+.page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
 }
 
-.header h2 {
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #262626;
   margin: 0;
-  color: #333;
-  font-size: 1.5rem;
 }
 
-.add-btn {
-  padding: 8px 16px;
-  background-color: #1890ff;
-  color: white;
-  border: none;
+.table-container {
+  background: white;
   border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: #8c8c8c;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1890ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-state i {
+  font-size: 24px;
+  color: #ff4d4f;
+  margin-bottom: 8px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
   cursor: pointer;
+  transition: all 0.3s;
+  border: none;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 500;
-  transition: all 0.3s ease;
 }
 
-.add-btn:hover {
-  opacity: 0.8;
+.btn-primary {
+  background: #1890ff;
+  color: white;
 }
 
-.content {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
+.btn-primary:hover {
+  background: #40a9ff;
 }
 </style>

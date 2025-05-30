@@ -162,77 +162,29 @@ export default {
 
 <style scoped>
 .table-container {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.table-header {
-  padding: 16px;
-  border-bottom: 1px solid #e8e8e8;
-}
-
-.search-filter {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.search-box {
-  position: relative;
-  flex: 1;
-}
-
-.search-box input {
   width: 100%;
-  padding: 8px 32px 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-}
-
-.search-box i {
-  position: absolute;
-  right: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #999;
-}
-
-.filter-box select {
-  padding: 8px 12px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  min-width: 150px;
-}
-
-.table-content {
   overflow-x: auto;
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
-}
-
-th,
-td {
-  padding: 12px 16px;
-  text-align: left;
-  border-bottom: 1px solid #e8e8e8;
+  background: white;
 }
 
 th {
   background: #fafafa;
+  padding: 12px 16px;
+  text-align: left;
   font-weight: 500;
+  color: #262626;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.loading,
-.no-data {
-  text-align: center;
-  color: #999;
-  padding: 24px;
+td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #f0f0f0;
+  color: #262626;
 }
 
 .customer-info {
@@ -243,11 +195,12 @@ th {
 
 .customer-name {
   font-weight: 500;
+  color: #1890ff;
 }
 
 .customer-email {
-  font-size: 0.875rem;
-  color: #666;
+  font-size: 0.9em;
+  color: #8c8c8c;
 }
 
 .rating {
@@ -255,8 +208,13 @@ th {
   gap: 2px;
 }
 
-.star-filled {
-  color: #ffd700;
+.rating span {
+  color: #d9d9d9;
+  font-size: 1.2em;
+}
+
+.rating .star-filled {
+  color: #faad14;
 }
 
 .actions {
@@ -264,29 +222,93 @@ th {
   gap: 8px;
 }
 
-.reply-btn,
-.delete-btn {
-  background: none;
+.actions button {
+  padding: 6px;
   border: none;
-  padding: 4px 8px;
-  cursor: pointer;
   border-radius: 4px;
-  transition: all 0.3s;
+  cursor: pointer;
+  transition: all 0.3s ease;
 }
 
 .reply-btn {
+  background: #e6f7ff;
   color: #1890ff;
 }
 
+.reply-btn:hover {
+  background: #bae7ff;
+}
+
 .delete-btn {
+  background: #fff1f0;
   color: #ff4d4f;
 }
 
-.reply-btn:hover {
-  background: #e6f7ff;
+.delete-btn:hover {
+  background: #ffccc7;
 }
 
-.delete-btn:hover {
-  background: #fff1f0;
+.loading,
+.no-data {
+  text-align: center;
+  color: #8c8c8c;
+  padding: 24px;
+}
+
+tr:hover {
+  background: #fafafa;
+}
+
+.search-filter {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: center;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8c8c8c;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.search-box input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  outline: none;
+}
+
+.filter-box select {
+  padding: 8px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  min-width: 150px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.filter-box select:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  outline: none;
 }
 </style>

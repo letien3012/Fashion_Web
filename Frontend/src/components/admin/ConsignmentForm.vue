@@ -55,6 +55,8 @@
                     'status',
                     consignment.publish ? 'active' : 'inactive',
                   ]"
+                  @click="handleStatusChange(consignment)"
+                  style="cursor: pointer"
                 >
                   <i
                     :class="

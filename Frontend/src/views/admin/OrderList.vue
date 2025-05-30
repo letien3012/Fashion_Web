@@ -1,26 +1,26 @@
 <template>
-  <div class="list-container">
-    <div class="admin-list-header">
-      <h2>Quản lý đơn hàng</h2>
-      <!-- <div class="header-actions">
-        <button class="btn btn-primary" @click="openCreateForm">
-          <i class="fas fa-plus"></i> Tạo đơn hàng mới
-        </button>
-      </div> -->
+  <div class="order-list">
+    <div class="page-header">
+      <h1>Quản lý đơn hàng</h1>
     </div>
 
-    <div class="search-filter">
+    <div class="filters-section">
       <div class="search-box">
+        <i class="fas fa-search"></i>
         <input
           type="text"
           v-model="searchQuery"
           placeholder="Tìm kiếm theo mã đơn hàng, tên khách hàng..."
           @input="handleSearch"
         />
-        <i class="fas fa-search"></i>
       </div>
-      <div class="filter-box">
-        <select v-model="statusFilter" @change="handleFilter">
+
+      <div class="filter-group">
+        <select
+          v-model="statusFilter"
+          @change="handleFilter"
+          class="filter-select"
+        >
           <option value="">Tất cả trạng thái</option>
           <option value="pending">Chờ xử lý</option>
           <option value="processing">Đang xử lý</option>
@@ -31,26 +31,26 @@
         </select>
 
         <div class="date-filter">
-          <label for="startDate">Từ ngày:</label>
           <input
             type="date"
-            id="startDate"
             v-model="startDateFilter"
             @change="handleFilter"
+            class="filter-select"
+            placeholder="Từ ngày"
           />
         </div>
 
         <div class="date-filter">
-          <label for="endDate">Đến ngày:</label>
           <input
             type="date"
-            id="endDate"
             v-model="endDateFilter"
             @change="handleFilter"
+            class="filter-select"
+            placeholder="Đến ngày"
           />
         </div>
 
-        <select v-model="sortBy" @change="handleSort">
+        <select v-model="sortBy" @change="handleSort" class="filter-select">
           <option value="">Sắp xếp theo giá</option>
           <option value="asc">Giá tăng dần</option>
           <option value="desc">Giá giảm dần</option>
@@ -58,15 +58,15 @@
       </div>
     </div>
 
-    <div class="content">
+    <div class="table-container">
       <div v-if="isLoading" class="loading-state">
         <div class="spinner"></div>
-        <p>Loading orders...</p>
+        <p>Đang tải dữ liệu...</p>
       </div>
       <div v-else-if="error" class="error-state">
         <i class="fas fa-exclamation-circle"></i>
         <p>{{ error }}</p>
-        <button class="btn btn-primary" @click="loadOrders">Retry</button>
+        <button class="btn btn-primary" @click="loadOrders">Thử lại</button>
       </div>
       <OrderTable
         v-else
@@ -77,24 +77,42 @@
         @update-status="handleUpdateStatus"
         @delete="deleteOrder"
       />
-    </div>
 
-    <div class="pagination">
-      <button
-        class="btn btn-secondary"
-        :disabled="currentPage === 1"
-        @click="currentPage--"
-      >
-        <i class="fas fa-chevron-left"></i>
-      </button>
-      <span class="page-info">Trang {{ currentPage }} / {{ totalPages }}</span>
-      <button
-        class="btn btn-secondary"
-        :disabled="currentPage === totalPages"
-        @click="currentPage++"
-      >
-        <i class="fas fa-chevron-right"></i>
-      </button>
+      <div class="pagination-info">
+        <span class="showing-info">
+          Hiển thị {{ startIndex + 1 }}-{{ endIndex }} /
+          {{ filteredOrders.length }} đơn hàng
+        </span>
+        <div class="pagination">
+          <button
+            class="page-btn"
+            :disabled="currentPage === 1"
+            @click="currentPage--"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+
+          <template v-for="page in displayedPages" :key="page">
+            <button
+              v-if="page !== '...'"
+              class="page-btn"
+              :class="{ active: currentPage === page }"
+              @click="currentPage = page"
+            >
+              {{ page }}
+            </button>
+            <span v-else class="page-dots">...</span>
+          </template>
+
+          <button
+            class="page-btn"
+            :disabled="currentPage === totalPages"
+            @click="currentPage++"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
     </div>
 
     <OrderDetail
@@ -202,6 +220,44 @@ export default {
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end = start + this.itemsPerPage;
       return this.filteredOrders.slice(start, end);
+    },
+    startIndex() {
+      return (this.currentPage - 1) * this.itemsPerPage;
+    },
+    endIndex() {
+      return Math.min(
+        this.currentPage * this.itemsPerPage,
+        this.filteredOrders.length
+      );
+    },
+    displayedPages() {
+      const pages = [];
+      const totalPages = this.totalPages;
+      const currentPage = this.currentPage;
+
+      if (totalPages <= 5) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        if (currentPage <= 3) {
+          pages.push(1, 2, 3, "...", totalPages);
+        } else if (currentPage >= totalPages - 2) {
+          pages.push(1, "...", totalPages - 2, totalPages - 1, totalPages);
+        } else {
+          pages.push(
+            1,
+            "...",
+            currentPage - 1,
+            currentPage,
+            currentPage + 1,
+            "...",
+            totalPages
+          );
+        }
+      }
+
+      return pages;
     },
   },
   async created() {
@@ -340,347 +396,106 @@ export default {
 </script>
 
 <style scoped>
-@import "../../assets/styles/admin/list.css";
-
-.list-container {
+.order-list {
   padding: 24px;
 }
 
-.admin-list-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.page-header {
   margin-bottom: 24px;
 }
 
-.admin-list-header h2 {
-  margin: 0;
-  color: #333;
-  font-size: 1.5rem;
+.page-header h1 {
+  font-size: 24px;
   font-weight: 600;
+  color: #262626;
+  margin: 0;
 }
 
-.header-actions {
+.filters-section {
   display: flex;
-  gap: 12px;
-}
-
-.btn {
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-}
-
-.btn-primary {
-  background-color: #1890ff;
-  color: white;
-  border: none;
-}
-
-.btn-primary:hover {
-  background-color: #40a9ff;
-}
-
-.search-filter {
-  display: flex;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
+  align-items: center;
 }
 
 .search-box {
   position: relative;
   flex: 1;
-}
-
-.search-box input {
-  width: 100%;
-  padding: 8px 16px;
-  padding-right: 40px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.search-box input:focus {
-  outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  min-width: 300px;
 }
 
 .search-box i {
   position: absolute;
-  right: 12px;
+  left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  color: #999;
-  font-size: 14px;
+  color: #8c8c8c;
 }
 
-.filter-box {
+.search-box input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.search-box input:focus {
+  border-color: #40a9ff;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  outline: none;
+}
+
+.filter-group {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
-  align-items: center;
 }
 
-.filter-box select {
-  min-width: 150px;
+.filter-select {
   padding: 8px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 14px;
-  color: #333;
-  background-color: white;
+  min-width: 150px;
+  background: white;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
 }
 
-.filter-box select:focus {
-  outline: none;
-  border-color: #1890ff;
+.filter-select:focus {
+  border-color: #40a9ff;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  outline: none;
 }
 
 .date-filter {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  position: relative;
 }
 
-.date-filter label {
-  font-size: 14px;
-  color: #333;
-  white-space: nowrap;
-}
-
-.date-filter input[type="date"] {
+.date-filter input {
   padding: 8px 12px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   font-size: 14px;
-  color: #333;
-  cursor: pointer;
-  transition: all 0.3s ease;
   min-width: 150px;
-}
-
-.date-filter input[type="date"]:focus {
-  outline: none;
-  border-color: #1890ff;
-  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
-}
-
-.content {
   background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 24px;
-}
-
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  backdrop-filter: blur(2px);
-}
-
-.modal-content {
-  background: white;
-  border-radius: 8px;
-  max-width: 800px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  position: relative;
-  z-index: 1001;
-}
-
-.status-modal {
-  padding: 24px;
-  text-align: center;
-}
-
-.status-modal h3 {
-  margin-bottom: 24px;
-  color: #333;
-  font-size: 1.25rem;
-  font-weight: 500;
-}
-
-.status-select {
-  width: 100%;
-  padding: 10px 16px;
-  margin-bottom: 24px;
-  border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  font-size: 14px;
-  color: #333;
-  background-color: white;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s;
 }
 
-.status-select:focus {
-  outline: none;
-  border-color: #1890ff;
+.date-filter input:focus {
+  border-color: #40a9ff;
   box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+  outline: none;
 }
 
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-}
-
-.cancel-btn,
-.confirm-btn {
-  padding: 8px 16px;
+.table-container {
+  background: white;
   border-radius: 4px;
-  cursor: pointer;
-  border: none;
-  font-weight: 500;
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.cancel-btn {
-  background-color: #f5f5f5;
-  color: #666;
-}
-
-.confirm-btn {
-  background-color: #1890ff;
-  color: white;
-}
-
-.cancel-btn:hover {
-  background-color: #e8e8e8;
-}
-
-.confirm-btn:hover {
-  background-color: #40a9ff;
-}
-
-/* Responsive styles */
-@media (max-width: 768px) {
-  .search-filter {
-    flex-direction: column;
-  }
-
-  .filter-box {
-    flex-direction: column;
-  }
-
-  .filter-box select,
-  .filter-box input[type="date"],
-  .date-filter {
-    width: 100%;
-  }
-
-  .admin-list-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: flex-start;
-  }
-
-  .header-actions {
-    width: 100%;
-  }
-
-  .btn {
-    width: 100%;
-    justify-content: center;
-  }
-
-  .date-filter {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-
-  .date-filter label {
-    margin-bottom: 4px;
-  }
-}
-
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 16px;
-  margin-top: 24px;
-  padding: 12px 0;
-  background-color: #f8f9fa;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
-}
-
-.page-info {
-  font-size: 15px;
-  color: #555;
-  font-weight: 500;
-}
-
-.btn-secondary {
-  background-color: #fff;
-  color: #007bff;
-  border: 1px solid #007bff;
-  padding: 8px 15px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-secondary i {
-  font-size: 12px;
-}
-
-.btn-secondary:hover:not(:disabled) {
-  background-color: #007bff;
-  color: #fff;
-  border-color: #007bff;
-}
-
-.btn-secondary:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background-color: #f8f9fa;
-  color: #999;
-  border-color: #ddd;
-}
-
-@media (max-width: 768px) {
-  .pagination {
-    flex-direction: row;
-    gap: 8px;
-    padding: 10px 0;
-  }
-
-  .btn-secondary {
-    padding: 6px 10px;
-  }
-
-  .page-info {
-    font-size: 14px;
-  }
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 .loading-state,
@@ -689,15 +504,15 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 40px;
-  text-align: center;
+  padding: 48px;
+  color: #8c8c8c;
 }
 
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #1890ff;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1890ff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin-bottom: 16px;
@@ -713,13 +528,77 @@ export default {
 }
 
 .error-state i {
-  font-size: 48px;
+  font-size: 24px;
   color: #ff4d4f;
-  margin-bottom: 16px;
+  margin-bottom: 8px;
 }
 
-.error-state p {
-  color: #666;
-  margin-bottom: 16px;
+.pagination-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.showing-info {
+  color: #8c8c8c;
+  font-size: 14px;
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.page-btn {
+  padding: 6px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+  color: #262626;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #40a9ff;
+  color: #40a9ff;
+}
+
+.page-btn.active {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.page-btn:disabled {
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+  color: #bfbfbf;
+  cursor: not-allowed;
+}
+
+.page-dots {
+  color: #8c8c8c;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+}
+
+.btn-primary {
+  background: #1890ff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #40a9ff;
 }
 </style>

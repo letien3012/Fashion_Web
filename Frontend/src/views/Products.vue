@@ -1,7 +1,6 @@
 <template>
+  <Header />
   <div class="product-list-page">
-    <Header />
-
     <div class="container">
       <!-- Breadcrumb -->
       <div class="breadcrumb">
@@ -225,9 +224,8 @@
         </div>
       </div>
     </div>
-
-    <Footer />
   </div>
+  <Footer />
 </template>
 
 <script>
@@ -537,10 +535,11 @@ export default {
 .product-list-page {
   min-height: 100vh;
   background: #f8f9fa;
+  width: 100%;
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 95%;
   margin: 0 auto;
   padding: 20px;
 }
