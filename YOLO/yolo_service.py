@@ -4,9 +4,23 @@ import numpy as np
 import cv2
 import base64
 import json  # cần import json để parse chuỗi JSON
+import torch
+from torchvision import transforms
+from efficientnet_pytorch import EfficientNet
 
 app = FastAPI()
 model = YOLO("best.pt")
+# Load EfficientNet-B0 model
+efficientnet_model = EfficientNet.from_pretrained('efficientnet-b0')
+efficientnet_model.eval()  # Set to evaluation mode
+
+# Define image preprocessing
+preprocess = transforms.Compose([
+    transforms.ToPILImage(),
+    transforms.Resize((224, 224)),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+])
 
 def decode_image(contents: bytes):
     np_img = np.frombuffer(contents, np.uint8)
@@ -63,5 +77,29 @@ async def crop(file: UploadFile = File(...), boxes: str = Form(...)):
             })
 
         return {"crops": crops}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/extract-features")
+async def extract_features(file: UploadFile = File(...)):
+    try:
+        contents = await file.read()
+        img = decode_image(contents)
+        
+        # Convert BGR to RGB (EfficientNet expects RGB)
+        img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        
+        # Preprocess image
+        input_tensor = preprocess(img_rgb)
+        input_batch = input_tensor.unsqueeze(0)  # Add batch dimension
+        
+        # Extract features
+        with torch.no_grad():
+            features = efficientnet_model.extract_features(input_batch)
+            # Get the final features (global average pooling)
+            features = torch.mean(features, dim=[2, 3])  # Global average pooling
+            features = features.squeeze().numpy()  # Convert to numpy array
+            
+        return {"features": features.tolist()}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

@@ -1,17 +1,18 @@
 <template>
   <div class="p-4">
     <input type="file" @change="onFileChange" accept="image/*" />
-    <div class="relative mt-4" v-if="imageUrl" style="position: relative">
+    <div class="relative mt-4 image-container" v-if="imageUrl" style="position: relative">
       <img
         :src="imageUrl"
         ref="imgRef"
         @load="onImageLoad"
         alt="uploaded image"
+        class="resized-image"
       />
 
       <!-- Lớp phủ mờ ảnh trừ vùng được chọn -->
       <div
-        v-if="selectedBox"
+        v-if="!selectedBox"
         class="highlight-mask"
         :style="highlightMaskStyle"
       ></div>
@@ -54,6 +55,8 @@ const croppedImage = ref(null);
 const imgRef = ref(null);
 const scaleX = ref(1);
 const scaleY = ref(1);
+const offsetX = ref(0);
+const offsetY = ref(0);
 
 const onFileChange = async (e) => {
   const file = e.target.files[0];
@@ -61,6 +64,13 @@ const onFileChange = async (e) => {
     alert("Vui lòng chọn file ảnh.");
     return;
   }
+
+  // Log kích thước ảnh gốc
+  const imgTest = new window.Image();
+  imgTest.onload = () => {
+    console.log("[DEBUG] Ảnh gốc:", imgTest.naturalWidth, imgTest.naturalHeight);
+  };
+  imgTest.src = URL.createObjectURL(file);
 
   const formData = new FormData();
   formData.append("image", file);
@@ -73,6 +83,8 @@ const onFileChange = async (e) => {
         headers: { "Content-Type": "multipart/form-data" },
       }
     );
+    // Log box backend trả về
+    console.log("[DEBUG] Box backend trả về:", res.data.boxes);
     // Lưu tạm dữ liệu boxes nhưng chưa gán ngay
     const tempBoxes = res.data.boxes;
     imageUrl.value = URL.createObjectURL(file);
@@ -96,15 +108,24 @@ const onFileChange = async (e) => {
 const onImageLoad = () => {
   const img = imgRef.value;
   if (img && img.naturalWidth && img.naturalHeight) {
-    scaleX.value = img.width / img.naturalWidth;
-    scaleY.value = img.height / img.naturalHeight;
-    console.log("Image loaded:", {
-      width: img.width,
+    const container = img.parentElement;
+    const containerRect = container.getBoundingClientRect();
+    const imgRect = img.getBoundingClientRect();
+    // Tính scale dựa trên vùng ảnh thực sự hiển thị (object-fit: contain)
+    scaleX.value = imgRect.width / img.naturalWidth;
+    scaleY.value = imgRect.height / img.naturalHeight;
+    // Tính offset do object-fit: contain tạo ra
+    offsetX.value = (containerRect.width - imgRect.width) / 2;
+    offsetY.value = (containerRect.height - imgRect.height) / 2;
+    console.log("[DEBUG] Image loaded:", {
+      width: imgRect.width,
       naturalWidth: img.naturalWidth,
-      height: img.height,
+      height: imgRect.height,
       naturalHeight: img.naturalHeight,
       scaleX: scaleX.value,
       scaleY: scaleY.value,
+      offsetX: offsetX.value,
+      offsetY: offsetY.value,
     });
   } else {
     console.warn("Image dimensions not available");
@@ -113,26 +134,21 @@ const onImageLoad = () => {
 
 const boxStyle = (box) => {
   const img = imgRef.value;
-  if (
-    !img ||
-    !img.naturalWidth ||
-    !img.naturalHeight ||
-    !img.width ||
-    !img.height
-  ) {
+  if (!img || !img.naturalWidth || !img.naturalHeight) {
     console.warn("Invalid image dimensions in boxStyle");
     return {};
   }
-
-  const style = {
+  return {
     position: "absolute",
-    left: `${box.x * scaleX.value}px`,
-    top: `${box.y * scaleY.value}px`,
+    left: `${box.x * scaleX.value + offsetX.value}px`,
+    top: `${box.y * scaleY.value + offsetY.value}px`,
     width: `${box.width * scaleX.value}px`,
     height: `${box.height * scaleY.value}px`,
+    border: "2px solid white",
+    boxShadow: "0 0 0 2px rgba(255,255,255,0.5)",
+    zIndex: 11,
+    boxSizing: "border-box"
   };
-  console.log("Box style:", style); // Debug style
-  return style;
 };
 
 const onBoxClick = async (box) => {
@@ -145,6 +161,7 @@ const onBoxClick = async (box) => {
       height: Math.round(box.height),
       imagePath: imagePath.value,
     };
+    console.log(payload);
 
     const res = await axios.post(
       "http://localhost:3005/api/imageService/crop",
@@ -208,11 +225,9 @@ const onImageClick = async (event) => {
 const dotStyle = (box) => {
   const img = imgRef.value;
   if (!img) return {};
-
-  const cx = (box.x + box.width / 2) * scaleX.value;
-  const cy = (box.y + box.height / 2) * scaleY.value;
+  const cx = (box.x + box.width / 2) * scaleX.value + offsetX.value;
+  const cy = (box.y + box.height / 2) * scaleY.value + offsetY.value;
   const size = 12;
-
   return {
     position: "absolute",
     left: `${cx - size / 2}px`,
@@ -224,6 +239,9 @@ const dotStyle = (box) => {
     border: "2px solid #000",
     zIndex: 20,
     pointerEvents: "auto",
+    cursor: "pointer",
+    transition: "all 0.2s ease",
+    boxShadow: "0 0 4px rgba(0,0,0,0.3)",
   };
 };
 
@@ -242,13 +260,14 @@ const onDotClick = async (box, index) => {
       height: Math.round(box.height),
       imagePath: imagePath.value,
     };
-
+    console.log(payload);
     const res = await axios.post(
       "http://localhost:3005/api/imageService/crop",
       payload
     );
-
+    console.log(res.data);
     croppedImage.value = res.data.image_base64;
+    console.log(croppedImage.value);
   } catch (err) {
     console.error("Error in onDotClick:", err);
     alert("Không thể cắt ảnh.");
@@ -296,6 +315,28 @@ const highlightMaskStyle = computed(() => {
 </script>
 
 <style scoped>
+.image-container {
+  width: 500px;
+  height: 500px;
+  position: relative;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #eee;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.resized-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+  padding: 0;
+  margin: 0;
+}
+
 img {
   display: block;
   max-width: 100%;
@@ -317,11 +358,12 @@ img {
   background-color: #fff;
   border: 2px solid #000;
   z-index: 10;
-  transition: transform 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .dot:hover {
   transform: scale(1.2);
+  box-shadow: 0 0 8px rgba(0,0,0,0.5);
 }
 
 .highlight-box {
@@ -329,6 +371,13 @@ img {
   position: absolute;
   z-index: 11;
   background: none;
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.5);
+  transition: all 0.2s ease;
+}
+
+.highlight-box:hover {
+  border-color: #00ff00;
+  box-shadow: 0 0 0 2px rgba(0,255,0,0.5);
 }
 
 .highlight-mask {
