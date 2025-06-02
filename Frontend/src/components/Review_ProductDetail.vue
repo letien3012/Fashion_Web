@@ -280,7 +280,6 @@ export default {
 
 <style scoped>
 .product-review-section {
-  width: 1100px;
   margin: 32px auto 40px auto;
   background: #fff;
   border-radius: 16px;

@@ -340,3 +340,20 @@ exports.getVariantPrice = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+// Lấy sản phẩm bán chạy
+exports.getBestSelling = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 8;
+    const products = await Product.getBestSelling(limit);
+    res.status(200).json({
+      message: "Success",
+      data: products,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};

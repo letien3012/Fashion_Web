@@ -13,57 +13,87 @@
     </div>
 
     <nav class="sidebar-nav">
-      <router-link to="/admin/dashboard" class="nav-item">
-        <i class="fas fa-home"></i>
-        <span>Dashboard</span>
-      </router-link>
-      <router-link to="/admin/orders" class="nav-item">
-        <i class="fas fa-shopping-cart"></i>
-        <span>Quản lý đơn hàng</span>
-      </router-link>
-      <router-link to="/admin/reviews" class="nav-item">
-        <i class="fas fa-star"></i>
-        <span>Quản lý đánh giá</span>
-      </router-link>
-      <router-link to="/admin/employees" class="nav-item">
-        <i class="fas fa-users"></i>
-        <span>Quản lý nhân viên</span>
-      </router-link>
-      <router-link to="/admin/attribute-catalogues" class="nav-item">
-        <i class="fas fa-list"></i>
-        <span>Danh mục thuộc tính</span>
-      </router-link>
-      <router-link to="/admin/product-catalogues" class="nav-item">
-        <i class="fas fa-folder"></i>
-        <span>Danh mục sản phẩm</span>
-      </router-link>
-      <router-link to="/admin/products" class="nav-item">
-        <i class="fas fa-box"></i>
-        <span>Quản lý sản phẩm</span>
-      </router-link>
-      <router-link to="/admin/suppliers" class="nav-item">
-        <i class="fas fa-truck"></i>
-        <span>Quản lý nhà cung cấp</span>
-      </router-link>
-      <router-link to="/admin/import-receipts" class="nav-item">
-        <i class="fas fa-file-import"></i>
-        <span>Phiếu nhập hàng</span>
-      </router-link>
-      <router-link to="/admin/consignments" class="nav-item">
-        <i class="fas fa-warehouse"></i>
-        <span>Quản lý kho hàng</span>
-      </router-link>
-      <router-link to="/admin/promotions" class="nav-item">
-        <i class="fas fa-percent"></i>
-        <span>Khuyến mãi</span>
-      </router-link>
-      <router-link to="/admin/banners" class="nav-item">
-        <i class="fas fa-images"></i>
-        <span>Quản lý banner</span>
-      </router-link>
-      <router-link to="/admin/customers" class="nav-item">
-        <i class="fas fa-users me-2"></i>Quản lý người dùng
-      </router-link>
+      <!-- Tổng quan -->
+      <div class="nav-section">
+        <h3 class="section-title">Tổng quan</h3>
+        <router-link to="/admin/dashboard" class="nav-item">
+          <i class="fas fa-home"></i>
+          <span>Dashboard</span>
+        </router-link>
+      </div>
+
+      <!-- Quản lý đơn hàng & Khách hàng -->
+      <div class="nav-section">
+        <h3 class="section-title">Quản lý đơn hàng & Khách hàng</h3>
+        <router-link to="/admin/orders" class="nav-item">
+          <i class="fas fa-shopping-cart"></i>
+          <span>Quản lý đơn hàng</span>
+        </router-link>
+        <router-link to="/admin/customers" class="nav-item">
+          <i class="fas fa-users"></i>
+          <span>Quản lý người dùng</span>
+        </router-link>
+      </div>
+
+      <!-- Quản lý sản phẩm & Danh mục -->
+      <div class="nav-section">
+        <h3 class="section-title">Quản lý sản phẩm & Danh mục</h3>
+        <router-link to="/admin/products" class="nav-item">
+          <i class="fas fa-box"></i>
+          <span>Quản lý sản phẩm</span>
+        </router-link>
+        <router-link to="/admin/product-catalogues" class="nav-item">
+          <i class="fas fa-folder"></i>
+          <span>Danh mục sản phẩm</span>
+        </router-link>
+        <router-link to="/admin/attribute-catalogues" class="nav-item">
+          <i class="fas fa-list"></i>
+          <span>Danh mục thuộc tính</span>
+        </router-link>
+      </div>
+
+      <!-- Quản lý kho & Nhà cung cấp -->
+      <div class="nav-section">
+        <h3 class="section-title">Quản lý kho & Nhà cung cấp</h3>
+        <router-link to="/admin/consignments" class="nav-item">
+          <i class="fas fa-warehouse"></i>
+          <span>Quản lý kho hàng</span>
+        </router-link>
+        <router-link to="/admin/suppliers" class="nav-item">
+          <i class="fas fa-truck"></i>
+          <span>Quản lý nhà cung cấp</span>
+        </router-link>
+        <router-link to="/admin/import-receipts" class="nav-item">
+          <i class="fas fa-file-import"></i>
+          <span>Phiếu nhập hàng</span>
+        </router-link>
+      </div>
+
+      <!-- Quản lý Marketing & Đánh giá -->
+      <div class="nav-section">
+        <h3 class="section-title">Quản lý Marketing & Đánh giá</h3>
+        <router-link to="/admin/promotions" class="nav-item">
+          <i class="fas fa-percent"></i>
+          <span>Khuyến mãi</span>
+        </router-link>
+        <router-link to="/admin/banners" class="nav-item">
+          <i class="fas fa-images"></i>
+          <span>Quản lý banner</span>
+        </router-link>
+        <router-link to="/admin/reviews" class="nav-item">
+          <i class="fas fa-star"></i>
+          <span>Quản lý đánh giá</span>
+        </router-link>
+      </div>
+
+      <!-- Quản lý nhân viên -->
+      <div class="nav-section">
+        <h3 class="section-title">Quản lý nhân viên</h3>
+        <router-link to="/admin/employees" class="nav-item">
+          <i class="fas fa-users"></i>
+          <span>Quản lý nhân viên</span>
+        </router-link>
+      </div>
     </nav>
 
     <div class="sidebar-footer">
@@ -280,5 +310,22 @@ export default {
   .admin-sidebar.collapsed .nav-item i {
     margin-right: 0;
   }
+}
+
+.nav-section {
+  margin-bottom: 24px;
+}
+
+.section-title {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 0 24px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.admin-sidebar.collapsed .section-title {
+  display: none;
 }
 </style>

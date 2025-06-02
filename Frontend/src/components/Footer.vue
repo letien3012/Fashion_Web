@@ -16,7 +16,7 @@
         <div class="footer-section links">
           <h2>Liên kết hữu ích</h2>
           <ul>
-            <li><a href="#">Về chúng tôi</a></li>
+            <li><a href="/about">Về chúng tôi</a></li>
             <li><a href="#">Chính sách đổi trả</a></li>
             <li><a href="#">Hệ thống cửa hàng</a></li>
             <li><a href="#">Tuyển dụng</a></li>

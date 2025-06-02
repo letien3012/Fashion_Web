@@ -23,7 +23,7 @@
         >
           <option value="">Tất cả trạng thái</option>
           <option value="pending">Chờ xử lý</option>
-          <option value="processing">Đang xử lý</option>
+          <option value="processing">Đã xác nhận</option>
           <option value="shipping">Đang giao hàng</option>
           <option value="delivered">Đã giao hàng</option>
           <option value="cancelled">Đã hủy</option>

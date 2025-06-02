@@ -464,4 +464,52 @@ Product.getVariantPrice = async function (productId, variantId) {
   };
 };
 
+// Static method to get best selling products
+Product.getBestSelling = async function (limit = 8) {
+  try {
+    const products = await this.aggregate([
+      {
+        $match: {
+          deletedAt: null,
+          publish: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          let: { productId: "$_id" },
+          pipeline: [
+            { $unwind: "$items" },
+            { $match: { $expr: { $eq: ["$items.productId", "$$productId"] } } },
+            { $group: { _id: null, total: { $sum: "$items.quantity" } } },
+          ],
+          as: "sales",
+        },
+      },
+      {
+        $addFields: {
+          totalSold: { $ifNull: [{ $arrayElemAt: ["$sales.total", 0] }, 0] },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          image: 1,
+          description: 1,
+          variants: 1,
+          totalSold: 1,
+          view_count: 1,
+          favorite_count: 1,
+        },
+      },
+    ]);
+    return products;
+  } catch (error) {
+    throw new Error(`Error getting best selling products: ${error.message}`);
+  }
+};
+
 module.exports = Product;

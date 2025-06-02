@@ -26,42 +26,6 @@
           <div class="message-time">{{ getCurrentTime() }}</div>
         </div>
 
-        <!-- Tin nhắn tìm kiếm hình ảnh -->
-        <div v-if="showImageSearch" class="message bot">
-          <div class="message-content">
-            <p>Vui lòng chọn hình ảnh sản phẩm bạn muốn tìm kiếm:</p>
-            <div class="image-search-container">
-              <div
-                class="image-upload-area"
-                @click="triggerFileInput"
-                :class="{ 'has-image': selectedImage }"
-              >
-                <input
-                  type="file"
-                  ref="fileInput"
-                  accept="image/*"
-                  @change="handleImageSelect"
-                  style="display: none"
-                />
-                <div v-if="!selectedImage" class="upload-placeholder">
-                  <i class="fas fa-camera"></i>
-                  <span>Click để chọn ảnh</span>
-                </div>
-                <img v-else :src="selectedImage" class="preview-image" />
-              </div>
-              <button
-                class="search-btn"
-                :disabled="!selectedImage"
-                @click="searchByImage"
-              >
-                <i class="fas fa-search"></i>
-                Tìm kiếm
-              </button>
-            </div>
-          </div>
-          <div class="message-time">{{ getCurrentTime() }}</div>
-        </div>
-
         <!-- Kết quả tìm kiếm giả lập -->
         <div v-if="showSearchResults" class="message bot">
           <div class="message-content">
@@ -86,9 +50,16 @@
 
       <div class="chat-input">
         <div class="input-actions">
+          <input
+            type="file"
+            ref="fileInput"
+            accept="image/*"
+            @change="handleImageSelect"
+            style="display: none"
+          />
           <button
             class="action-btn"
-            @click="toggleImageSearch"
+            @click="triggerFileInput"
             title="Tìm kiếm bằng hình ảnh"
           >
             <i class="fas fa-camera"></i>
@@ -116,8 +87,6 @@ export default {
       isOpen: false,
       message: "",
       hasNewMessage: false,
-      showImageSearch: false,
-      selectedImage: null,
       showSearchResults: false,
       mockSearchResults: [
         {
@@ -158,26 +127,13 @@ export default {
         minute: "2-digit",
       });
     },
-    toggleImageSearch() {
-      this.showImageSearch = !this.showImageSearch;
-      this.showSearchResults = false;
-      this.selectedImage = null;
-    },
     triggerFileInput() {
       this.$refs.fileInput.click();
     },
     handleImageSelect(event) {
       const file = event.target.files[0];
       if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          this.selectedImage = e.target.result;
-        };
-        reader.readAsDataURL(file);
-      }
-    },
-    searchByImage() {
-      if (this.selectedImage) {
+        // Xử lý tìm kiếm bằng hình ảnh ở đây
         this.showSearchResults = true;
         // Cuộn xuống kết quả tìm kiếm
         this.$nextTick(() => {
@@ -431,80 +387,23 @@ export default {
   border: none;
   color: #666;
   cursor: pointer;
-  padding: 8px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .action-btn:hover {
-  background: #f0f0f0;
+  background: rgba(230, 57, 70, 0.1);
   color: #e63946;
 }
 
-.image-search-container {
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.image-upload-area {
-  width: 100%;
-  height: 200px;
-  border: 2px dashed #ddd;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  overflow: hidden;
-}
-
-.image-upload-area:hover {
-  border-color: #e63946;
-}
-
-.upload-placeholder {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  color: #666;
-}
-
-.upload-placeholder i {
-  font-size: 32px;
-}
-
-.preview-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.search-btn {
-  padding: 10px 20px;
-  background: linear-gradient(135deg, #e63946, #ff4d5a);
-  color: white;
-  border: none;
-  border-radius: 25px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-}
-
-.search-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.search-btn:not(:disabled):hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(230, 57, 70, 0.4);
+.action-btn i {
+  font-size: 18px;
 }
 
 .search-results {
@@ -556,10 +455,6 @@ export default {
 @media (max-width: 576px) {
   .search-results {
     grid-template-columns: repeat(2, 1fr);
-  }
-
-  .image-upload-area {
-    height: 150px;
   }
 }
 </style>

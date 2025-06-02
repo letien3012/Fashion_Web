@@ -254,6 +254,18 @@ const productService = {
       throw error;
     }
   },
+
+  getBestSelling: async (limit = 8) => {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/products/best-selling?limit=${limit}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching best selling products:", error);
+      throw error;
+    }
+  },
 };
 
 export const getVariantPrice = async (productId, variantId) => {

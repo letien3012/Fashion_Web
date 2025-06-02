@@ -1,166 +1,192 @@
 <template>
-  <Header />
-  <SidebarProfile />
-  <div class="main-content">
-    <!-- Tabs trạng thái đơn hàng -->
-    <div class="order-tabs">
-      <div
-        v-for="tab in orderTabs"
-        :key="tab.value"
-        :class="['tab', { active: currentTab === tab.value }]"
-        @click="currentTab = tab.value"
-      >
-        {{ tab.label }}
+  <Header></Header>
+  <div class="page-container">
+    <div class="breadcrumb">
+      <router-link to="/">Trang chủ</router-link>
+      <span class="separator">/</span>
+      <span class="current">Đơn hàng của tôi</span>
+    </div>
+    <div class="row">
+      <div class="col-md-3">
+        <SidebarProfile />
       </div>
-    </div>
-
-    <!-- Ô tìm kiếm -->
-    <div class="order-search">
-      <i class="fas fa-search search-icon"></i>
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Bạn có thể tìm kiếm theo tên ID đơn hàng hoặc Tên Sản phẩm"
-      />
-    </div>
-
-    <!-- Loading state -->
-    <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>Đang tải đơn hàng...</p>
-    </div>
-
-    <!-- Empty state -->
-    <div v-else-if="filteredOrders.length === 0" class="empty-state">
-      <img src="../assets/images/empty-order.png" alt="Không có đơn hàng" />
-      <p>Bạn chưa có đơn hàng nào</p>
-      <router-link to="/" class="continue-shopping"
-        >Tiếp tục mua sắm</router-link
-      >
-    </div>
-
-    <!-- Danh sách đơn hàng -->
-    <div v-else class="orders-container">
-      <div v-for="order in filteredOrders" :key="order.id" class="order-group">
-        <div class="order-header">
-          <div class="order-info">
-            <span class="order-id">Đơn hàng #{{ order.code }}</span>
-            <span class="order-date">{{ order.date }}</span>
-          </div>
-          <span class="order-status" :class="order.statusClass">
-            {{ order.statusText }}
-          </span>
-        </div>
-
-        <div class="order-items">
-          <div
-            v-for="item in order.order_detail"
-            :key="item._id"
-            class="order-item"
-          >
-            <img :src="item.productId.image" class="item-image" />
-            <div class="item-info">
-              <div class="item-title">{{ item.productId.name }}</div>
-              <div class="item-variant">
-                Phân loại: {{ item.productId.variant }}
-              </div>
-              <div class="item-qty">Số lượng: {{ item.quantity }}</div>
-            </div>
-            <div class="item-price">{{ formatPrice(item.price) }}</div>
-          </div>
-        </div>
-
-        <div class="order-footer">
-          <div class="order-summary">
-            <div class="summary-row" v-if="order.discount > 0">
-              <span>Giảm giá:</span>
-              <span class="discount">-{{ formatPrice(order.discount) }}</span>
-            </div>
-            <div class="summary-row" v-if="order.total_ship_fee > 0">
-              <span>Phí vận chuyển:</span>
-              <span>{{ formatPrice(order.total_ship_fee) }}</span>
-            </div>
-            <div class="summary-row total">
-              <span>Tổng tiền:</span>
-              <span class="total-price">{{ formatPrice(order.total) }}</span>
-            </div>
-          </div>
-          <button
-            class="action-btn danger cancel-btn-below"
-            v-if="order.status === 'pending'"
-            @click="cancelOrder(order.id)"
-          >
-            Hủy đơn
-          </button>
-          <div class="order-actions">
-            <button
-              class="action-btn primary"
-              v-if="order.status === 'shipping'"
-              @click="confirmReceived(order.id)"
-            >
-              <i class="fas fa-check"></i>
-              Đã nhận hàng
-            </button>
-            <button
-              class="action-btn"
-              v-if="order.status === 'delivered'"
-              @click="reviewOrder(order.id)"
-            >
-              <i class="fas fa-star"></i>
-              Đánh giá
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Product Selection Modal -->
-    <div v-if="showProductSelectionModal" class="modal-overlay">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>Chọn sản phẩm để đánh giá</h3>
-          <button class="close-btn" @click="closeProductSelectionModal">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-
-        <div class="modal-body">
-          <div class="product-list">
+      <div class="col-md-9">
+        <div class="main-content">
+          <!-- Tabs trạng thái đơn hàng -->
+          <div class="order-tabs">
             <div
-              v-for="product in availableProducts"
-              :key="product.productId._id"
-              class="product-item"
-              @click="selectProductForReview(product)"
+              v-for="tab in orderTabs"
+              :key="tab.value"
+              :class="['tab', { active: currentTab === tab.value }]"
+              @click="currentTab = tab.value"
             >
-              <img
-                :src="
-                  product.productId.image.startsWith('http')
-                    ? product.productId.image
-                    : `http://localhost:3005/${product.productId.image}`
-                "
-                class="product-image"
-              />
-              <div class="product-info">
-                <div class="product-name">{{ product.productId.name }}</div>
-                <div class="product-variants">
-                  {{ product.variants.length }} biến thể
+              {{ tab.label }}
+            </div>
+          </div>
+
+          <!-- Ô tìm kiếm -->
+          <div class="order-search">
+            <i class="fas fa-search search-icon"></i>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Bạn có thể tìm kiếm theo tên ID đơn hàng hoặc Tên Sản phẩm"
+            />
+          </div>
+
+          <!-- Loading state -->
+          <div v-if="loading" class="loading-container">
+            <div class="loading-spinner"></div>
+            <p>Đang tải đơn hàng...</p>
+          </div>
+
+          <!-- Empty state -->
+          <div v-else-if="filteredOrders.length === 0" class="empty-state">
+            <img
+              src="../assets/images/empty-order.png"
+              alt="Không có đơn hàng"
+            />
+            <p>Bạn chưa có đơn hàng nào</p>
+            <router-link to="/" class="continue-shopping"
+              >Tiếp tục mua sắm</router-link
+            >
+          </div>
+
+          <!-- Danh sách đơn hàng -->
+          <div v-else class="orders-container">
+            <div
+              v-for="order in filteredOrders"
+              :key="order.id"
+              class="order-group"
+            >
+              <div class="order-header">
+                <div class="order-info">
+                  <span class="order-id">Đơn hàng #{{ order.code }}</span>
+                  <span class="order-date">{{ order.date }}</span>
+                </div>
+                <span class="order-status" :class="order.statusClass">
+                  {{ order.statusText }}
+                </span>
+              </div>
+
+              <div class="order-items">
+                <div
+                  v-for="item in order.order_detail"
+                  :key="item._id"
+                  class="order-item"
+                >
+                  <img :src="item.productId.image" class="item-image" />
+                  <div class="item-info">
+                    <div class="item-title">{{ item.productId.name }}</div>
+                    <div class="item-variant">
+                      Phân loại: {{ item.productId.variant }}
+                    </div>
+                    <div class="item-qty">Số lượng: {{ item.quantity }}</div>
+                  </div>
+                  <div class="item-price">{{ formatPrice(item.price) }}</div>
+                </div>
+              </div>
+
+              <div class="order-footer">
+                <div class="order-summary">
+                  <div class="summary-row" v-if="order.discount > 0">
+                    <span>Giảm giá:</span>
+                    <span class="discount"
+                      >-{{ formatPrice(order.discount) }}</span
+                    >
+                  </div>
+                  <div class="summary-row" v-if="order.total_ship_fee > 0">
+                    <span>Phí vận chuyển:</span>
+                    <span>{{ formatPrice(order.total_ship_fee) }}</span>
+                  </div>
+                  <div class="summary-row total">
+                    <span>Tổng tiền:</span>
+                    <span class="total-price">{{
+                      formatPrice(order.total)
+                    }}</span>
+                  </div>
+                </div>
+                <button
+                  class="action-btn danger cancel-btn-below"
+                  v-if="order.status === 'pending'"
+                  @click="cancelOrder(order.id)"
+                >
+                  Hủy đơn
+                </button>
+                <div class="order-actions">
+                  <button
+                    class="action-btn primary"
+                    v-if="order.status === 'shipping'"
+                    @click="confirmReceived(order.id)"
+                  >
+                    <i class="fas fa-check"></i>
+                    Đã nhận hàng
+                  </button>
+                  <button
+                    class="action-btn"
+                    v-if="order.status === 'delivered'"
+                    @click="reviewOrder(order.id)"
+                  >
+                    <i class="fas fa-star"></i>
+                    Đánh giá
+                  </button>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Product Selection Modal -->
+          <div v-if="showProductSelectionModal" class="modal-overlay">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3>Chọn sản phẩm để đánh giá</h3>
+                <button class="close-btn" @click="closeProductSelectionModal">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+
+              <div class="modal-body">
+                <div class="product-list">
+                  <div
+                    v-for="product in availableProducts"
+                    :key="product.productId._id"
+                    class="product-item"
+                    @click="selectProductForReview(product)"
+                  >
+                    <img
+                      :src="
+                        product.productId.image.startsWith('http')
+                          ? product.productId.image
+                          : `http://localhost:3005/${product.productId.image}`
+                      "
+                      class="product-image"
+                    />
+                    <div class="product-info">
+                      <div class="product-name">
+                        {{ product.productId.name }}
+                      </div>
+                      <div class="product-variants">
+                        {{ product.variants.length }} biến thể
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Review Modal -->
+          <Review
+            v-if="showReviewModal"
+            :show="showReviewModal"
+            :order="selectedOrder"
+            :product="selectedProduct"
+            @close="closeReviewModal"
+            @review-submitted="handleReviewSubmitted"
+          />
         </div>
       </div>
     </div>
-
-    <!-- Review Modal -->
-    <Review
-      v-if="showReviewModal"
-      :show="showReviewModal"
-      :order="selectedOrder"
-      :product="selectedProduct"
-      @close="closeReviewModal"
-      @review-submitted="handleReviewSubmitted"
-    />
   </div>
   <Footer />
 </template>
@@ -183,7 +209,7 @@ const loading = ref(false);
 const orderTabs = [
   { label: "Tất cả", value: "all" },
   { label: "Chờ xử lý", value: "pending" },
-  { label: "Đang xử lý", value: "processing" },
+  { label: "Đã xác nhận", value: "processing" },
   { label: "Đang giao hàng", value: "shipping" },
   { label: "Đã giao", value: "delivered" },
   { label: "Đã hủy", value: "cancelled" },
@@ -312,7 +338,7 @@ onMounted(async () => {
 function getStatusText(status) {
   const statusMap = {
     pending: "Chờ xử lý",
-    processing: "Đang xử lý",
+    processing: "Đã xác nhận",
     shipping: "Đang giao hàng",
     delivered: "Đã giao",
     cancelled: "Đã hủy",
@@ -506,11 +532,71 @@ const handleReviewSubmitted = async () => {
 </script>
 
 <style scoped>
+.page-container {
+  width: 95%;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 991px) {
+  .page-container {
+    width: 100%;
+    padding: 10px;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+  .row {
+    margin: 0 !important;
+  }
+  .col-md-3,
+  .col-md-9 {
+    padding: 0 !important;
+  }
+  .col-md-3 {
+    margin-bottom: 15px;
+  }
+}
+
+.breadcrumb {
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+@media (max-width: 991px) {
+  .breadcrumb {
+    font-size: 12px;
+    margin-bottom: 15px;
+    padding: 0 10px;
+  }
+}
+
+.breadcrumb a {
+  color: #666;
+  text-decoration: none;
+}
+
+.breadcrumb .separator {
+  margin: 0 8px;
+  color: #999;
+}
+
+.breadcrumb .current {
+  color: #e63946;
+}
+
 .main-content {
-  flex: 1;
   padding: 30px;
   background: #f8f9fa;
-  min-height: calc(100vh - 60px);
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
+}
+
+@media (max-width: 991px) {
+  .main-content {
+    padding: 15px;
+  }
 }
 
 .order-tabs {
@@ -520,8 +606,26 @@ const handleReviewSubmitted = async () => {
   padding: 8px;
   margin-bottom: 20px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-
+.order-tabs::-webkit-scrollbar {
+  display: none;
+}
+@media (max-width: 991px) {
+  .order-tabs {
+    padding: 5px;
+    margin-bottom: 15px;
+  }
+  .tab {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    min-width: max-content;
+  }
+}
 .tab {
   padding: 12px 24px;
   cursor: pointer;
@@ -530,12 +634,10 @@ const handleReviewSubmitted = async () => {
   font-weight: 500;
   transition: all 0.3s ease;
 }
-
 .tab:hover {
   color: #ee4d2d;
   background: #fff5f5;
 }
-
 .tab.active {
   color: #ee4d2d;
   background: #fff5f5;
@@ -545,7 +647,15 @@ const handleReviewSubmitted = async () => {
   position: relative;
   margin-bottom: 24px;
 }
-
+@media (max-width: 991px) {
+  .order-search {
+    margin-bottom: 15px;
+  }
+  .order-search input {
+    padding: 8px 16px 8px 35px;
+    font-size: 0.9rem;
+  }
+}
 .search-icon {
   position: absolute;
   left: 16px;
@@ -553,7 +663,6 @@ const handleReviewSubmitted = async () => {
   transform: translateY(-50%);
   color: #999;
 }
-
 .order-search input {
   width: 100%;
   padding: 12px 16px 12px 40px;
@@ -562,13 +671,13 @@ const handleReviewSubmitted = async () => {
   font-size: 1rem;
   transition: all 0.3s ease;
 }
-
 .order-search input:focus {
   border-color: #ee4d2d;
   box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.1);
   outline: none;
 }
 
+/* Loading styles */
 .loading-container {
   display: flex;
   flex-direction: column;
@@ -596,12 +705,23 @@ const handleReviewSubmitted = async () => {
   }
 }
 
+/* Empty state styles */
 .empty-state {
   text-align: center;
   padding: 40px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+@media (max-width: 768px) {
+  .empty-state {
+    padding: 20px;
+  }
+
+  .empty-state img {
+    width: 150px;
+  }
 }
 
 .empty-state img {
@@ -628,17 +748,33 @@ const handleReviewSubmitted = async () => {
   background: #f05d40;
 }
 
+/* Orders container styles */
 .orders-container {
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
+@media (max-width: 768px) {
+  .orders-container {
+    gap: 15px;
+  }
+}
+
+/* Order group styles */
 .order-group {
   background: white;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   overflow: hidden;
+  margin-bottom: 20px;
+}
+
+@media (max-width: 768px) {
+  .order-group {
+    border-radius: 6px;
+    margin-bottom: 15px;
+  }
 }
 
 .order-header {
@@ -650,10 +786,26 @@ const handleReviewSubmitted = async () => {
   background: #fafafa;
 }
 
+@media (max-width: 768px) {
+  .order-header {
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px;
+  }
+}
+
 .order-info {
   display: flex;
   gap: 16px;
   align-items: center;
+}
+
+@media (max-width: 768px) {
+  .order-info {
+    flex-direction: column;
+    gap: 5px;
+    width: 100%;
+  }
 }
 
 .order-id {
@@ -661,8 +813,20 @@ const handleReviewSubmitted = async () => {
   color: #333;
 }
 
+@media (max-width: 768px) {
+  .order-id {
+    font-size: 0.9rem;
+  }
+}
+
 .order-date {
   color: #666;
+}
+
+@media (max-width: 768px) {
+  .order-date {
+    font-size: 0.8rem;
+  }
 }
 
 .order-status {
@@ -672,38 +836,23 @@ const handleReviewSubmitted = async () => {
   font-weight: 500;
 }
 
-.order-status.pending {
-  background: #fff7e6;
-  color: #fa8c16;
+@media (max-width: 768px) {
+  .order-status {
+    align-self: flex-start;
+    font-size: 0.8rem;
+    padding: 4px 8px;
+  }
 }
 
-.order-status.shipping {
-  background: #e6f7ff;
-  color: #1890ff;
-}
-
-.order-status.delivering {
-  background: #f6ffed;
-  color: #52c41a;
-}
-
-.order-status.completed {
-  background: #f6ffed;
-  color: #52c41a;
-}
-
-.order-status.cancelled {
-  background: #fff1f0;
-  color: #f5222d;
-}
-
-.order-status.returned {
-  background: #fff1f0;
-  color: #f5222d;
-}
-
+/* Order items styles */
 .order-items {
   padding: 16px;
+}
+
+@media (max-width: 768px) {
+  .order-items {
+    padding: 12px;
+  }
 }
 
 .order-item {
@@ -713,8 +862,13 @@ const handleReviewSubmitted = async () => {
   border-bottom: 1px solid #eee;
 }
 
-.order-item:last-child {
-  border-bottom: none;
+@media (max-width: 768px) {
+  .order-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+  }
 }
 
 .item-image {
@@ -725,14 +879,34 @@ const handleReviewSubmitted = async () => {
   margin-right: 16px;
 }
 
+@media (max-width: 768px) {
+  .item-image {
+    width: 60px;
+    height: 60px;
+    margin-right: 0;
+  }
+}
+
 .item-info {
   flex: 1;
+}
+
+@media (max-width: 768px) {
+  .item-info {
+    width: 100%;
+  }
 }
 
 .item-title {
   font-weight: 500;
   margin-bottom: 8px;
   color: #333;
+}
+
+@media (max-width: 768px) {
+  .item-title {
+    font-size: 0.9rem;
+  }
 }
 
 .item-variant,
@@ -742,6 +916,13 @@ const handleReviewSubmitted = async () => {
   margin-bottom: 4px;
 }
 
+@media (max-width: 768px) {
+  .item-variant,
+  .item-qty {
+    font-size: 0.8rem;
+  }
+}
+
 .item-price {
   font-weight: 600;
   color: #ee4d2d;
@@ -749,6 +930,16 @@ const handleReviewSubmitted = async () => {
   text-align: right;
 }
 
+@media (max-width: 768px) {
+  .item-price {
+    width: 100%;
+    text-align: left;
+    margin-top: 5px;
+    font-size: 0.9rem;
+  }
+}
+
+/* Order footer styles */
 .order-footer {
   padding: 16px;
   border-top: 1px solid #eee;
@@ -757,8 +948,20 @@ const handleReviewSubmitted = async () => {
   align-items: stretch;
 }
 
+@media (max-width: 768px) {
+  .order-footer {
+    padding: 12px;
+  }
+}
+
 .order-summary {
   flex: 1;
+}
+
+@media (max-width: 768px) {
+  .order-summary {
+    margin-bottom: 15px;
+  }
 }
 
 .summary-row {
@@ -768,12 +971,24 @@ const handleReviewSubmitted = async () => {
   color: #666;
 }
 
+@media (max-width: 768px) {
+  .summary-row {
+    font-size: 0.9rem;
+  }
+}
+
 .summary-row.total {
   margin-top: 8px;
   padding-top: 8px;
   border-top: 1px solid #eee;
   font-weight: 600;
   color: #333;
+}
+
+@media (max-width: 768px) {
+  .summary-row.total {
+    font-size: 1rem;
+  }
 }
 
 .discount {
@@ -785,16 +1000,18 @@ const handleReviewSubmitted = async () => {
   font-size: 1.2rem;
 }
 
-.cancel-btn-below {
-  align-self: flex-end;
-  margin-top: 16px;
-  min-width: 120px;
-}
-
+/* Action buttons styles */
 .order-actions {
   display: flex;
   gap: 12px;
   margin-top: 8px;
+}
+
+@media (max-width: 768px) {
+  .order-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .action-btn {
@@ -810,6 +1027,14 @@ const handleReviewSubmitted = async () => {
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .action-btn {
+    width: 100%;
+    padding: 8px;
+    font-size: 0.9rem;
+  }
 }
 
 .action-btn i {
@@ -838,16 +1063,19 @@ const handleReviewSubmitted = async () => {
   border-color: #ff4d4f;
   color: #ff4d4f;
   margin-left: 0;
+  width: 120px;
   min-width: 120px;
+  max-width: 120px;
+  padding: 8px 0;
+  text-align: center;
+}
+@media (max-width: 991px) {
+  .action-btn.danger {
+    margin-top: 10px;
+  }
 }
 
-.action-btn.danger:hover {
-  background: #ff4d4f;
-  border-color: #ff4d4f;
-  color: white;
-}
-
-/* Modal Styles */
+/* Modal styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -871,12 +1099,29 @@ const handleReviewSubmitted = async () => {
   position: relative;
 }
 
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    margin: 10px;
+  }
+}
+
 .modal-header {
   padding: 16px 24px;
   border-bottom: 1px solid #eee;
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+@media (max-width: 768px) {
+  .modal-header {
+    padding: 12px 16px;
+  }
+
+  .modal-header h3 {
+    font-size: 1.1rem;
+  }
 }
 
 .modal-header h3 {
@@ -897,142 +1142,13 @@ const handleReviewSubmitted = async () => {
   padding: 24px;
 }
 
-.modal-footer {
-  padding: 16px 24px;
-  border-top: 1px solid #eee;
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+@media (max-width: 768px) {
+  .modal-body {
+    padding: 16px;
+  }
 }
 
-.cancel-btn {
-  padding: 8px 16px;
-  background: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cancel-btn:hover {
-  background: #e8e8e8;
-}
-
-.submit-btn {
-  padding: 8px 16px;
-  background: #ee4d2d;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.submit-btn:hover:not(:disabled) {
-  background: #f05d40;
-}
-
-.submit-btn:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-/* Review Form Styles */
-.rating-section,
-.content-section,
-.image-section {
-  margin-bottom: 24px;
-}
-
-h4 {
-  color: #333;
-  margin-bottom: 16px;
-  font-size: 1rem;
-}
-
-.star-rating {
-  display: flex;
-  gap: 8px;
-}
-
-.star-rating i {
-  font-size: 24px;
-  color: #ddd;
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.star-rating i.active {
-  color: #ffc107;
-}
-
-textarea {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.image-upload {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
-
-.upload-area {
-  width: 120px;
-  height: 120px;
-  border: 2px dashed #ddd;
-  border-radius: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.upload-area:hover {
-  border-color: #ee4d2d;
-  color: #ee4d2d;
-}
-
-.upload-area i {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.image-preview {
-  position: relative;
-  width: 120px;
-  height: 120px;
-}
-
-.image-preview img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  border-radius: 4px;
-}
-
-.remove-image {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  width: 24px;
-  height: 24px;
-  background: #ff4d4f;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
+/* Product list styles */
 .product-list {
   display: flex;
   flex-direction: column;
@@ -1049,6 +1165,15 @@ textarea {
   transition: all 0.3s ease;
 }
 
+@media (max-width: 768px) {
+  .product-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px;
+  }
+}
+
 .product-item:hover {
   border-color: #ee4d2d;
   background: #fff5f5;
@@ -1062,8 +1187,22 @@ textarea {
   margin-right: 16px;
 }
 
+@media (max-width: 768px) {
+  .product-image {
+    width: 60px;
+    height: 60px;
+    margin-right: 0;
+  }
+}
+
 .product-info {
   flex: 1;
+}
+
+@media (max-width: 768px) {
+  .product-info {
+    width: 100%;
+  }
 }
 
 .product-name {
@@ -1072,8 +1211,41 @@ textarea {
   color: #333;
 }
 
+@media (max-width: 768px) {
+  .product-name {
+    font-size: 0.9rem;
+  }
+}
+
 .product-variants {
   color: #666;
   font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .product-variants {
+    font-size: 0.8rem;
+  }
+}
+
+/* Responsive cho màn hình rất nhỏ */
+@media (max-width: 576px) {
+  .page-container {
+    padding: 5px;
+  }
+  .breadcrumb {
+    font-size: 11px;
+    padding: 0 5px;
+  }
+  .main-content {
+    padding: 8px;
+  }
+  .order-tabs {
+    padding: 3px;
+  }
+  .order-search input {
+    padding: 6px 10px 6px 30px;
+    font-size: 0.85rem;
+  }
 }
 </style>

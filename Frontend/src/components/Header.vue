@@ -2,11 +2,8 @@
   <div class="header-top-bar">
     <div class="header-top-left">
       <i class="fas fa-bolt"></i>
-      <span>Chào mừng bạn đến với JUNO Store!</span>
-      <i
-        class="fas fa-headset"
-        style="margin-left: 1.2rem; margin-right: 0.3rem"
-      ></i>
+      <span class="welcome-text">Chào mừng bạn đến với JUNO Store!</span>
+      <i class="fas fa-headset header-icon"></i>
       <span class="header-phone">1900 6750</span>
     </div>
     <div class="header-top-right">
@@ -21,20 +18,39 @@
     </div>
   </div>
   <header class="header">
+    <div class="mobile-menu-toggle" @click="toggleMobileMenu">
+      <i class="fas fa-bars"></i>
+    </div>
     <router-link to="/" class="logo">JUNO</router-link>
-    <nav class="nav-menu">
-      <router-link to="/hang-moi" class="nav-item">HÀNG MỚI</router-link>
-      <router-link to="/products" class="nav-item">SẢN PHẨM</router-link>
-      <router-link to="/bst-he-nonstop" class="nav-item"
+    <nav class="nav-menu" :class="{ 'mobile-active': isMobileMenuOpen }">
+      <div class="mobile-menu-header">
+        <span class="mobile-menu-title">Menu</span>
+        <i class="fas fa-times close-menu" @click="closeMobileMenu"></i>
+      </div>
+      <router-link to="/" class="nav-item" @click="closeMobileMenu"
+        >TRANG CHỦ</router-link
+      >
+      <router-link to="/products" class="nav-item" @click="closeMobileMenu"
+        >SẢN PHẨM</router-link
+      >
+      <router-link
+        to="/bst-he-nonstop"
+        class="nav-item"
+        @click="closeMobileMenu"
         >BST HÈ NONSTOP</router-link
       >
-      <router-link to="/sale-happy-friday" class="nav-item"
+      <router-link
+        to="/sale-happy-friday"
+        class="nav-item"
+        @click="closeMobileMenu"
         >SALE HAPPY FRIDAY</router-link
       >
-      <router-link to="/sale-quan-ao" class="nav-item"
+      <router-link to="/sale-quan-ao" class="nav-item" @click="closeMobileMenu"
         >SALE QUẦN ÁO</router-link
       >
-      <router-link to="/showroom" class="nav-item">SHOWROOM</router-link>
+      <router-link to="/showroom" class="nav-item" @click="closeMobileMenu"
+        >SHOWROOM</router-link
+      >
     </nav>
     <div class="search-bar">
       <input
@@ -43,6 +59,8 @@
         placeholder="Tìm kiếm"
         @keyup.enter="handleSearch"
       />
+      <i class="fas fa-search search-icon" @click="handleSearch"></i>
+      <i class="fas fa-camera search-camera-icon" @click="goToImageSearch"></i>
     </div>
     <div class="user-icons">
       <div
@@ -59,6 +77,11 @@
         @view-cart="goToCart"
       />
     </div>
+    <div
+      class="mobile-overlay"
+      v-if="isMobileMenuOpen"
+      @click="closeMobileMenu"
+    ></div>
   </header>
 </template>
 
@@ -79,6 +102,7 @@ export default {
     const cartItems = ref([]);
     const hasCart = ref(false);
     const userData = ref(null);
+    const isMobileMenuOpen = ref(false);
 
     async function checkCartOfCurrentUser() {
       try {
@@ -139,6 +163,18 @@ export default {
       }
     };
 
+    const goToImageSearch = () => {
+      router.push("/imageSearch");
+    };
+
+    const toggleMobileMenu = () => {
+      isMobileMenuOpen.value = !isMobileMenuOpen.value;
+    };
+
+    const closeMobileMenu = () => {
+      isMobileMenuOpen.value = false;
+    };
+
     onMounted(() => {
       // Lấy thông tin user từ localStorage
       const userStr = localStorage.getItem("user");
@@ -168,6 +204,10 @@ export default {
       cartItems,
       goToCart,
       userData,
+      isMobileMenuOpen,
+      toggleMobileMenu,
+      closeMobileMenu,
+      goToImageSearch,
     };
   },
 };
@@ -176,20 +216,25 @@ export default {
 <style scoped>
 .header-top-bar {
   background-color: #f8f9fa;
-  padding: 8px 0;
+  padding: 8px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
   color: #666;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .header-top-left {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-left: 5%;
+}
+
+.header-icon {
+  margin-left: 1.2rem;
+  margin-right: 0.3rem;
 }
 
 .header-top-right {
@@ -198,7 +243,6 @@ export default {
   gap: 8px;
   cursor: pointer;
   transition: color 0.3s ease;
-  margin-right: 5%;
 }
 
 .header-top-right:hover {
@@ -284,10 +328,38 @@ export default {
 .search-bar {
   margin: 0 5%;
   flex-shrink: 0;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  right: 45px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.search-icon:hover {
+  color: #ff0000;
+}
+
+.search-camera-icon {
+  position: absolute;
+  right: 15px;
+  color: #666;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.search-camera-icon:hover {
+  color: #ff0000;
 }
 
 .search-bar input {
   padding: 10px 15px;
+  padding-right: 80px;
   border: 1px solid #e0e0e0;
   border-radius: 25px;
   width: 250px;
@@ -348,6 +420,45 @@ export default {
   box-shadow: 0 2px 4px rgba(255, 0, 0, 0.2);
 }
 
+.mobile-menu-toggle {
+  display: none;
+  font-size: 24px;
+  cursor: pointer;
+  margin-right: 15px;
+  color: #333;
+}
+
+.mobile-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+}
+
+.mobile-menu-header {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.mobile-menu-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+}
+
+.close-menu {
+  font-size: 20px;
+  cursor: pointer;
+  color: #666;
+}
+
 @media (max-width: 1200px) {
   .nav-menu {
     gap: 15px;
@@ -359,16 +470,121 @@ export default {
 }
 
 @media (max-width: 992px) {
-  .header {
-    padding: 15px 20px;
+  .header-top-bar {
+    padding: 8px 15px;
   }
 
-  .nav-menu {
+  .welcome-text {
     display: none;
   }
 
+  .header {
+    padding: 15px 5%;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .mobile-overlay {
+    display: block;
+  }
+
+  .mobile-menu-header {
+    display: flex;
+  }
+
+  .nav-menu {
+    position: fixed;
+    top: 0;
+    left: -280px;
+    width: 280px;
+    height: 100vh;
+    background-color: white;
+    flex-direction: column;
+    padding: 0;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    overflow-y: auto;
+  }
+
+  .nav-menu.mobile-active {
+    left: 0;
+  }
+
+  .nav-item {
+    padding: 15px 20px;
+    width: 100%;
+    text-align: left;
+    border-bottom: 1px solid #f5f5f5;
+  }
+
+  .search-bar {
+    order: 3;
+    margin: 0;
+    width: 100%;
+  }
+
   .search-bar input {
-    width: 180px;
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 15px;
+    border-radius: 30px;
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+  }
+
+  .search-bar input:focus {
+    background-color: #fff;
+    border-color: #ff0000;
+    box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.1);
+  }
+
+  .logo {
+    font-size: 24px;
+    margin-right: 15px;
+  }
+
+  .user-icons {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .header-top-bar {
+    font-size: 12px;
+  }
+
+  .header {
+    padding: 10px 5%;
+    gap: 10px;
+  }
+
+  .logo {
+    font-size: 20px;
+    margin-right: 10px;
+  }
+
+  .search-bar input {
+    padding: 10px 15px;
+    font-size: 14px;
+  }
+
+  .user-icons {
+    gap: 15px;
+  }
+
+  .icon {
+    font-size: 18px;
+  }
+
+  .cart-badge {
+    font-size: 10px;
+    min-width: 16px;
+    height: 16px;
   }
 }
 </style>

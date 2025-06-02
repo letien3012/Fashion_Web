@@ -39,90 +39,71 @@
     <!-- Featured Categories -->
     <section class="categories">
       <h2 class="section-title">Mua Theo Danh Mục</h2>
-      <div class="category-grid">
-        <div
-          class="category-card"
-          v-for="category in categories"
-          :key="category.id"
+      <div class="category-container">
+        <button
+          class="nav-btn prev"
+          @click="prevCategories"
+          :disabled="categoryStart === 0"
         >
-          <div class="category-image">
-            <img :src="category.image" :alt="category.name" />
-            <div class="category-overlay">
-              <router-link :to="category.link" class="category-btn"
-                >Xem Bộ Sưu Tập</router-link
-              >
+          <i class="fas fa-chevron-left"></i>
+        </button>
+        <div class="category-grid">
+          <div
+            class="category-card"
+            v-for="category in displayedCategories"
+            :key="category.id"
+          >
+            <div class="category-image">
+              <img :src="category.image" :alt="category.name" />
+              <div class="category-overlay">
+                <router-link :to="category.link" class="category-btn"
+                  >Xem Bộ Sưu Tập</router-link
+                >
+              </div>
             </div>
+            <h3 class="category-name">{{ category.name }}</h3>
+            <p class="category-count">{{ category.count }} Sản Phẩm</p>
           </div>
-          <h3 class="category-name">{{ category.name }}</h3>
-          <p class="category-count">{{ category.count }} Sản Phẩm</p>
         </div>
+        <button
+          class="nav-btn next"
+          @click="nextCategories"
+          :disabled="categoryStart + categoriesPerPage >= categories.length"
+        >
+          <i class="fas fa-chevron-right"></i>
+        </button>
       </div>
     </section>
 
     <!-- Featured Products -->
-    <section class="featured-products">
-      <h2 class="section-title">Sản Phẩm Nổi Bật</h2>
-      <div class="slide-controls">
-        <button @click="prevFeatured" :disabled="featuredStart === 0">
-          Trước
-        </button>
-        <button
-          @click="nextFeatured"
-          :disabled="featuredStart + featuredPerPage >= featuredProducts.length"
-        >
-          Sau
-        </button>
+    <section class="featured-products" v-if="!loading && !error">
+      <div class="section-header">
+        <h2 class="section-title">Sản Phẩm Bán Chạy</h2>
+        <p class="section-subtitle">
+          Khám phá những sản phẩm được yêu thích nhất
+        </p>
       </div>
-      <div class="product-grid">
-        <router-link
-          v-for="product in featuredProducts.slice(
-            featuredStart,
-            featuredStart + featuredPerPage
-          )"
-          :key="product.id"
-          :to="getProductDetailLink(product)"
-          class="product-card"
-        >
-          <div class="product-image">
-            <img :src="product.image" :alt="product.name" />
-            <div class="product-badge" v-if="product.badge">
-              {{ product.badge }}
-            </div>
-            <div class="product-overlay">
-              <button class="add-to-cart-btn" @click.prevent>
-                <i class="fas fa-cart-plus"></i>
-              </button>
-            </div>
-          </div>
-          <div class="product-info">
-            <h3 class="product-name" :title="product.name">
-              {{ product.name }}
-            </h3>
-            <div class="product-meta">
-              <span class="product-rating">
-                <i
-                  class="fas fa-star"
-                  v-for="n in 5"
-                  :key="n"
-                  :class="{ active: n <= product.rating }"
-                ></i>
-              </span>
-              <div class="product-price-container">
-                <span
-                  class="product-price"
-                  :class="{ 'has-sale': product.salePrice }"
-                >
-                  {{ formatVND(product.salePrice || product.price) }}
-                </span>
-                <span v-if="product.salePrice" class="product-sale-price">
-                  {{ formatVND(product.price) }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </router-link>
+      <div
+        v-if="bestSellingProducts && bestSellingProducts.length > 0"
+        class="product-grid"
+      >
+        <ProductItem
+          v-for="product in bestSellingProducts"
+          :key="product._id"
+          :product="product"
+        />
+      </div>
+      <div v-else class="no-products">
+        <i class="fas fa-box-open"></i>
+        <p>Không có sản phẩm bán chạy</p>
       </div>
     </section>
+    <div v-else-if="loading" class="loading-section">
+      <div class="loading">Đang tải sản phẩm bán chạy...</div>
+    </div>
+    <div v-else-if="error" class="error-section">
+      <div class="error">{{ error }}</div>
+    </div>
 
     <!-- New Arrivals -->
     <section class="new-arrivals" v-if="!loading && !error">
@@ -161,6 +142,7 @@ import Footer from "../components/Footer.vue";
 import { productService } from "../services/product.service";
 import ChatBot from "../components/ChatBot.vue";
 import ProductItem from "../components/ProductItem.vue";
+import { productCatalogueService } from "../services/productCatalogue.service";
 
 export default {
   name: "Home",
@@ -192,80 +174,33 @@ export default {
           link: "/collections/special-offers",
         },
       ],
-      categories: [
-        {
-          id: 1,
-          name: "Thời Trang Nam",
-          image: "/images/mens.jpg",
-          count: 120,
-          link: "/category/mens",
-        },
-        {
-          id: 2,
-          name: "Thời Trang Nữ",
-          image: "/images/womens.jpg",
-          count: 150,
-          link: "/category/womens",
-        },
-        {
-          id: 3,
-          name: "Phụ Kiện",
-          image: "/images/accessories.jpg",
-          count: 80,
-          link: "/category/accessories",
-        },
-        {
-          id: 4,
-          name: "Giày Dép",
-          image: "/images/footwear.jpg",
-          count: 90,
-          link: "/category/footwear",
-        },
-      ],
-      featuredProducts: [
-        {
-          id: 1,
-          name: "Classic White Shirt",
-          price: 49.99,
-          image:
-            "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcT37KQ_M5eqlIz_XkF7t0hFjDjDXs-TcZXirQ&s",
-          rating: 4,
-        },
-        {
-          id: 2,
-          name: "Denim Jacket",
-          price: 89.99,
-          image: "/images/product2.jpg",
-          rating: 5,
-        },
-        {
-          id: 3,
-          name: "Summer Dress",
-          price: 59.99,
-          image: "/images/product3.jpg",
-          rating: 4,
-        },
-        {
-          id: 4,
-          name: "Leather Boots",
-          price: 129.99,
-          image: "/images/product4.jpg",
-          rating: 5,
-        },
-      ],
+      categories: [],
       newArrivals: [],
       loading: true,
       error: null,
       featuredStart: 0,
       featuredPerPage: 4,
+      categoryStart: 0,
+      categoriesPerPage: 8,
+      bestSellingProducts: [],
     };
   },
   async created() {
-    await this.fetchNewArrivals();
+    await Promise.all([
+      this.fetchNewArrivals(),
+      this.fetchCategories(),
+      this.fetchBestSellingProducts(),
+    ]);
   },
   computed: {
     getProductDetailLink() {
       return (product) => `/product-detail/${product._id || ""}`;
+    },
+    displayedCategories() {
+      return this.categories.slice(
+        this.categoryStart,
+        this.categoryStart + this.categoriesPerPage
+      );
     },
   },
   methods: {
@@ -338,6 +273,87 @@ export default {
         this.loading = false;
       }
     },
+    async fetchCategories() {
+      try {
+        this.loading = true;
+        const response = await productCatalogueService.getAll();
+        if (response && response.data) {
+          this.categories = response.data.map((category) => ({
+            id: category._id,
+            name: category.name,
+            image: category.icon
+              ? `${this.baseUrl}${category.icon}`
+              : "/images/default-category.jpg",
+            count: category.productCount || 0,
+            link: `/category/${category._id}`,
+          }));
+        }
+      } catch (error) {
+        this.error = "Không thể tải danh mục sản phẩm";
+        console.error("Error fetching categories:", error);
+      } finally {
+        this.loading = false;
+      }
+    },
+    async fetchBestSellingProducts() {
+      try {
+        this.loading = true;
+        const response = await productService.getBestSelling();
+        if (response && response.data) {
+          // Duyệt từng sản phẩm để lấy promotion
+          const productsWithPromotions = await Promise.all(
+            response.data.map(async (product) => {
+              const defaultVariant = product.variants?.[0] || {};
+              let salePrice = null;
+              let discountPercentage = null;
+              if (defaultVariant._id) {
+                const promotions = await productService.getProductPromotions(
+                  product._id,
+                  defaultVariant._id
+                );
+                if (promotions && promotions.length > 0) {
+                  const bestPromotion = promotions.reduce((max, p) =>
+                    p.discount > max.discount ? p : max
+                  );
+                  discountPercentage = bestPromotion.discount;
+                  salePrice =
+                    Math.round(
+                      (defaultVariant.price -
+                        (defaultVariant.price * bestPromotion.discount) / 100) *
+                        100
+                    ) / 100;
+                }
+              }
+              return {
+                _id: product._id,
+                name: product.name,
+                image: this.getImageUrl(product.image),
+                album: (product.album || []).map((img) =>
+                  this.getImageUrl(img)
+                ),
+                price: defaultVariant.price || 0,
+                salePrice,
+                discountPercentage,
+                favorite_count: product.favorite_count || 0,
+                variants: product.variants || [],
+                catalogueId: product.catalogueId,
+                publish: product.publish,
+                description: product.description,
+                content: product.content,
+                view_count: product.view_count || 0,
+                totalSold: product.totalSold || 0,
+              };
+            })
+          );
+          this.bestSellingProducts = productsWithPromotions;
+        }
+      } catch (error) {
+        this.error = "Không thể tải sản phẩm bán chạy";
+        console.error("Error fetching best selling products:", error);
+      } finally {
+        this.loading = false;
+      }
+    },
     nextSlide() {
       this.currentSlide = (this.currentSlide + 1) % this.slides.length;
     },
@@ -357,6 +373,22 @@ export default {
     formatVND(value) {
       if (typeof value !== "number") return "";
       return value.toLocaleString("vi-VN") + "đ";
+    },
+    nextCategories() {
+      if (
+        this.categoryStart + this.categoriesPerPage <
+        this.categories.length
+      ) {
+        this.categoryStart += this.categoriesPerPage;
+      }
+    },
+    prevCategories() {
+      if (this.categoryStart > 0) {
+        this.categoryStart = Math.max(
+          0,
+          this.categoryStart - this.categoriesPerPage
+        );
+      }
     },
   },
   mounted() {
@@ -498,14 +530,15 @@ router-link {
 
 /* Categories Styles */
 .categories {
-  padding: 4rem 2rem;
+  padding: 3rem 2rem;
   background: #f9f9f9;
+  position: relative;
 }
 
 .section-title {
   text-align: center;
-  font-size: 2.5rem;
-  margin-bottom: 3rem;
+  font-size: 2rem;
+  margin-bottom: 2rem;
   color: #333;
   position: relative;
 }
@@ -513,36 +546,81 @@ router-link {
 .section-title::after {
   content: "";
   position: absolute;
-  bottom: -10px;
+  bottom: -8px;
   left: 50%;
   transform: translateX(-50%);
-  width: 60px;
+  width: 50px;
   height: 3px;
   background: #ff6b6b;
 }
 
+.category-container {
+  position: relative;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  z-index: 2;
+}
+
+.nav-btn:hover:not(:disabled) {
+  background: #ff6b6b;
+  color: white;
+  transform: scale(1.1);
+}
+
+.nav-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.nav-btn.prev {
+  margin-right: -20px;
+}
+
+.nav-btn.next {
+  margin-left: -20px;
+}
+
 .category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 2rem;
-  max-width: 1400px;
-  margin: 0 auto;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  width: 100%;
+  overflow: hidden;
 }
 
 .category-card {
   background: white;
-  border-radius: 10px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  width: 100%;
 }
 
 .category-card:hover {
   transform: translateY(-5px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
 .category-image {
-  height: 300px;
+  height: 200px;
   position: relative;
   overflow: hidden;
 }
@@ -551,7 +629,7 @@ router-link {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition: transform 0.5s ease;
 }
 
 .category-card:hover .category-image img {
@@ -564,7 +642,7 @@ router-link {
   left: 0;
   width: 100%;
   height: 100%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -577,10 +655,12 @@ router-link {
 }
 
 .category-btn {
-  padding: 0.8rem 1.5rem;
+  padding: 0.6rem 1.2rem;
   background: white;
   color: #333;
-  border-radius: 25px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 500;
   transition: all 0.3s ease;
 }
 
@@ -590,14 +670,20 @@ router-link {
 }
 
 .category-name {
-  padding: 1rem;
-  font-size: 1.2rem;
+  padding: 0.8rem;
+  font-size: 1rem;
   color: #333;
+  margin: 0;
+  text-align: center;
+  font-weight: 600;
 }
 
 .category-count {
-  padding: 0 1rem 1rem;
+  padding: 0 0.8rem 0.8rem;
   color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+  margin: 0;
 }
 
 /* Product Grid Styles */
@@ -1147,6 +1233,28 @@ router-link {
 
   .product-rating {
     font-size: 0.8rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .categories {
+    padding: 2rem 1rem;
+  }
+
+  .category-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  .nav-btn {
+    width: 35px;
+    height: 35px;
+  }
+}
+
+@media (max-width: 480px) {
+  .category-grid {
+    grid-template-columns: repeat(1, 1fr);
   }
 }
 </style>

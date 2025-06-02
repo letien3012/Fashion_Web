@@ -1,123 +1,136 @@
 <template>
   <Header />
-  <div class="checkout-container">
-    <h1>Thanh toán</h1>
-    <div class="checkout-content">
-      <!-- Thông tin sản phẩm -->
-      <div class="checkout-products">
-        <h2>Sản phẩm</h2>
-        <div
-          v-for="item in checkoutItems"
-          :key="item.variantId"
-          class="checkout-product"
-        >
-          <img
-            :src="
-              item.productId.image.startsWith('http')
-                ? item.productId.image
-                : `http://localhost:3005/${item.productId.image}`
-            "
-            alt=""
-          />
-          <div class="product-info">
-            <div class="product-name">{{ item.productId.name }}</div>
-            <div class="product-sku">Phân loại: {{ item.variant.sku }}</div>
-            <div class="product-quantity">
-              Số lượng: {{ item.variant.quantity }}
+  <div class="page-container">
+    <div class="breadcrumb">
+      <router-link to="/">Trang chủ</router-link>
+      <span class="separator">/</span>
+      <router-link to="/cart">Giỏ hàng</router-link>
+      <span class="separator">/</span>
+      <span class="current">Thanh toán</span>
+    </div>
+    <div class="checkout-container">
+      <div class="checkout-wrapper">
+        <h1>Thanh toán</h1>
+        <div class="checkout-content">
+          <!-- Thông tin sản phẩm -->
+          <div class="checkout-products">
+            <h2>Sản phẩm</h2>
+            <div
+              v-for="item in checkoutItems"
+              :key="item.variantId"
+              class="checkout-product"
+            >
+              <img
+                :src="
+                  item.productId.image.startsWith('http')
+                    ? item.productId.image
+                    : `http://localhost:3005/${item.productId.image}`
+                "
+                alt=""
+              />
+              <div class="product-info">
+                <div class="product-name">{{ item.productId.name }}</div>
+                <div class="product-sku">Phân loại: {{ item.variant.sku }}</div>
+                <div class="product-quantity">
+                  Số lượng: {{ item.variant.quantity }}
+                </div>
+                <div class="product-price">
+                  <template
+                    v-if="item.variant.price < item.variant.originPrice"
+                  >
+                    <span class="price-old"
+                      >₫{{
+                        (
+                          item.variant.originPrice * item.variant.quantity
+                        ).toLocaleString()
+                      }}</span
+                    >
+                    <span class="price-sale"
+                      >₫{{
+                        (
+                          item.variant.price * item.variant.quantity
+                        ).toLocaleString()
+                      }}</span
+                    >
+                  </template>
+                  <template v-else>
+                    <span class="price-sale"
+                      >₫{{
+                        (
+                          item.variant.price * item.variant.quantity
+                        ).toLocaleString()
+                      }}</span
+                    >
+                  </template>
+                </div>
+              </div>
             </div>
-            <div class="product-price">
-              <template v-if="item.variant.price < item.variant.originPrice">
-                <span class="price-old"
-                  >₫{{
-                    (
-                      item.variant.originPrice * item.variant.quantity
-                    ).toLocaleString()
-                  }}</span
-                >
-                <span class="price-sale"
-                  >₫{{
-                    (
-                      item.variant.price * item.variant.quantity
-                    ).toLocaleString()
-                  }}</span
-                >
-              </template>
-              <template v-else>
-                <span class="price-sale"
-                  >₫{{
-                    (
-                      item.variant.price * item.variant.quantity
-                    ).toLocaleString()
-                  }}</span
-                >
-              </template>
-            </div>
+          </div>
+
+          <!-- Thông tin khách hàng -->
+          <div class="checkout-form">
+            <h2>Thông tin nhận hàng</h2>
+            <form @submit.prevent="submitOrder">
+              <div class="form-group">
+                <label>Họ tên <span class="required">*</span></label>
+                <input
+                  v-model="customer.name"
+                  required
+                  placeholder="Nhập họ tên của bạn"
+                />
+              </div>
+              <div class="form-group">
+                <label>Số điện thoại <span class="required">*</span></label>
+                <input
+                  v-model="customer.phone"
+                  required
+                  pattern="[0-9]{10}"
+                  title="Vui lòng nhập số điện thoại hợp lệ (10 số)"
+                  placeholder="Nhập số điện thoại của bạn"
+                />
+              </div>
+              <div class="form-group">
+                <label>Địa chỉ <span class="required">*</span></label>
+                <input
+                  v-model="customer.address"
+                  required
+                  placeholder="Nhập địa chỉ của bạn"
+                />
+              </div>
+              <div class="form-group">
+                <label>Ghi chú</label>
+                <textarea
+                  v-model="customer.note"
+                  rows="2"
+                  placeholder="Nhập ghi chú (nếu có)"
+                />
+              </div>
+              <div class="checkout-summary">
+                <div>
+                  <span>Tổng giá gốc:</span>
+                  <span class="summary-old"
+                    >₫{{ totalProductPrice.toLocaleString() }}</span
+                  >
+                </div>
+                <div v-if="totalDiscount > 0">
+                  <span>Tiết kiệm:</span>
+                  <span class="summary-save"
+                    >₫{{ totalDiscount.toLocaleString() }}</span
+                  >
+                </div>
+                <div class="total-price">
+                  <span>Tổng thanh toán:</span>
+                  <span class="summary-price"
+                    >₫{{ totalPrice.toLocaleString() }}</span
+                  >
+                </div>
+              </div>
+              <button class="submit-btn" type="submit" :disabled="isLoading">
+                {{ isLoading ? "Đã xác nhận..." : "Đặt hàng" }}
+              </button>
+            </form>
           </div>
         </div>
-      </div>
-
-      <!-- Thông tin khách hàng -->
-      <div class="checkout-form">
-        <h2>Thông tin nhận hàng</h2>
-        <form @submit.prevent="submitOrder">
-          <div class="form-group">
-            <label>Họ tên <span class="required">*</span></label>
-            <input
-              v-model="customer.name"
-              required
-              placeholder="Nhập họ tên của bạn"
-            />
-          </div>
-          <div class="form-group">
-            <label>Số điện thoại <span class="required">*</span></label>
-            <input
-              v-model="customer.phone"
-              required
-              pattern="[0-9]{10}"
-              title="Vui lòng nhập số điện thoại hợp lệ (10 số)"
-              placeholder="Nhập số điện thoại của bạn"
-            />
-          </div>
-          <div class="form-group">
-            <label>Địa chỉ <span class="required">*</span></label>
-            <input
-              v-model="customer.address"
-              required
-              placeholder="Nhập địa chỉ của bạn"
-            />
-          </div>
-          <div class="form-group">
-            <label>Ghi chú</label>
-            <textarea
-              v-model="customer.note"
-              rows="2"
-              placeholder="Nhập ghi chú (nếu có)"
-            />
-          </div>
-          <div class="checkout-summary">
-            <div>
-              <span>Tổng giá gốc:</span>
-              <span class="summary-old"
-                >₫{{ totalProductPrice.toLocaleString() }}</span
-              >
-            </div>
-            <div v-if="totalDiscount > 0">
-              <span>Tiết kiệm:</span>
-              <span class="summary-save"
-                >₫{{ totalDiscount.toLocaleString() }}</span
-              >
-            </div>
-            <div class="total-price">
-              <span>Tổng thanh toán:</span>
-              <span class="summary-price"
-                >₫{{ totalPrice.toLocaleString() }}</span
-              >
-            </div>
-          </div>
-          <button class="submit-btn" type="submit" :disabled="isLoading">
-            {{ isLoading ? "Đang xử lý..." : "Đặt hàng" }}
-          </button>
-        </form>
       </div>
     </div>
   </div>
@@ -285,18 +298,60 @@ const submitOrder = async () => {
 </script>
 
 <style scoped>
-.checkout-page {
-  background: #f8f9fa;
-  min-height: 100vh;
+.page-container {
+  width: 95%;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 991px) {
+  .page-container {
+    width: 100%;
+    padding: 10px;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+}
+
+.breadcrumb {
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+@media (max-width: 991px) {
+  .breadcrumb {
+    font-size: 12px;
+    margin-bottom: 15px;
+    padding: 0 10px;
+  }
+}
+
+.breadcrumb a {
+  color: #666;
+  text-decoration: none;
+}
+
+.breadcrumb .separator {
+  margin: 0 8px;
+  color: #999;
+}
+
+.breadcrumb .current {
+  color: #e63946;
 }
 
 .checkout-container {
-  max-width: 1000px;
-  margin: 1.5rem auto;
-  background: #fff;
-  border-radius: 10px;
-  padding: 2rem;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  min-height: 100vh;
+  background-color: #f8f9fa;
+  padding: 2rem 0;
+  margin-bottom: 3rem;
+}
+
+.checkout-wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
 }
 
 .checkout-container h1 {
@@ -521,13 +576,40 @@ const submitOrder = async () => {
   }
 
   .checkout-container {
-    padding: 1.25rem;
-    margin: 0.75rem;
+    padding: 1.25rem 0;
+  }
+
+  .checkout-wrapper {
+    padding: 0 0.75rem;
   }
 
   .checkout-product img {
     width: 70px;
     height: 70px;
+  }
+}
+
+/* Additional responsive styles */
+@media (max-width: 576px) {
+  .page-container {
+    padding: 5px;
+  }
+
+  .breadcrumb {
+    font-size: 11px;
+    padding: 0 5px;
+  }
+
+  .checkout-container {
+    padding: 1rem 0;
+  }
+
+  .checkout-wrapper {
+    padding: 0 0.5rem;
+  }
+
+  .checkout-container h1 {
+    font-size: 1.5rem;
   }
 }
 </style>

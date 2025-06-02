@@ -96,13 +96,15 @@ const router = createRouter({
   routes,
 });
 
-// Navigation guard
+// Navigation guardMore actions
+
 router.beforeEach((to, from, next) => {
-  const userStr = localStorage.getItem("user");
+  const isAuthenticated = localStorage.getItem("token");
+
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 
-  if (to.meta.requiresAuth && !userStr) {
-    next("/login");
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    next("/admin/login");
   } else if (to.meta.requiresAdmin && !isAdmin) {
     next("/admin/login");
   } else {

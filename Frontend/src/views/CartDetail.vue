@@ -1,209 +1,216 @@
 <template>
   <Header />
-  <div class="cart-container">
-    <div class="cart-wrapper">
-      <div class="cart-header">
-        <h1>Giỏ Hàng</h1>
-        <p class="cart-subtitle">Quản lý sản phẩm bạn muốn mua</p>
-      </div>
-
-      <!-- Loading State -->
-      <div v-if="loading" class="loading-container">
-        <div class="loading-spinner"></div>
-        <p>Đang tải giỏ hàng...</p>
-      </div>
-
-      <!-- Error State -->
-      <div v-else-if="error" class="error-container">
-        <div class="error-icon">!</div>
-        <p>{{ error }}</p>
-        <button @click="fetchCart" class="retry-button">Thử lại</button>
-      </div>
-
-      <!-- Empty Cart -->
-      <div v-else-if="cartItems.length === 0" class="empty-cart">
-        <div class="empty-cart-icon">
-          <i class="fas fa-shopping-cart"></i>
-        </div>
-        <h2>Giỏ hàng trống</h2>
-        <p>Bạn chưa có sản phẩm nào trong giỏ hàng</p>
-        <router-link to="/" class="continue-shopping">
-          Tiếp tục mua sắm
-        </router-link>
-      </div>
-
-      <!-- Cart Content -->
-      <div v-else class="cart-content">
-        <!-- Cart Actions -->
-        <div class="cart-actions">
-          <label class="select-all">
-            <input
-              type="checkbox"
-              :checked="isAllSelected"
-              @change="toggleSelectAll"
-            />
-            <span>Chọn tất cả ({{ flattenedCartItems.length }})</span>
-          </label>
-          <button
-            v-if="selectedItems.length > 0"
-            @click="removeSelectedItems"
-            class="remove-selected"
-          >
-            <i class="fas fa-trash"></i>
-            Xóa đã chọn
-          </button>
+  <div class="page-container">
+    <div class="breadcrumb">
+      <router-link to="/">Trang chủ</router-link>
+      <span class="separator">/</span>
+      <span class="current">Giỏ hàng</span>
+    </div>
+    <div class="cart-container">
+      <div class="cart-wrapper">
+        <div class="cart-header">
+          <h1>Giỏ Hàng</h1>
+          <p class="cart-subtitle">Quản lý sản phẩm bạn muốn mua</p>
         </div>
 
-        <!-- Cart Items -->
-        <div class="cart-items">
-          <div
-            v-for="item in flattenedCartItems"
-            :key="item.variantId"
-            class="cart-item"
-          >
-            <div class="item-select">
+        <!-- Loading State -->
+        <div v-if="loading" class="loading-container">
+          <div class="loading-spinner"></div>
+          <p>Đang tải giỏ hàng...</p>
+        </div>
+
+        <!-- Error State -->
+        <div v-else-if="error" class="error-container">
+          <div class="error-icon">!</div>
+          <p>{{ error }}</p>
+          <button @click="fetchCart" class="retry-button">Thử lại</button>
+        </div>
+
+        <!-- Empty Cart -->
+        <div v-else-if="cartItems.length === 0" class="empty-cart">
+          <div class="empty-cart-icon">
+            <i class="fas fa-shopping-cart"></i>
+          </div>
+          <h2>Giỏ hàng trống</h2>
+          <p>Bạn chưa có sản phẩm nào trong giỏ hàng</p>
+          <router-link to="/" class="continue-shopping">
+            Tiếp tục mua sắm
+          </router-link>
+        </div>
+
+        <!-- Cart Content -->
+        <div v-else class="cart-content">
+          <!-- Cart Actions -->
+          <div class="cart-actions">
+            <label class="select-all">
               <input
                 type="checkbox"
-                :checked="isItemSelected(item)"
-                @change="toggleItemSelection(item)"
+                :checked="isAllSelected"
+                @change="toggleSelectAll"
               />
-            </div>
-            <div class="item-content">
-              <div class="item-image">
-                <img
-                  :src="
-                    'http://localhost:3005/' +
-                    (item.variant.image || item.productId.image)
-                  "
-                  :alt="item.productId.name"
+              <span>Chọn tất cả ({{ flattenedCartItems.length }})</span>
+            </label>
+            <button
+              v-if="selectedItems.length > 0"
+              @click="removeSelectedItems"
+              class="remove-selected"
+            >
+              <i class="fas fa-trash"></i>
+              Xóa đã chọn
+            </button>
+          </div>
+
+          <!-- Cart Items -->
+          <div class="cart-items">
+            <div
+              v-for="item in flattenedCartItems"
+              :key="item.variantId"
+              class="cart-item"
+            >
+              <div class="item-select">
+                <input
+                  type="checkbox"
+                  :checked="isItemSelected(item)"
+                  @change="toggleItemSelection(item)"
                 />
               </div>
-              <div class="item-details">
-                <h3 class="item-name">{{ item.productId.name }}</h3>
-                <p class="item-variant">Phân loại: {{ item.variant.sku }}</p>
-                <div class="item-quantity">
-                  <button
-                    @click="updateQuantity(item, item.variant, -1)"
-                    :disabled="item.variant.quantity <= 1"
-                    class="quantity-btn"
-                  >
-                    <i class="fas fa-minus"></i>
-                  </button>
-                  <span class="quantity">{{ item.variant.quantity }}</span>
-                  <button
-                    @click="updateQuantity(item, item.variant, 1)"
-                    :disabled="
-                      item.variant.quantity >= item.variant.stockQuantity
+              <div class="item-content">
+                <div class="item-image">
+                  <img
+                    :src="
+                      'http://localhost:3005/' +
+                      (item.variant.image || item.productId.image)
                     "
-                    class="quantity-btn"
-                  >
-                    <i class="fas fa-plus"></i>
-                  </button>
+                    :alt="item.productId.name"
+                  />
                 </div>
-                <p
-                  :class="[
-                    'stock-status',
-                    item.variant.stockQuantity === undefined
-                      ? 'stock-unknown'
-                      : item.variant.quantity >= item.variant.stockQuantity
-                      ? 'stock-warning'
-                      : 'stock-available',
-                  ]"
-                >
-                  {{
-                    item.variant.stockQuantity === undefined
-                      ? "Đang cập nhật tồn kho"
-                      : item.variant.quantity >= item.variant.stockQuantity
-                      ? `Chỉ còn ${item.variant.stockQuantity} sản phẩm`
-                      : `Còn ${item.variant.stockQuantity} sản phẩm trong kho`
-                  }}
-                </p>
-              </div>
-              <div class="item-price-wrapper">
-                <div class="item-price">
-                  <template
-                    v-if="item.variant.price < item.variant.originPrice"
+                <div class="item-details">
+                  <h3 class="item-name">{{ item.productId.name }}</h3>
+                  <p class="item-variant">Phân loại: {{ item.variant.sku }}</p>
+                  <div class="item-quantity">
+                    <button
+                      @click="updateQuantity(item, item.variant, -1)"
+                      :disabled="item.variant.quantity <= 1"
+                      class="quantity-btn"
+                    >
+                      <i class="fas fa-minus"></i>
+                    </button>
+                    <span class="quantity">{{ item.variant.quantity }}</span>
+                    <button
+                      @click="updateQuantity(item, item.variant, 1)"
+                      :disabled="
+                        item.variant.quantity >= item.variant.stockQuantity
+                      "
+                      class="quantity-btn"
+                    >
+                      <i class="fas fa-plus"></i>
+                    </button>
+                  </div>
+                  <p
+                    :class="[
+                      'stock-status',
+                      item.variant.stockQuantity === undefined
+                        ? 'stock-unknown'
+                        : item.variant.quantity >= item.variant.stockQuantity
+                        ? 'stock-warning'
+                        : 'stock-available',
+                    ]"
                   >
-                    <span class="original-price">
-                      ₫{{
-                        (
-                          item.variant.originPrice * item.variant.quantity
-                        ).toLocaleString()
-                      }}
-                    </span>
-                    <span class="sale-price">
-                      ₫{{
-                        (
-                          item.variant.price * item.variant.quantity
-                        ).toLocaleString()
-                      }}
-                    </span>
-                  </template>
-                  <template v-else>
-                    <span class="sale-price">
-                      ₫{{
-                        (
-                          item.variant.price * item.variant.quantity
-                        ).toLocaleString()
-                      }}
-                    </span>
-                  </template>
+                    {{
+                      item.variant.stockQuantity === undefined
+                        ? "Đang cập nhật tồn kho"
+                        : item.variant.quantity >= item.variant.stockQuantity
+                        ? `Chỉ còn ${item.variant.stockQuantity} sản phẩm`
+                        : `Còn ${item.variant.stockQuantity} sản phẩm trong kho`
+                    }}
+                  </p>
                 </div>
+                <div class="item-price-wrapper">
+                  <div class="item-price">
+                    <template
+                      v-if="item.variant.price < item.variant.originPrice"
+                    >
+                      <span class="original-price">
+                        ₫{{
+                          (
+                            item.variant.originPrice * item.variant.quantity
+                          ).toLocaleString()
+                        }}
+                      </span>
+                      <span class="sale-price">
+                        ₫{{
+                          (
+                            item.variant.price * item.variant.quantity
+                          ).toLocaleString()
+                        }}
+                      </span>
+                    </template>
+                    <template v-else>
+                      <span class="sale-price">
+                        ₫{{
+                          (
+                            item.variant.price * item.variant.quantity
+                          ).toLocaleString()
+                        }}
+                      </span>
+                    </template>
+                  </div>
+                </div>
+                <button class="remove-item" @click="removeItem(item)">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
               </div>
-              <button class="remove-item" @click="removeItem(item)">
-                <i class="fas fa-trash-alt"></i>
-              </button>
             </div>
           </div>
-        </div>
 
-        <!-- Cart Summary -->
-        <div class="cart-summary">
-          <div class="summary-content">
-            <div class="selected-count">
-              Đã chọn {{ selectedItems.length }} sản phẩm
+          <!-- Cart Summary -->
+          <div class="cart-summary">
+            <div class="summary-content">
+              <div class="selected-count">
+                Đã chọn {{ selectedItems.length }} sản phẩm
+              </div>
+              <div class="price-summary">
+                <template v-if="selectedTotalOldPrice > selectedTotalPrice">
+                  <div class="price-row">
+                    <span>Tổng tiền hàng:</span>
+                    <span class="original-total">
+                      ₫{{ selectedTotalOldPrice.toLocaleString() }}
+                    </span>
+                  </div>
+                  <div class="price-row">
+                    <span>Tiết kiệm:</span>
+                    <span class="savings">
+                      ₫{{
+                        (
+                          selectedTotalOldPrice - selectedTotalPrice
+                        ).toLocaleString()
+                      }}
+                    </span>
+                  </div>
+                  <div class="price-row total">
+                    <span>Thành tiền:</span>
+                    <span class="final-price">
+                      ₫{{ selectedTotalPrice.toLocaleString() }}
+                    </span>
+                  </div>
+                </template>
+                <template v-else>
+                  <div class="price-row total">
+                    <span>Thành tiền:</span>
+                    <span class="final-price">
+                      ₫{{ selectedTotalPrice.toLocaleString() }}
+                    </span>
+                  </div>
+                </template>
+              </div>
+              <button
+                class="checkout-button"
+                @click="checkout"
+                :disabled="selectedItems.length === 0"
+              >
+                Thanh Toán
+              </button>
             </div>
-            <div class="price-summary">
-              <template v-if="selectedTotalOldPrice > selectedTotalPrice">
-                <div class="price-row">
-                  <span>Tổng tiền hàng:</span>
-                  <span class="original-total">
-                    ₫{{ selectedTotalOldPrice.toLocaleString() }}
-                  </span>
-                </div>
-                <div class="price-row">
-                  <span>Tiết kiệm:</span>
-                  <span class="savings">
-                    ₫{{
-                      (
-                        selectedTotalOldPrice - selectedTotalPrice
-                      ).toLocaleString()
-                    }}
-                  </span>
-                </div>
-                <div class="price-row total">
-                  <span>Thành tiền:</span>
-                  <span class="final-price">
-                    ₫{{ selectedTotalPrice.toLocaleString() }}
-                  </span>
-                </div>
-              </template>
-              <template v-else>
-                <div class="price-row total">
-                  <span>Thành tiền:</span>
-                  <span class="final-price">
-                    ₫{{ selectedTotalPrice.toLocaleString() }}
-                  </span>
-                </div>
-              </template>
-            </div>
-            <button
-              class="checkout-button"
-              @click="checkout"
-              :disabled="selectedItems.length === 0"
-            >
-              Thanh Toán
-            </button>
           </div>
         </div>
       </div>
@@ -500,6 +507,49 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.page-container {
+  width: 95%;
+  margin: 0 auto;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 991px) {
+  .page-container {
+    width: 100%;
+    padding: 10px;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+}
+
+.breadcrumb {
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+@media (max-width: 991px) {
+  .breadcrumb {
+    font-size: 12px;
+    margin-bottom: 15px;
+    padding: 0 10px;
+  }
+}
+
+.breadcrumb a {
+  color: #666;
+  text-decoration: none;
+}
+
+.breadcrumb .separator {
+  margin: 0 8px;
+  color: #999;
+}
+
+.breadcrumb .current {
+  color: #e63946;
+}
+
 .cart-container {
   min-height: 100vh;
   background-color: #f8f9fa;
@@ -658,10 +708,21 @@ onMounted(async () => {
 
 .cart-item {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   padding: 1.5rem;
   border-bottom: 1px solid #eee;
   position: relative;
+}
+
+.item-select {
+  padding-top: 0.5rem;
+  margin-right: 1rem;
+}
+
+.item-select input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
 }
 
 .item-content {
@@ -909,6 +970,47 @@ onMounted(async () => {
 
   .summary-content {
     max-width: 100%;
+  }
+
+  .cart-item {
+    flex-direction: column;
+    padding: 1rem;
+  }
+
+  .item-select {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    margin-right: 0;
+    z-index: 1;
+  }
+
+  .item-content {
+    margin-left: 2rem;
+  }
+}
+
+/* Additional responsive styles */
+@media (max-width: 576px) {
+  .page-container {
+    padding: 5px;
+  }
+
+  .breadcrumb {
+    font-size: 11px;
+    padding: 0 5px;
+  }
+
+  .cart-container {
+    padding: 1rem 0;
+  }
+
+  .cart-header h1 {
+    font-size: 1.8rem;
+  }
+
+  .cart-subtitle {
+    font-size: 0.9rem;
   }
 }
 </style>

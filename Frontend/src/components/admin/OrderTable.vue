@@ -36,7 +36,7 @@
                 :class="['status-select', getStatusClass(order.status)]"
               >
                 <option value="pending">Chờ xử lý</option>
-                <option value="processing">Đang xử lý</option>
+                <option value="processing">Đã xác nhận</option>
                 <option value="shipping">Đang giao hàng</option>
                 <option value="delivered">Đã giao hàng</option>
                 <option value="cancelled">Đã hủy</option>
@@ -109,7 +109,7 @@ export default {
     formatStatus(status) {
       const statusMap = {
         pending: "Chờ xử lý",
-        processing: "Đang xử lý",
+        processing: "Đã xác nhận",
         shipping: "Đang giao hàng",
         delivered: "Đã giao hàng",
         cancelled: "Đã hủy",
