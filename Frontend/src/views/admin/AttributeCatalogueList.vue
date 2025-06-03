@@ -21,11 +21,47 @@
       </div>
       <AttributeCatalogueTable
         v-else
-        :catalogues="catalogues"
+        :catalogues="paginatedCatalogues"
         :loading="loading"
         @edit="editCatalogue"
         @delete="confirmDelete"
       />
+
+      <div class="pagination-info">
+        <span class="showing-info">
+          Hiển thị {{ startIndex + 1 }}-{{ endIndex }} /
+          {{ catalogues.length }} danh mục
+        </span>
+        <div class="pagination">
+          <button
+            class="page-btn"
+            :disabled="currentPage === 1"
+            @click="changePage(currentPage - 1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+
+          <template v-for="page in displayedPages" :key="page">
+            <button
+              v-if="page !== '...'"
+              class="page-btn"
+              :class="{ active: currentPage === page }"
+              @click="changePage(page)"
+            >
+              {{ page }}
+            </button>
+            <span v-else class="page-dots">...</span>
+          </template>
+
+          <button
+            class="page-btn"
+            :disabled="currentPage === totalPages"
+            @click="changePage(currentPage + 1)"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
     </div>
 
     <AttributeCatalogueForm
@@ -65,7 +101,62 @@ export default {
       },
       loading: false,
       error: null,
+      currentPage: 1,
+      itemsPerPage: 10,
     };
+  },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.catalogues.length / this.itemsPerPage);
+    },
+    startIndex() {
+      return (this.currentPage - 1) * this.itemsPerPage;
+    },
+    endIndex() {
+      return Math.min(
+        this.startIndex + this.itemsPerPage,
+        this.catalogues.length
+      );
+    },
+    paginatedCatalogues() {
+      const start = this.startIndex;
+      const end = this.endIndex;
+      return this.catalogues.slice(start, end);
+    },
+    displayedPages() {
+      const pages = [];
+      const maxVisiblePages = 5;
+
+      if (this.totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= this.totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        if (this.currentPage <= 3) {
+          for (let i = 1; i <= 4; i++) {
+            pages.push(i);
+          }
+          pages.push("...");
+          pages.push(this.totalPages);
+        } else if (this.currentPage >= this.totalPages - 2) {
+          pages.push(1);
+          pages.push("...");
+          for (let i = this.totalPages - 3; i <= this.totalPages; i++) {
+            pages.push(i);
+          }
+        } else {
+          pages.push(1);
+          pages.push("...");
+          for (let i = this.currentPage - 1; i <= this.currentPage + 1; i++) {
+            pages.push(i);
+          }
+          pages.push("...");
+          pages.push(this.totalPages);
+        }
+      }
+
+      return pages;
+    },
   },
   created() {
     this.fetchCatalogues();
@@ -206,6 +297,12 @@ export default {
     handleFormError(message) {
       toast.error(message);
     },
+
+    changePage(page) {
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page;
+      }
+    },
   },
 };
 </script>
@@ -289,5 +386,69 @@ export default {
 
 .btn-primary:hover {
   background: #40a9ff;
+}
+
+.pagination-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.showing-info {
+  color: #666;
+  font-size: 14px;
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background-color: white;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #40a9ff;
+  color: #1890ff;
+}
+
+.page-btn.active {
+  background-color: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.page-btn:disabled {
+  background-color: #f5f5f5;
+  border-color: #d9d9d9;
+  color: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.page-dots {
+  color: #666;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .pagination-info {
+    flex-direction: column;
+    gap: 16px;
+  }
 }
 </style>

@@ -30,9 +30,38 @@
       <router-link to="/" class="nav-item" @click="closeMobileMenu"
         >TRANG CHỦ</router-link
       >
-      <router-link to="/products" class="nav-item" @click="closeMobileMenu"
-        >SẢN PHẨM</router-link
+      <div
+        class="nav-item product-menu-wrapper"
+        @mouseenter="showProductMenu = true"
+        @mouseleave="showProductMenu = false"
       >
+        <router-link to="/products" class="nav-item" @click="closeMobileMenu">
+          SẢN PHẨM
+        </router-link>
+        <transition name="fade">
+          <div
+            v-if="showProductMenu && !isMobileMenuOpen"
+            class="product-mega-menu"
+          >
+            <div class="mega-menu-column">
+              <div class="mega-menu-title">SOFA</div>
+              <div class="mega-menu-item">Sofa hiện đại</div>
+              <div class="mega-menu-item">Sofa tân cổ điển</div>
+              <div class="mega-menu-item">Sofa bed</div>
+              <div class="mega-menu-item">Sofa gỗ</div>
+            </div>
+            <div class="mega-menu-column">
+              <div class="mega-menu-title">BÀN SOFA</div>
+              <div class="mega-menu-item">Bàn sofa mặt đá</div>
+              <div class="mega-menu-item">Bàn sofa gỗ</div>
+            </div>
+            <div class="mega-menu-column">
+              <div class="mega-menu-title">GHẾ THƯ GIÃN</div>
+              <div class="mega-menu-item">Ghế thư giãn</div>
+            </div>
+          </div>
+        </transition>
+      </div>
       <router-link
         to="/bst-he-nonstop"
         class="nav-item"
@@ -60,7 +89,10 @@
         @keyup.enter="handleSearch"
       />
       <i class="fas fa-search search-icon" @click="handleSearch"></i>
-      <i class="fas fa-camera search-camera-icon" @click="goToImageSearch"></i>
+      <i
+        class="fas fa-camera search-camera-icon"
+        @click="showImageSearchModal"
+      ></i>
     </div>
     <div class="user-icons">
       <div
@@ -69,7 +101,10 @@
         style="position: relative; cursor: pointer"
       >
         <i class="fas fa-shopping-cart icon"></i>
-        <span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+        <span v-if="!userData" class="cart-badge">0</span>
+        <span v-else-if="cartCount > 0" class="cart-badge">{{
+          cartCount
+        }}</span>
       </div>
       <CartPopup
         :visible="showCartPopup"
@@ -83,6 +118,7 @@
       @click="closeMobileMenu"
     ></div>
   </header>
+  <ImageSearchModal :visible="showImageSearch" @close="closeImageSearchModal" />
 </template>
 
 <script>
@@ -90,10 +126,11 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import CartPopup from "./CartPopup.vue";
+import ImageSearchModal from "./ImageSearchModal.vue";
 import { cartService } from "../services/cart.service";
 
 export default {
-  components: { CartPopup },
+  components: { CartPopup, ImageSearchModal },
   setup() {
     const searchQuery = ref("");
     const router = useRouter();
@@ -103,6 +140,8 @@ export default {
     const hasCart = ref(false);
     const userData = ref(null);
     const isMobileMenuOpen = ref(false);
+    const showImageSearch = ref(false);
+    const showProductMenu = ref(false);
 
     async function checkCartOfCurrentUser() {
       try {
@@ -157,14 +196,21 @@ export default {
     };
 
     const handleSearch = () => {
-      if (searchQuery.value) {
-        router.push({ path: "/search", query: { q: searchQuery.value } });
+      if (searchQuery.value.trim()) {
+        router.push({
+          name: "Search",
+          query: { keyword: searchQuery.value.trim() },
+        });
         searchQuery.value = "";
       }
     };
 
-    const goToImageSearch = () => {
-      router.push("/imageSearch");
+    const showImageSearchModal = () => {
+      showImageSearch.value = true;
+    };
+
+    const closeImageSearchModal = () => {
+      showImageSearch.value = false;
     };
 
     const toggleMobileMenu = () => {
@@ -207,7 +253,10 @@ export default {
       isMobileMenuOpen,
       toggleMobileMenu,
       closeMobileMenu,
-      goToImageSearch,
+      showImageSearch,
+      showImageSearchModal,
+      closeImageSearchModal,
+      showProductMenu,
     };
   },
 };
@@ -262,17 +311,21 @@ export default {
   top: 0;
   z-index: 1000;
   box-sizing: border-box;
+  position: relative;
+  max-width: 1920px;
+  margin: 0 auto;
 }
 
 .logo {
   font-size: 28px;
   font-weight: 800;
   color: #ff0000;
-  margin-right: 5%;
+  margin-right: 40px;
   text-decoration: none;
   letter-spacing: 1px;
   transition: transform 0.3s ease;
   white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .logo:hover {
@@ -284,6 +337,7 @@ export default {
   flex-grow: 1;
   gap: 25px;
   justify-content: center;
+  margin-right: 40px;
 }
 
 .nav-item {
@@ -326,11 +380,20 @@ export default {
 }
 
 .search-bar {
-  margin: 0 5%;
-  flex-shrink: 0;
   position: relative;
   display: flex;
   align-items: center;
+  width: 300px;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 10px 80px 10px 15px;
+  border: 1px solid #e0e0e0;
+  border-radius: 25px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  outline: none;
 }
 
 .search-icon {
@@ -339,10 +402,8 @@ export default {
   color: #666;
   cursor: pointer;
   transition: color 0.3s ease;
-}
-
-.search-icon:hover {
-  color: #ff0000;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .search-camera-icon {
@@ -351,21 +412,8 @@ export default {
   color: #666;
   cursor: pointer;
   transition: color 0.3s ease;
-}
-
-.search-camera-icon:hover {
-  color: #ff0000;
-}
-
-.search-bar input {
-  padding: 10px 15px;
-  padding-right: 80px;
-  border: 1px solid #e0e0e0;
-  border-radius: 25px;
-  width: 250px;
-  font-size: 14px;
-  transition: all 0.3s ease;
-  outline: none;
+  top: 50%;
+  transform: translateY(-50%);
 }
 
 .search-bar input:focus {
@@ -376,8 +424,8 @@ export default {
 .user-icons {
   display: flex;
   gap: 20px;
-  margin-left: auto;
   flex-shrink: 0;
+  margin-left: 40px;
 }
 
 .icon {
@@ -459,25 +507,39 @@ export default {
   color: #666;
 }
 
+@media (max-width: 1400px) {
+  .nav-menu {
+    gap: 20px;
+    margin-right: 30px;
+  }
+
+  .search-bar {
+    width: 250px;
+    margin: 0 30px;
+  }
+
+  .user-icons {
+    margin-left: 30px;
+  }
+}
+
 @media (max-width: 1200px) {
   .nav-menu {
     gap: 15px;
+    margin-right: 20px;
   }
 
-  .search-bar input {
+  .search-bar {
     width: 200px;
+    margin: 0 20px;
+  }
+
+  .user-icons {
+    margin-left: 20px;
   }
 }
 
 @media (max-width: 992px) {
-  .header-top-bar {
-    padding: 8px 15px;
-  }
-
-  .welcome-text {
-    display: none;
-  }
-
   .header {
     padding: 15px 5%;
     flex-wrap: wrap;
@@ -486,14 +548,23 @@ export default {
 
   .mobile-menu-toggle {
     display: block;
+    order: 1;
   }
 
-  .mobile-overlay {
-    display: block;
+  .logo {
+    order: 2;
+    margin-right: auto;
   }
 
-  .mobile-menu-header {
-    display: flex;
+  .user-icons {
+    order: 3;
+    margin-left: auto;
+  }
+
+  .search-bar {
+    order: 4;
+    margin: 15px 0 0 0;
+    width: 100%;
   }
 
   .nav-menu {
@@ -509,6 +580,7 @@ export default {
     box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
     z-index: 1000;
     overflow-y: auto;
+    margin-right: 0;
   }
 
   .nav-menu.mobile-active {
@@ -520,12 +592,6 @@ export default {
     width: 100%;
     text-align: left;
     border-bottom: 1px solid #f5f5f5;
-  }
-
-  .search-bar {
-    order: 3;
-    margin: 0;
-    width: 100%;
   }
 
   .search-bar input {
@@ -547,17 +613,9 @@ export default {
     font-size: 24px;
     margin-right: 15px;
   }
-
-  .user-icons {
-    margin-left: 0;
-  }
 }
 
 @media (max-width: 576px) {
-  .header-top-bar {
-    font-size: 12px;
-  }
-
   .header {
     padding: 10px 5%;
     gap: 10px;
@@ -565,12 +623,10 @@ export default {
 
   .logo {
     font-size: 20px;
-    margin-right: 10px;
   }
 
-  .search-bar input {
-    padding: 10px 15px;
-    font-size: 14px;
+  .search-bar {
+    margin-top: 10px;
   }
 
   .user-icons {
@@ -585,6 +641,114 @@ export default {
     font-size: 10px;
     min-width: 16px;
     height: 16px;
+  }
+}
+
+.product-menu-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.product-mega-menu {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  background: rgba(30, 30, 30, 0.92);
+  color: #fff;
+  display: flex;
+  flex-wrap: wrap;
+  min-width: 700px;
+  max-width: 1000px;
+  padding: 20px 16px 20px 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  z-index: 2000;
+  border-radius: 0 0 16px 16px;
+  gap: 28px;
+  backdrop-filter: blur(2px);
+  border-top: 2px solid #ff0000;
+  animation: dropDown 0.3s;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+@keyframes dropDown {
+  from {
+    transform: translateY(-10px);
+    opacity: 0.7;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.mega-menu-column {
+  min-width: 160px;
+  max-width: 220px;
+  flex: 1 1 22%; /* tối đa 4 cột trên 1 hàng */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  padding-right: 18px;
+  margin-bottom: 10px;
+}
+.mega-menu-column:nth-child(4n) {
+  border-right: none;
+  padding-right: 0;
+}
+.mega-menu-column:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.mega-menu-title {
+  font-weight: 700;
+  color: #ff0000;
+  margin-bottom: 8px;
+  font-size: 15px;
+  text-transform: uppercase;
+  text-decoration: underline;
+  letter-spacing: 0.5px;
+  transition: color 0.2s;
+  cursor: pointer;
+}
+.mega-menu-title:hover {
+  color: #fff;
+  text-decoration: none;
+}
+
+.mega-menu-item {
+  color: #fff;
+  font-size: 13px;
+  padding: 4px 0 4px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 0.2s, background 0.2s;
+}
+.mega-menu-item:hover {
+  color: #ff0000;
+  background: rgba(255, 255, 255, 0.07);
+  text-decoration: underline;
+}
+
+/* Fade effect for mega menu */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* Responsive for mega menu */
+@media (max-width: 992px) {
+  .product-mega-menu {
+    display: none !important;
+  }
+  .product-menu-wrapper {
+    width: 100%;
   }
 }
 </style>

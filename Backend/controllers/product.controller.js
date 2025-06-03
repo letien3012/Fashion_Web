@@ -357,3 +357,23 @@ exports.getBestSelling = async (req, res) => {
     });
   }
 };
+
+// Tìm kiếm sản phẩm
+exports.search = async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    if (!keyword) {
+      return res.status(400).json({
+        message: "Keyword is required",
+      });
+    }
+
+    const products = await Product.search(keyword);
+    res.status(200).json({
+      message: "Products retrieved successfully",
+      data: products,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

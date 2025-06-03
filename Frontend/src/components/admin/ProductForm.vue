@@ -680,7 +680,7 @@ export default {
 
     const fetchAttributeCatalogues = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         const response = await axios.get(
           `${backendUrl}/api/attributeCatalogues`,
           {
@@ -697,7 +697,7 @@ export default {
 
     const fetchAttributes = async (catalogueId) => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         const response = await axios.get(`${backendUrl}/api/attributes`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -779,7 +779,7 @@ export default {
       if (!attributeName) return;
 
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         const response = await axios.post(
           `${backendUrl}/api/attributes/add`,
           {
@@ -959,7 +959,7 @@ export default {
           return;
         }
 
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         if (props.product) {
           const response = await axios.put(
             `${backendUrl}/api/products/update/${props.product._id}`,

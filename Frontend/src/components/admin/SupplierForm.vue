@@ -101,7 +101,7 @@ export default {
 
     const handleSubmit = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         if (props.supplier) {
           const response = await axios.put(
             `${backendUrl}/api/suppliers/update/${props.supplier._id}`,
@@ -160,4 +160,4 @@ export default {
   padding-top: 16px;
   border-top: 1px solid #dee2e6;
 }
-</style> 
+</style>

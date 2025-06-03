@@ -236,7 +236,7 @@ export default {
     async fetchProducts() {
       try {
         this.loading = true;
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         if (!token) {
           toast.error("Vui lòng đăng nhập để tiếp tục");
           this.$router.push("/admin/login");
@@ -269,7 +269,7 @@ export default {
 
     async fetchProductCatalogues() {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         const response = await axios.get(
           `${this.backendUrl}/api/productCatalogues`,
           {
@@ -297,7 +297,7 @@ export default {
 
     async fetchAttributeCatalogues() {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         const response = await axios.get(
           `${this.backendUrl}/api/attributeCatalogues`,
           {

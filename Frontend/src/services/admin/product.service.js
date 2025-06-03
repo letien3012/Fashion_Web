@@ -2,7 +2,7 @@ import axios from "axios";
 
 const backendUrl = "http://localhost:3005";
 const getAuthHeaders = () => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token-admin");
   return {
     headers: {
       Authorization: `Bearer ${token}`,

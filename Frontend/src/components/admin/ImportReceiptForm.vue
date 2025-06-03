@@ -281,7 +281,7 @@ export default {
   emits: ["close", "saved"],
   setup(props, { emit }) {
     const backendUrl = "http://localhost:3005";
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token-admin");
     const suppliers = ref([]);
     const products = ref([]);
     const attributes = ref([]);

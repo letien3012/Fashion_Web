@@ -29,7 +29,7 @@ const AdminAuthService = {
 
       if (response.data.success && response.data.token) {
         // Store token and employee info
-        localStorage.setItem("token", response.data.token);
+        localStorage.setItem("token-admin", response.data.token);
         localStorage.setItem(
           "employee",
           JSON.stringify(response.data.employee)
@@ -50,7 +50,7 @@ const AdminAuthService = {
   },
 
   logout() {
-    localStorage.removeItem("token");
+    localStorage.removeItem("token-admin");
     localStorage.removeItem("employee");
     localStorage.removeItem("isAdmin");
     delete axios.defaults.headers.common["Authorization"];
@@ -58,13 +58,13 @@ const AdminAuthService = {
 
   isAuthenticated() {
     return (
-      !!localStorage.getItem("token") &&
+      !!localStorage.getItem("token-admin") &&
       localStorage.getItem("isAdmin") === "true"
     );
   },
 
   getToken() {
-    return localStorage.getItem("token");
+    return localStorage.getItem("token-admin");
   },
 
   getEmployee() {

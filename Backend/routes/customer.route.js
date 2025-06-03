@@ -17,8 +17,8 @@ router.put("/change-password", auth, customerController.changePassword);
 router.get("/orders", auth, customerController.getCustomerOrders);
 
 // Admin routes
-router.get("/", auth, customerController.getAllCustomers);
-router.put("/update-status/:id", auth, customerController.updateStatus);
-router.delete("/:id", auth, customerController.softDelete);
+router.get("/", customerController.getAllCustomers);
+router.put("/update-status/:id", customerController.updateStatus);
+router.delete("/:id", customerController.softDelete);
 
 module.exports = router;

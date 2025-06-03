@@ -95,7 +95,7 @@ const productService = {
   async searchProducts(query) {
     try {
       const response = await axios.get(`${backendUrl}/api/products/search`, {
-        params: { q: query },
+        params: { keyword: query },
       });
       return response.data;
     } catch (error) {

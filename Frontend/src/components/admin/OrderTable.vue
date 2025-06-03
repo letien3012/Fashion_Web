@@ -7,7 +7,7 @@
           <th>Khách hàng</th>
           <th>Tổng tiền</th>
           <th>Phương thức</th>
-          <th>Trạng thái</th>
+          <th>Trạng thái hiện tại</th>
           <th>Ngày tạo</th>
           <th>Thao tác</th>
         </tr>
@@ -28,38 +28,40 @@
           <td>{{ formatPrice(order.total_price) }}</td>
           <td>{{ formatPaymentMethod(order.method) }}</td>
           <td>
-            <div class="status-container">
-              <select
-                v-if="canUpdateStatus"
-                :value="order.status"
-                @change="handleStatusChange($event, order._id)"
-                :class="['status-select', getStatusClass(order.status)]"
-              >
-                <option value="pending">Chờ xử lý</option>
-                <option value="processing">Đã xác nhận</option>
-                <option value="shipping">Đang giao hàng</option>
-                <option value="delivered">Đã giao hàng</option>
-                <option value="cancelled">Đã hủy</option>
-                <option value="returned">Đã trả hàng</option>
-              </select>
-              <span v-else :class="['status', getStatusClass(order.status)]">
-                {{ formatStatus(order.status) }}
-              </span>
-            </div>
+            <span :class="['status', getStatusClass(order.status)]">
+              {{ formatStatus(order.status) }}
+            </span>
           </td>
           <td>{{ formatDate(order.createdAt) }}</td>
           <td>
             <div class="actions">
-              <button class="view-btn" @click="$emit('view', order._id)">
-                <i class="fas fa-eye"></i>
-              </button>
-              <button
-                v-if="canDelete"
-                class="delete-btn"
-                @click="$emit('delete', order._id)"
-              >
-                <i class="fas fa-trash"></i>
-              </button>
+              <div v-if="canUpdateStatus" class="status-actions">
+                <button
+                  v-for="nextStatus in getValidNextStatuses(order.status)"
+                  :key="nextStatus"
+                  @click="
+                    handleStatusChange(
+                      { target: { value: nextStatus } },
+                      order._id
+                    )
+                  "
+                  :class="['status-btn', getStatusClass(nextStatus)]"
+                >
+                  {{ formatStatus(nextStatus) }}
+                </button>
+              </div>
+              <div class="action-buttons">
+                <button class="view-btn" @click="$emit('view', order._id)">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button
+                  v-if="canDelete"
+                  class="delete-btn"
+                  @click="$emit('delete', order._id)"
+                >
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
             </div>
           </td>
         </tr>
@@ -72,6 +74,8 @@
 </template>
 
 <script>
+import Swal from "sweetalert2";
+
 export default {
   name: "OrderTable",
   props: {
@@ -127,18 +131,45 @@ export default {
     },
     getStatusClass(status) {
       const classMap = {
-        pending: "inactive",
-        processing: "active",
-        shipping: "active",
-        delivered: "active",
-        cancelled: "inactive",
-        returned: "inactive",
+        pending: "status-pending",
+        processing: "status-processing",
+        shipping: "status-shipping",
+        delivered: "status-delivered",
+        cancelled: "status-cancelled",
+        returned: "status-returned",
       };
       return classMap[status] || "";
     },
-    handleStatusChange(event, orderId) {
+    getValidNextStatuses(currentStatus) {
+      const statusFlow = {
+        pending: ["processing", "cancelled"],
+        processing: ["shipping", "cancelled"],
+        shipping: ["delivered", "returned"],
+        delivered: ["returned"],
+        cancelled: [],
+        returned: [],
+      };
+      return statusFlow[currentStatus] || [];
+    },
+    async handleStatusChange(event, orderId) {
       const newStatus = event.target.value;
-      this.$emit("update-status", { orderId, newStatus });
+
+      const result = await Swal.fire({
+        title: "Xác nhận thay đổi trạng thái?",
+        text: `Bạn có chắc chắn muốn chuyển trạng thái đơn hàng sang "${this.formatStatus(
+          newStatus
+        )}"?`,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Xác nhận",
+        cancelButtonText: "Hủy",
+        confirmButtonColor: "#1890ff",
+        cancelButtonColor: "#ff4d4f",
+      });
+
+      if (result.isConfirmed) {
+        this.$emit("update-status", { orderId, newStatus });
+      }
     },
   },
 };
@@ -192,50 +223,96 @@ td {
   align-items: center;
 }
 
-.status {
+.status-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.current-status {
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: 14px;
   font-weight: 500;
+  display: inline-block;
 }
 
-.status.active {
-  background: #e6f7ff;
-  color: #1890ff;
+.next-status-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.status.inactive {
-  background: #fff1f0;
-  color: #ff4d4f;
-}
-
-.status-select {
+.status-btn {
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 0.9em;
+  font-size: 14px;
   font-weight: 500;
-  border: 1px solid #d9d9d9;
   cursor: pointer;
-  outline: none;
-  background: #fff;
+  border: 1px solid transparent;
+  transition: all 0.3s;
+  white-space: nowrap;
 }
 
-.status-select.active {
-  border-color: #1890ff;
-  color: #1890ff;
+.status-btn:hover {
+  opacity: 0.8;
 }
 
-.status-select.inactive {
-  border-color: #ff4d4f;
-  color: #ff4d4f;
+.status-pending {
+  background: #fff7e6;
+  color: #d46b08;
+  border: 1px solid #ffd591;
+}
+
+.status-processing {
+  background: #e6f7ff;
+  color: #096dd9;
+  border: 1px solid #91d5ff;
+}
+
+.status-shipping {
+  background: #f6ffed;
+  color: #389e0d;
+  border: 1px solid #b7eb8f;
+}
+
+.status-delivered {
+  background: #f9f0ff;
+  color: #531dab;
+  border: 1px solid #d3adf7;
+}
+
+.status-cancelled {
+  background: #fff1f0;
+  color: #cf1322;
+  border: 1px solid #ffa39e;
+}
+
+.status-returned {
+  background: #f5f5f5;
+  color: #595959;
+  border: 1px solid #d9d9d9;
 }
 
 .actions {
   display: flex;
+  flex-direction: column;
   gap: 8px;
 }
 
-.actions button {
+.status-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.view-btn,
+.delete-btn {
   padding: 6px;
   border: none;
   border-radius: 4px;
@@ -269,5 +346,12 @@ td {
 
 tr:hover {
   background: #fafafa;
+}
+
+.no-next-status,
+.no-permission {
+  color: #8c8c8c;
+  font-size: 14px;
+  font-style: italic;
 }
 </style>

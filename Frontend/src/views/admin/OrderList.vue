@@ -5,30 +5,27 @@
     </div>
 
     <div class="filters-section">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input
-          type="text"
-          v-model="searchQuery"
-          placeholder="Tìm kiếm theo mã đơn hàng, tên khách hàng..."
-          @input="handleSearch"
-        />
+      <div class="status-filters">
+        <button
+          v-for="status in orderStatuses"
+          :key="status.value"
+          @click="statusFilter = status.value"
+          :class="['status-btn', { active: statusFilter === status.value }]"
+        >
+          {{ status.label }}
+        </button>
       </div>
 
       <div class="filter-group">
-        <select
-          v-model="statusFilter"
-          @change="handleFilter"
-          class="filter-select"
-        >
-          <option value="">Tất cả trạng thái</option>
-          <option value="pending">Chờ xử lý</option>
-          <option value="processing">Đã xác nhận</option>
-          <option value="shipping">Đang giao hàng</option>
-          <option value="delivered">Đã giao hàng</option>
-          <option value="cancelled">Đã hủy</option>
-          <option value="returned">Đã trả hàng</option>
-        </select>
+        <div class="search-box">
+          <i class="fas fa-search"></i>
+          <input
+            type="text"
+            v-model="searchQuery"
+            placeholder="Tìm kiếm theo mã đơn hàng, tên khách hàng..."
+            @input="handleSearch"
+          />
+        </div>
 
         <div class="date-filter">
           <input
@@ -149,6 +146,15 @@ export default {
       endDateFilter: null,
       isLoading: false,
       error: null,
+      orderStatuses: [
+        { value: "", label: "Tất cả" },
+        { value: "pending", label: "Chờ xử lý" },
+        { value: "processing", label: "Đã xác nhận" },
+        { value: "shipping", label: "Đang giao hàng" },
+        { value: "delivered", label: "Đã giao hàng" },
+        { value: "cancelled", label: "Đã hủy" },
+        { value: "returned", label: "Đã trả hàng" },
+      ],
     };
   },
   computed: {
@@ -261,7 +267,7 @@ export default {
     },
   },
   async created() {
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token-admin");
     if (!token) {
       this.$router.push("/admin/login");
       return;
@@ -391,6 +397,17 @@ export default {
         toast.error(errorMessage);
       }
     },
+    getValidNextStatuses(currentStatus) {
+      const statusFlow = {
+        pending: ["processing", "cancelled"],
+        processing: ["shipping", "cancelled"],
+        shipping: ["delivered", "returned"],
+        delivered: ["returned"],
+        cancelled: [],
+        returned: [],
+      };
+      return statusFlow[currentStatus] || [];
+    },
   },
 };
 </script>
@@ -413,16 +430,22 @@ export default {
 
 .filters-section {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 16px;
   margin-bottom: 24px;
-  align-items: center;
+}
+
+.status-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 0;
 }
 
 .search-box {
   position: relative;
-  flex: 1;
-  min-width: 300px;
+  width: 100%;
+  max-width: 500px;
 }
 
 .search-box i {
@@ -600,5 +623,27 @@ export default {
 
 .btn-primary:hover {
   background: #40a9ff;
+}
+
+.status-btn {
+  padding: 8px 16px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+  color: #262626;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+}
+
+.status-btn:hover {
+  border-color: #40a9ff;
+  color: #40a9ff;
+}
+
+.status-btn.active {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
 }
 </style>

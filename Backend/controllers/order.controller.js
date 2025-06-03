@@ -1,5 +1,6 @@
 const Order = require("../models/order.model");
 const Customer = require("../models/customer.model");
+const Consignment = require("../models/consignment.model");
 
 // Generate unique order code
 const generateOrderCode = () => {
@@ -22,6 +23,54 @@ exports.create = async (req, res) => {
       method,
       note,
     } = req.body;
+    console.log(req.body);
+    // Process each item and its variants to allocate consignments
+    for (const item of items) {
+      for (const variant of item.variants) {
+        let remainingQuantity = variant.quantity;
+        variant.consignments = [];
+
+        // Get all available consignments for this variant, sorted by creation date (oldest first)
+        const consignments = await Consignment.find({
+          productId: item.productId,
+          variantId: variant._id,
+          publish: true,
+          current_quantity: { $gt: 0 },
+        }).sort({ createdAt: 1 });
+
+        console.log(
+          `Found ${consignments.length} consignments for variant ${variant.sku} (ID: ${variant._id})`
+        );
+
+        // Allocate quantities from consignments
+        for (const consignment of consignments) {
+          if (remainingQuantity <= 0) break;
+
+          const quantityToTake = Math.min(
+            remainingQuantity,
+            consignment.current_quantity
+          );
+
+          // Add consignment allocation to variant
+          variant.consignments.push({
+            consignmentId: consignment._id,
+            quantity: quantityToTake,
+          });
+
+          // Update consignment's current quantity
+          await Consignment.decreaseQuantity(consignment._id, quantityToTake);
+
+          remainingQuantity -= quantityToTake;
+        }
+
+        // If we couldn't fulfill the entire order
+        if (remainingQuantity > 0) {
+          throw new Error(
+            `Không đủ số lượng cho biến thể ${variant.sku} (ID: ${variant._id}). Cần thêm ${remainingQuantity} sản phẩm.`
+          );
+        }
+      }
+    }
 
     // Create order
     const order = new Order({

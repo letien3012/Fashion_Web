@@ -94,7 +94,8 @@ export default {
 
     const fetchReceipts = async () => {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
+        // Ensure the token is available
         if (!token) {
           toast.error("Vui lòng đăng nhập để tiếp tục");
           return;

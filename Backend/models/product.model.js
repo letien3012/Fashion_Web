@@ -512,4 +512,22 @@ Product.getBestSelling = async function (limit = 8) {
   }
 };
 
+Product.search = async function (keyword) {
+  try {
+    const searchRegex = new RegExp(keyword, "i");
+    const products = await this.find({
+      $or: [
+        { name: searchRegex },
+        { code: searchRegex },
+        { content: searchRegex },
+        { description: searchRegex },
+      ],
+      publish: true,
+    }).populate("catalogueId");
+    return products;
+  } catch (error) {
+    throw new Error(`Error searching products: ${error.message}`);
+  }
+};
+
 module.exports = Product;

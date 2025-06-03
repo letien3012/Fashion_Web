@@ -140,7 +140,7 @@ export default {
       this.isExpanded = !this.isExpanded;
     },
     handleLogout() {
-      localStorage.removeItem("token");
+      localStorage.removeItem("token-admin");
       localStorage.removeItem("employee");
       localStorage.removeItem("isAdmin");
       toast.success("Đăng xuất thành công!");

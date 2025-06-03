@@ -243,6 +243,7 @@ const submitOrder = async () => {
         productId: item.productId._id,
         variants: [
           {
+            _id: item.variant._id,
             sku: item.variant.sku,
             quantity: item.variant.quantity,
             price: item.variant.price,

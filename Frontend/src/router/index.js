@@ -6,7 +6,6 @@ import ForgotPW from "../views/ForgotPW.vue";
 import Verification from "../views/OtpVerification.vue";
 import CreatePW from "../views/CreatePW.vue";
 import Home from "../views/Home.vue";
-import ImageSearch from "../views/ImageSearch.vue";
 import About from "../views/About.vue";
 import ProductDetail from "../views/ProductDetail.vue";
 import CartDetail from "../views/CartDetail.vue";
@@ -15,6 +14,8 @@ import Customer from "../views/Customer.vue";
 import Profile from "../components/Profile.vue";
 import ChangePW from "../views/ChangePW.vue";
 import Products from "../views/Products.vue";
+import FeatureUpload from "../views/FeatureUpload.vue";
+import Search from "../views/Search.vue";
 
 const routes = [
   {
@@ -44,11 +45,6 @@ const routes = [
     path: "/product-detail/:id",
     name: "ProductDetail",
     component: ProductDetail,
-  },
-  {
-    path: "/imageSearch",
-    name: "ImageSearch",
-    component: ImageSearch,
   },
   {
     path: "/cart",
@@ -88,6 +84,20 @@ const routes = [
     name: "Products",
     component: Products,
   },
+  {
+    path: "/feature-upload",
+    name: "FeatureUpload",
+    component: FeatureUpload,
+    meta: {
+      requiresAuth: false,
+      requiresAdmin: false,
+    },
+  },
+  {
+    path: "/search",
+    name: "Search",
+    component: Search,
+  },
   ...adminRoutes,
 ];
 
@@ -99,7 +109,7 @@ const router = createRouter({
 // Navigation guardMore actions
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem("token");
+  const isAuthenticated = localStorage.getItem("token-admin");
 
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 

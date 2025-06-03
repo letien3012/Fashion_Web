@@ -8,7 +8,8 @@ const JWT_SECRET = process.env.JWT_SECRET || "fashion_web_secret_key_2024";
 // Đăng ký tài khoản nhân viên mới
 exports.add = async (req, res) => {
   try {
-    const { fullname, email, password, role, address, publish } = req.body;
+    const { fullname, email, password, role, address, phone, publish } =
+      req.body;
     let image = null;
 
     // Handle image upload if present
@@ -41,6 +42,7 @@ exports.add = async (req, res) => {
       password: hashedPassword,
       role,
       address,
+      phone,
       image,
       publish,
     });
@@ -55,6 +57,7 @@ exports.add = async (req, res) => {
         email: employee.email,
         role: employee.role,
         address: employee.address,
+        phone: employee.phone,
         image: employee.image,
         publish: employee.publish,
       },
@@ -133,7 +136,7 @@ exports.login = async (req, res) => {
     res.status(200).json({
       success: true,
       message: "Đăng nhập thành công",
-      token,
+      token: "token-admin",
       employee: employeeWithoutPassword,
     });
   } catch (error) {
@@ -170,7 +173,8 @@ exports.getEmployeeById = async (req, res) => {
 exports.updateEmployee = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fullname, email, password, role, address, publish } = req.body;
+    const { fullname, email, password, role, address, phone, publish } =
+      req.body;
     let image = null;
 
     const employee = await Employee.findById(id);
@@ -185,6 +189,7 @@ exports.updateEmployee = async (req, res) => {
     employee.email = email || employee.email;
     employee.role = role || employee.role;
     employee.address = address || employee.address;
+    employee.phone = phone || employee.phone;
     employee.publish = publish !== undefined ? publish : employee.publish;
 
     // Update password if provided
@@ -219,6 +224,7 @@ exports.updateEmployee = async (req, res) => {
         email: employee.email,
         role: employee.role,
         address: employee.address,
+        phone: employee.phone,
         image: employee.image,
         publish: employee.publish,
       },
