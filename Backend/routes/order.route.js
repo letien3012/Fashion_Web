@@ -4,7 +4,9 @@ const orderController = require("../controllers/order.controller");
 const auth = require("../middleware/auth");
 
 // Lấy tất cả đơn hàng (cho admin)
-router.get("/", orderController.getAllOrders);
+router.get("/", auth, orderController.getAllOrders);
+router.get("/total", auth, orderController.getTotalOrders);
+router.get("/revenue", auth, orderController.getTotalRevenue);
 
 // Lấy tất cả đơn hàng của khách hàng đang đăng nhập
 router.get("/customer", auth, orderController.getOrdersByCustomer);

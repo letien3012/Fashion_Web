@@ -9,7 +9,9 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng đơn hàng</h6>
-              <h3 class="card-title mb-0">1.234</h3>
+              <h3 class="card-title mb-0">
+                {{ totalOrders !== null ? totalOrders : "Đang tải..." }}
+              </h3>
             </div>
           </div>
         </div>
@@ -23,7 +25,9 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng khách hàng</h6>
-              <h3 class="card-title mb-0">856</h3>
+              <h3 class="card-title mb-0">
+                {{ totalCustomers !== null ? totalCustomers : "Đang tải..." }}
+              </h3>
             </div>
           </div>
         </div>
@@ -37,7 +41,9 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng sản phẩm</h6>
-              <h3 class="card-title mb-0">432</h3>
+              <h3 class="card-title mb-0">
+                {{ totalProducts !== null ? totalProducts : "Đang tải..." }}
+              </h3>
             </div>
           </div>
         </div>
@@ -51,7 +57,13 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng doanh thu</h6>
-              <h3 class="card-title mb-0">45.678.000 ₫</h3>
+              <h3 class="card-title mb-0">
+                {{
+                  totalRevenue !== null
+                    ? formatCurrency(totalRevenue)
+                    : "Đang tải..."
+                }}
+              </h3>
             </div>
           </div>
         </div>
@@ -331,11 +343,15 @@
 
 <script>
 import Chart from "chart.js/auto";
+import axios from "axios";
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
 
 export default {
   name: "AdminDashboard",
   data() {
     return {
+      backendUrl: "http://localhost:3005",
       employeeName: "",
       salesChart: null,
       productsChart: null,
@@ -345,8 +361,8 @@ export default {
       timeFilter: "year",
       selectedYear: new Date().getFullYear(),
       selectedMonth: new Date().getMonth() + 1,
-      startDate: "",
-      endDate: "",
+      startDate: null,
+      endDate: null,
       years: [],
       months: [
         "Tháng 1",
@@ -363,165 +379,117 @@ export default {
         "Tháng 12",
       ],
       productTimeFilter: "week",
+      // Data for overview cards
+      totalOrders: null,
+      totalCustomers: null,
+      totalProducts: null,
+      totalRevenue: null,
+      // Data for charts
+      salesData: {
+        labels: [],
+        datasets: [],
+      },
+      orderStatusData: {
+        labels: [],
+        datasets: [],
+      },
+      // Data for top products table
+      topProducts: [],
     };
   },
-  created() {
-    const employee = JSON.parse(localStorage.getItem("employee"));
-    if (employee) {
-      this.employeeName = employee.fullname;
-    }
-
-    // Generate years array (current year - 5 years)
-    const currentYear = new Date().getFullYear();
-    this.years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
-    // Set default date range
-    const today = new Date();
-    this.endDate = today.toISOString().split("T")[0];
-    const lastMonth = new Date(
-      today.getFullYear(),
-      today.getMonth() - 1,
-      today.getDate()
-    );
-    this.startDate = lastMonth.toISOString().split("T")[0];
+  computed: {
+    years() {
+      const currentYear = new Date().getFullYear();
+      const startYear = 2020; // Adjust as needed
+      const yearsArray = [];
+      for (let i = currentYear; i >= startYear; i--) {
+        yearsArray.push(i);
+      }
+      return yearsArray;
+    },
+    months() {
+      return [
+        "Tháng 1",
+        "Tháng 2",
+        "Tháng 3",
+        "Tháng 4",
+        "Tháng 5",
+        "Tháng 6",
+        "Tháng 7",
+        "Tháng 8",
+        "Tháng 9",
+        "Tháng 10",
+        "Tháng 11",
+        "Tháng 12",
+      ];
+    },
   },
-  mounted() {
-    this.initSalesChart();
-    this.initProductsChart();
-    this.initOrderStatusChart();
-    this.initNewCustomersChart();
-    this.initCategoryChart();
+  async mounted() {
+    // Initial data fetch for overview cards
+    await this.fetchOverviewStats();
+
+    // Initialize charts after data is potentially fetched
+    this.renderSalesChart();
+    this.renderOrderStatusChart();
+
+    // Initial data fetch for charts and tables (example - need actual APIs)
+    // await this.fetchSalesData();
+    // await this.fetchOrderStatusData();
+    // await this.fetchTopProducts();
   },
   methods: {
     formatCurrency(value) {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        minimumFractionDigits: 0,
-      }).format(value);
+      if (value === null || value === undefined) return "";
+      return value.toLocaleString("vi-VN") + " ₫";
     },
-    updateChart() {
+    async fetchOverviewStats() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          // Or redirect to login
+          console.error("Authentication token not found.");
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          // Redirect to login page if using Vue Router
+          // this.$router.push('/admin/login');
+          return;
+        }
+
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [ordersRes, customersRes, productsRes, revenueRes] =
+          await Promise.all([
+            axios.get(`${this.backendUrl}/api/orders/total`, { headers }),
+            axios.get(`${this.backendUrl}/api/customers/total`, { headers }),
+            axios.get(`${this.backendUrl}/api/products/total`, { headers }),
+            axios.get(`${this.backendUrl}/api/orders/revenue`, { headers }),
+          ]);
+
+        this.totalOrders = ordersRes.data.data.totalOrders;
+        this.totalCustomers = customersRes.data.data.totalCustomers;
+        this.totalProducts = productsRes.data.data.totalProducts;
+        this.totalRevenue = revenueRes.data.data.totalRevenue;
+      } catch (error) {
+        console.error("Error fetching overview stats:", error);
+        toast.error("Lỗi khi tải dữ liệu tổng quan");
+      }
+    },
+    renderSalesChart() {
       if (this.salesChart) {
         this.salesChart.destroy();
       }
-      this.initSalesChart();
-    },
-    initSalesChart() {
       const ctx = this.$refs.salesChart.getContext("2d");
-
-      // Generate data based on selected time filter
-      let labels = [];
-      let data = [];
-
-      if (this.timeFilter === "year") {
-        labels = this.months;
-        data = Array.from(
-          { length: 12 },
-          () => Math.floor(Math.random() * 30000000) + 10000000
-        );
-      } else if (this.timeFilter === "month") {
-        labels = Array.from({ length: 30 }, (_, i) => `Ngày ${i + 1}`);
-        data = Array.from(
-          { length: 30 },
-          () => Math.floor(Math.random() * 2000000) + 500000
-        );
-      } else {
-        // Custom range - generate daily data
-        const start = new Date(this.startDate);
-        const end = new Date(this.endDate);
-        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-
-        labels = Array.from({ length: days }, (_, i) => {
-          const date = new Date(start);
-          date.setDate(date.getDate() + i);
-          return date.toLocaleDateString("vi-VN");
-        });
-
-        data = Array.from(
-          { length: days },
-          () => Math.floor(Math.random() * 1000000) + 200000
-        );
-      }
-
       this.salesChart = new Chart(ctx, {
         type: "line",
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: "Doanh thu",
-              data: data,
-              borderColor: "#0d6efd",
-              backgroundColor: "rgba(13, 110, 253, 0.1)",
-              tension: 0.4,
-              fill: true,
-            },
-          ],
-        },
+        data: this.salesData, // Use actual data
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  return `Doanh thu: ${this.formatCurrency(context.raw)}`;
-                },
-              },
-            },
-          },
           scales: {
             y: {
               beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
-              },
               ticks: {
-                callback: (value) => {
-                  return this.formatCurrency(value);
-                },
-              },
-            },
-            x: {
-              grid: {
-                display: false,
-              },
-            },
-          },
-        },
-      });
-    },
-    initProductsChart() {
-      const ctx = this.$refs.productsChart.getContext("2d");
-      this.productsChart = new Chart(ctx, {
-        type: "doughnut",
-        data: {
-          labels: ["Áo thun", "Quần jean", "Váy", "Giày", "Phụ kiện"],
-          datasets: [
-            {
-              data: [30, 25, 20, 15, 10],
-              backgroundColor: [
-                "#0d6efd",
-                "#198754",
-                "#dc3545",
-                "#ffc107",
-                "#6f42c1",
-              ],
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: "bottom",
-              labels: {
-                font: {
-                  size: 12,
+                callback: function (value) {
+                  return value.toLocaleString("vi-VN") + " ₫";
                 },
               },
             },
@@ -529,146 +497,66 @@ export default {
         },
       });
     },
-    initOrderStatusChart() {
+    renderOrderStatusChart() {
+      if (this.orderStatusChart) {
+        this.orderStatusChart.destroy();
+      }
       const ctx = this.$refs.orderStatusChart.getContext("2d");
       this.orderStatusChart = new Chart(ctx, {
-        type: "bar",
+        type: "pie",
         data: {
-          labels: [
-            "Chờ xác nhận",
-            "Đã xác nhận",
-            "Đang giao",
-            "Hoàn thành",
-            "Đã hủy",
-          ],
+          labels: ["Đang chờ", "Đang xử lý", "Đang giao", "Đã giao", "Đã hủy"],
           datasets: [
             {
-              data: [15, 25, 10, 40, 5],
+              data: [300, 150, 100, 500, 84], // Replace with actual data
               backgroundColor: [
-                "#ffc107",
-                "#0dcaf0",
-                "#0d6efd",
-                "#198754",
-                "#dc3545",
+                "#ffc107", // warning (pending)
+                "#0dcaf0", // info (processing)
+                "#0d6efd", // primary (shipping)
+                "#198754", // success (delivered)
+                "#dc3545", // danger (cancelled)
               ],
             },
           ],
-        },
+        }, // Use actual data
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
-              },
-            },
-            x: {
-              grid: {
-                display: false,
-              },
-            },
-          },
         },
       });
     },
-    initNewCustomersChart() {
-      const ctx = this.$refs.newCustomersChart.getContext("2d");
-      this.newCustomersChart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
-          datasets: [
-            {
-              label: "Khách hàng mới",
-              data: [12, 19, 15, 25, 22, 30, 18],
-              borderColor: "#6f42c1",
-              backgroundColor: "rgba(111, 66, 193, 0.1)",
-              tension: 0.4,
-              fill: true,
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
-              },
-            },
-            x: {
-              grid: {
-                display: false,
-              },
-            },
-          },
-        },
-      });
-    },
-    initCategoryChart() {
-      const ctx = this.$refs.categoryChart.getContext("2d");
-      this.categoryChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: ["Áo", "Quần", "Váy", "Giày", "Phụ kiện", "Túi xách"],
-          datasets: [
-            {
-              label: "Số lượng sản phẩm",
-              data: [120, 80, 60, 40, 30, 25],
-              backgroundColor: [
-                "#0d6efd",
-                "#198754",
-                "#dc3545",
-                "#ffc107",
-                "#6f42c1",
-                "#0dcaf0",
-              ],
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
-              },
-            },
-            x: {
-              grid: {
-                display: false,
-              },
-            },
-          },
-        },
-      });
+    updateChart() {
+      // This method will be updated later to fetch and update sales data
+      console.log(
+        "Updating chart for filter:",
+        this.timeFilter,
+        this.selectedYear,
+        this.selectedMonth,
+        this.startDate,
+        this.endDate
+      );
+      // Example data update (replace with API call)
+      // this.salesData = { labels: [...], datasets: [...] };
+      // this.renderSalesChart();
     },
     updateProductChart() {
-      if (this.productsChart) {
-        this.productsChart.destroy();
-      }
-      this.initProductsChart();
+      // This method will be updated later to fetch and update top products data
+      console.log("Updating product chart for filter:", this.productTimeFilter);
+      // Example data update (replace with API call)
+      // this.topProducts = [...];
+    },
+    // Placeholder methods for fetching chart/table data
+    async fetchSalesData() {
+      // Need backend API
+      console.log("Fetching sales data...");
+    },
+    async fetchOrderStatusData() {
+      // Need backend API
+      console.log("Fetching order status data...");
+    },
+    async fetchTopProducts() {
+      // Need backend API
+      console.log("Fetching top products data...");
     },
   },
 };

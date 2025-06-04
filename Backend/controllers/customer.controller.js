@@ -375,3 +375,14 @@ exports.updateStatus = async (req, res) => {
     });
   }
 };
+
+// Get total number of customers
+exports.getTotalCustomers = async (req, res) => {
+  try {
+    const count = await Customer.countDocuments({ deletedAt: null });
+    res.status(200).json({ success: true, data: { totalCustomers: count } });
+  } catch (error) {
+    console.error("Error getting total customers:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

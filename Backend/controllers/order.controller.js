@@ -139,3 +139,29 @@ exports.getAllOrders = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+// Get total number of orders
+exports.getTotalOrders = async (req, res) => {
+  try {
+    const count = await Order.countDocuments({ deletedAt: null });
+    res.status(200).json({ success: true, data: { totalOrders: count } });
+  } catch (error) {
+    console.error("Error getting total orders:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Get total revenue (sum of total_price from delivered orders)
+exports.getTotalRevenue = async (req, res) => {
+  try {
+    const result = await Order.aggregate([
+      { $match: { status: "delivered", deletedAt: null } },
+      { $group: { _id: null, totalRevenue: { $sum: "$total_price" } } },
+    ]);
+    const totalRevenue = result.length > 0 ? result[0].totalRevenue : 0;
+    res.status(200).json({ success: true, data: { totalRevenue } });
+  } catch (error) {
+    console.error("Error getting total revenue:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

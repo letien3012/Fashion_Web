@@ -19,5 +19,6 @@ router.get("/orders", auth, customerController.getCustomerOrders);
 // Admin routes
 router.get("/", auth, customerController.getAllCustomers);
 router.put("/update-status/:id", auth, customerController.updateStatus);
+router.get("/total", auth, customerController.getTotalCustomers);
 
 module.exports = router;

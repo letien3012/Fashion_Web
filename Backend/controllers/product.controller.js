@@ -340,3 +340,14 @@ exports.getVariantPrice = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+
+// Get total number of products
+exports.getTotalProducts = async (req, res) => {
+  try {
+    const count = await Product.countDocuments();
+    res.status(200).json({ success: true, data: { totalProducts: count } });
+  } catch (error) {
+    console.error("Error getting total products:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
