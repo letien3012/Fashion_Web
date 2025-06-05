@@ -5,6 +5,7 @@ const session = require("express-session");
 const passport = require("passport");
 const path = require("path");
 const connectDB = require("./config/mongodb");
+const fs = require("fs");
 
 // Connect to MongoDB
 connectDB();
@@ -15,12 +16,6 @@ const app = express();
 
 // CORS options
 const corsOptions = {
-  // origin: ["http://localhost:5173", "http://localhost:3005"], // Allow both frontend ports
-  // methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  // allowedHeaders: ["Content-Type", "Authorization"],
-  // credentials: true,
-  // preflightContinue: false,
-  // optionsSuccessStatus: 204,
   origin: [
     "http://localhost:5173",
     "http://localhost:3005",
@@ -74,5 +69,5 @@ app.use(passport.session());
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, "public")));
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 module.exports = app;

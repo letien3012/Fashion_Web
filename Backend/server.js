@@ -1,10 +1,13 @@
 // server.js
 const app = require("./app");
 const express = require("express");
-
+const path = require("path");
 // Middleware xử lý dữ liệu từ client
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Add static file serving for uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Route imports
 const routes = {
