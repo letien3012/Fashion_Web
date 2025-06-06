@@ -190,14 +190,19 @@ exports.removeFromCart = async (req, res) => {
         .json({ message: "Variant not found in cart item" });
     }
 
-    // Remove only the specific variant
+    // Remove the specific variant
     item.variants.splice(variantIndex, 1);
 
-    // Update the total quantity of the product
-    item.quantity = item.variants.reduce(
-      (total, variant) => total + variant.quantity,
-      0
-    );
+    // If no variants left, remove the entire item
+    if (item.variants.length === 0) {
+      cart.items.splice(itemIndex, 1);
+    } else {
+      // Update the total quantity of the product
+      item.quantity = item.variants.reduce(
+        (total, variant) => total + variant.quantity,
+        0
+      );
+    }
 
     cart.updatedAt = new Date();
     await cart.save();

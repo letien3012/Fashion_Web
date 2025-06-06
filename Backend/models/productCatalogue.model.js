@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const ImageModel = require("./image.model");
+const Product = require("./product.model");
 
 const productCatalogueSchema = new mongoose.Schema({
   name: {
@@ -113,6 +114,41 @@ productCatalogueSchema.statics.getAll = async function () {
     return await this.find({ deletedAt: null });
   } catch (error) {
     throw new Error(`Error fetching all catalogues: ${error.message}`);
+  }
+};
+
+// Static method to get product count for a catalogue
+productCatalogueSchema.statics.getProductCount = async function (catalogueId) {
+  try {
+    const count = await Product.countDocuments({
+      catalogueId,
+      deletedAt: null,
+      publish: true,
+    });
+    return count;
+  } catch (error) {
+    throw new Error(`Error counting products in catalogue: ${error.message}`);
+  }
+};
+
+// Static method to get all catalogues with product count
+productCatalogueSchema.statics.getAllWithProductCount = async function () {
+  try {
+    const catalogues = await this.find({ deletedAt: null });
+    const cataloguesWithCount = await Promise.all(
+      catalogues.map(async (catalogue) => {
+        const count = await this.getProductCount(catalogue._id);
+        return {
+          ...catalogue.toObject(),
+          productCount: count,
+        };
+      })
+    );
+    return cataloguesWithCount;
+  } catch (error) {
+    throw new Error(
+      `Error getting catalogues with product count: ${error.message}`
+    );
   }
 };
 

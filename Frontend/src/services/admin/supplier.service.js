@@ -4,7 +4,7 @@ const BASE_URL = "http://localhost:3005";
 const SUPPLIER_URL = `${BASE_URL}/api/suppliers`;
 
 const getAuthHeader = () => {
-  const token = localStorage.getItem("token");
+  const token = localStorage.getItem("token-admin");
   return { Authorization: `Bearer ${token}` };
 };
 

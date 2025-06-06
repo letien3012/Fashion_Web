@@ -351,3 +351,40 @@ exports.getTotalProducts = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
+
+// Lấy sản phẩm bán chạy
+exports.getBestSelling = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 8;
+    const products = await Product.getBestSelling(limit);
+    res.status(200).json({
+      message: "Success",
+      data: products,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// Tìm kiếm sản phẩm
+exports.search = async (req, res) => {
+  try {
+    const { keyword } = req.query;
+    if (!keyword) {
+      return res.status(400).json({
+        message: "Keyword is required",
+      });
+    }
+
+    const products = await Product.search(keyword);
+    res.status(200).json({
+      message: "Products retrieved successfully",
+      data: products,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

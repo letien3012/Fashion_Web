@@ -1,5 +1,5 @@
 <template>
-  <div class="table-container">
+  <div class="supplier-table">
     <table>
       <thead>
         <tr>
@@ -11,30 +11,32 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(supplier, index) in suppliers" :key="supplier._id">
-          <td>{{ index + 1 }}</td>
+        <tr v-for="(supplier, index) in paginatedSuppliers" :key="supplier._id">
+          <td>{{ startIndex + index + 1 }}</td>
           <td>{{ supplier.name }}</td>
           <td>{{ supplier.phone }}</td>
           <td>{{ supplier.address }}</td>
-          <td class="actions">
-            <button
-              class="edit-btn"
-              @click="$emit('edit', supplier)"
-              title="Chỉnh sửa"
-            >
-              <i class="fas fa-edit"></i>
-            </button>
-            <button
-              class="delete-btn"
-              @click="confirmDelete(supplier)"
-              title="Xóa"
-            >
-              <i class="fas fa-trash"></i>
-            </button>
+          <td>
+            <div class="action-buttons">
+              <button
+                class="edit-btn"
+                @click="$emit('edit', supplier)"
+                title="Chỉnh sửa"
+              >
+                <i class="fas fa-edit"></i>
+              </button>
+              <button
+                class="delete-btn"
+                @click="confirmDelete(supplier)"
+                title="Xóa"
+              >
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
         <tr v-if="suppliers.length === 0">
-          <td colspan="6" class="text-center">Không có dữ liệu</td>
+          <td colspan="5" class="no-data">Không có dữ liệu</td>
         </tr>
       </tbody>
     </table>
@@ -42,9 +44,9 @@
 </template>
 
 <script>
+import { ref, computed } from "vue";
 import { toast } from "vue3-toastify";
 import axios from "axios";
-import "../../assets/styles/admin/table.css";
 
 export default {
   name: "SupplierTable",
@@ -53,15 +55,34 @@ export default {
       type: Array,
       required: true,
     },
+    currentPage: {
+      type: Number,
+      required: true,
+    },
+    itemsPerPage: {
+      type: Number,
+      required: true,
+    },
   },
   emits: ["edit", "delete"],
   setup(props, { emit }) {
     const backendUrl = "http://localhost:3005";
 
+    const startIndex = computed(() => {
+      return (props.currentPage - 1) * props.itemsPerPage;
+    });
+
+    const paginatedSuppliers = computed(() => {
+      return props.suppliers.slice(
+        startIndex.value,
+        startIndex.value + props.itemsPerPage
+      );
+    });
+
     const confirmDelete = async (supplier) => {
       if (confirm("Bạn có chắc chắn muốn xóa nhà cung cấp này?")) {
         try {
-          const token = localStorage.getItem("token");
+          const token = localStorage.getItem("token-admin");
           await axios.delete(
             `${backendUrl}/api/suppliers/delete/${supplier._id}`,
             {
@@ -83,41 +104,75 @@ export default {
 
     return {
       confirmDelete,
+      startIndex,
+      paginatedSuppliers,
     };
   },
 };
 </script>
 
 <style scoped>
-.table-container {
+.supplier-table {
   width: 100%;
   overflow-x: auto;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  background: white;
 }
 
 th {
-  background-color: #fafafa;
-  font-weight: 600;
+  background: #fafafa;
+  padding: 12px 16px;
   text-align: left;
-  padding: 16px;
+  font-weight: 500;
+  color: #262626;
   border-bottom: 1px solid #f0f0f0;
 }
 
 td {
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
+  color: #262626;
 }
 
-.text-center {
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-btn {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.edit-btn:hover {
+  background: #bae7ff;
+}
+
+.delete-btn {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+.delete-btn:hover {
+  background: #ffa39e;
+}
+
+.no-data {
   text-align: center;
-  color: #999;
+  color: #8c8c8c;
   padding: 24px;
 }
 </style>

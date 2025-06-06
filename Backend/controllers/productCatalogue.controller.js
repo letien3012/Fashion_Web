@@ -47,7 +47,7 @@ exports.getChildren = async (req, res) => {
     const children = await ProductCatalogue.getChildren(req.params.id);
     res.status(200).json({
       message: "Success",
-      data: children
+      data: children,
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -60,7 +60,7 @@ exports.getTree = async (req, res) => {
     const tree = await ProductCatalogue.getTree();
     res.status(200).json({
       message: "Success",
-      data: tree
+      data: tree,
     });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -70,7 +70,7 @@ exports.getTree = async (req, res) => {
 // Lấy danh sách danh mục sản phẩm
 exports.getAll = async (req, res) => {
   try {
-    const catalogues = await ProductCatalogue.find();
+    const catalogues = await ProductCatalogue.getAllWithProductCount();
     res.status(200).json({
       data: catalogues,
     });
@@ -91,7 +91,12 @@ exports.getById = async (req, res) => {
         message: "Không tìm thấy danh mục",
       });
     }
-    res.status(200).json(catalogue);
+    const productCount = await ProductCatalogue.getProductCount(req.params.id);
+    const catalogueWithCount = {
+      ...catalogue.toObject(),
+      productCount,
+    };
+    res.status(200).json(catalogueWithCount);
   } catch (error) {
     res.status(500).json({
       message: "Lỗi server",
@@ -122,7 +127,7 @@ exports.update = async (req, res) => {
     // Handle icon update
     if (req.body.icon) {
       // If icon is a base64 string (new icon)
-      if (req.body.icon.startsWith('data:')) {
+      if (req.body.icon.startsWith("data:")) {
         icon = await ImageModel.saveImage(req.body.icon, "icon");
         // Delete old icon if exists
         if (catalogue.icon) {
@@ -131,7 +136,7 @@ exports.update = async (req, res) => {
         catalogue.icon = icon;
       }
       // If icon is a path (old icon), keep it
-      else if (req.body.icon.startsWith('/images/')) {
+      else if (req.body.icon.startsWith("/images/")) {
         catalogue.icon = req.body.icon;
       }
     }
@@ -177,4 +182,4 @@ exports.delete = async (req, res) => {
       error: error.message,
     });
   }
-}; 
+};

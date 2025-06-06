@@ -76,6 +76,19 @@ const orderSchema = new mongoose.Schema({
           sku: String,
           quantity: Number,
           price: Number,
+          consignments: [
+            {
+              consignmentId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Consignment",
+                required: true,
+              },
+              quantity: {
+                type: Number,
+                required: true,
+              },
+            },
+          ],
         },
       ],
       quantity: Number,

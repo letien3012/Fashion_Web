@@ -15,10 +15,28 @@ const app = express();
 
 // CORS options
 const corsOptions = {
-  origin: ["http://localhost:5173", "http://localhost:3005"], // Allow both frontend ports
-  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  // origin: ["http://localhost:5173", "http://localhost:3005"], // Allow both frontend ports
+  // methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  // allowedHeaders: ["Content-Type", "Authorization"],
+  // credentials: true,
+  // preflightContinue: false,
+  // optionsSuccessStatus: 204,
+  origin: [
+    "http://localhost:5173",
+    "http://localhost:3005",
+    "http://localhost:3000",
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+  allowedHeaders: [
+    "Content-Type",
+    "Authorization",
+    "X-Requested-With",
+    "Accept",
+  ],
+  exposedHeaders: ["Content-Range", "X-Content-Range"],
   credentials: true,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 };
 
 // Session options

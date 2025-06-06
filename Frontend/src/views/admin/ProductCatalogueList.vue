@@ -1,18 +1,66 @@
 <template>
-  <div class="list-container">
-    <div class="header">
-      <h2>Quản lý danh mục sản phẩm</h2>
+  <div class="product-catalogue-list">
+    <div class="page-header">
+      <h1>Quản lý danh mục sản phẩm</h1>
       <button class="add-btn" @click="openAddModal">
         <i class="fas fa-plus"></i> Thêm danh mục
       </button>
     </div>
 
-    <div class="content">
+    <div class="filters-section">
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input
+          type="text"
+          v-model="searchQuery"
+          placeholder="Tìm kiếm theo tên danh mục..."
+          @input="handleSearch"
+        />
+      </div>
+    </div>
+
+    <div class="table-container">
       <ProductCatalogueTable
-        :catalogues="catalogues"
+        :catalogues="paginatedCatalogues"
         @edit="editCatalogue"
         @delete="confirmDelete"
       />
+
+      <div class="pagination-info" v-if="totalPages > 1">
+        <span class="showing-info">
+          Hiển thị {{ startIndex + 1 }}-{{ endIndex }} /
+          {{ filteredCatalogues.length }} danh mục
+        </span>
+        <div class="pagination">
+          <button
+            class="page-btn"
+            :disabled="currentPage === 1"
+            @click="changePage(currentPage - 1)"
+          >
+            <i class="fas fa-chevron-left"></i>
+          </button>
+
+          <template v-for="page in displayedPages" :key="page">
+            <button
+              v-if="page !== '...'"
+              class="page-btn"
+              :class="{ active: currentPage === page }"
+              @click="changePage(page)"
+            >
+              {{ page }}
+            </button>
+            <span v-else class="page-dots">...</span>
+          </template>
+
+          <button
+            class="page-btn"
+            :disabled="currentPage === totalPages"
+            @click="changePage(currentPage + 1)"
+          >
+            <i class="fas fa-chevron-right"></i>
+          </button>
+        </div>
+      </div>
 
       <ProductCatalogueForm
         :show="showAddModal"
@@ -43,6 +91,10 @@ export default {
   data() {
     return {
       catalogues: [],
+      filteredCatalogues: [],
+      searchQuery: "",
+      currentPage: 1,
+      itemsPerPage: 10,
       showAddModal: false,
       isEditing: false,
       formData: {
@@ -53,6 +105,57 @@ export default {
         parentId: null,
       },
     };
+  },
+  computed: {
+    totalPages() {
+      return Math.ceil(this.filteredCatalogues.length / this.itemsPerPage);
+    },
+    startIndex() {
+      return (this.currentPage - 1) * this.itemsPerPage;
+    },
+    endIndex() {
+      return Math.min(
+        this.startIndex + this.itemsPerPage,
+        this.filteredCatalogues.length
+      );
+    },
+    paginatedCatalogues() {
+      return this.filteredCatalogues.slice(this.startIndex, this.endIndex);
+    },
+    displayedPages() {
+      const pages = [];
+      const maxVisiblePages = 5;
+
+      if (this.totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= this.totalPages; i++) {
+          pages.push(i);
+        }
+      } else {
+        if (this.currentPage <= 3) {
+          for (let i = 1; i <= 4; i++) {
+            pages.push(i);
+          }
+          pages.push("...");
+          pages.push(this.totalPages);
+        } else if (this.currentPage >= this.totalPages - 2) {
+          pages.push(1);
+          pages.push("...");
+          for (let i = this.totalPages - 3; i <= this.totalPages; i++) {
+            pages.push(i);
+          }
+        } else {
+          pages.push(1);
+          pages.push("...");
+          for (let i = this.currentPage - 1; i <= this.currentPage + 1; i++) {
+            pages.push(i);
+          }
+          pages.push("...");
+          pages.push(this.totalPages);
+        }
+      }
+
+      return pages;
+    },
   },
   methods: {
     openAddModal() {
@@ -72,6 +175,7 @@ export default {
         const response = await AdminProductCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.catalogues = response.data.data;
+          this.filteredCatalogues = [...this.catalogues];
         } else {
           toast.error("Dữ liệu trả về không đúng định dạng");
         }
@@ -86,6 +190,23 @@ export default {
           );
         }
       }
+    },
+
+    handleSearch() {
+      this.currentPage = 1;
+      if (!this.searchQuery.trim()) {
+        this.filteredCatalogues = [...this.catalogues];
+        return;
+      }
+
+      const query = this.searchQuery.toLowerCase().trim();
+      this.filteredCatalogues = this.catalogues.filter((catalogue) =>
+        catalogue.name.toLowerCase().includes(query)
+      );
+    },
+
+    changePage(page) {
+      this.currentPage = page;
     },
 
     editCatalogue(catalogue) {
@@ -118,7 +239,8 @@ export default {
         );
         if (response.status === 200) {
           toast.success("Xóa danh mục thành công");
-          this.fetchCatalogues();
+          await this.fetchCatalogues();
+          this.handleSearch(); // Re-apply search filter
         }
       } catch (error) {
         console.error("Delete catalogue error:", error);
@@ -148,6 +270,7 @@ export default {
             toast.success("Cập nhật danh mục thành công");
             this.closeModal();
             await this.fetchCatalogues();
+            this.handleSearch(); // Re-apply search filter
           }
         } else {
           // Add new catalogue
@@ -159,6 +282,7 @@ export default {
             toast.success("Thêm danh mục thành công");
             this.closeModal();
             await this.fetchCatalogues();
+            this.handleSearch(); // Re-apply search filter
           }
         }
       } catch (error) {
@@ -199,5 +323,132 @@ export default {
 </script>
 
 <style scoped>
-@import "../../assets/styles/admin/list.css";
+.product-catalogue-list {
+  padding: 24px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 600;
+  color: #262626;
+  margin: 0;
+}
+
+.add-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #1890ff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-btn:hover {
+  background: #40a9ff;
+}
+
+.filters-section {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #8c8c8c;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+  border-color: #40a9ff;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+.table-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pagination-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border-top: 1px solid #f0f0f0;
+}
+
+.showing-info {
+  color: #8c8c8c;
+  font-size: 0.9em;
+}
+
+.pagination {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #d9d9d9;
+  border-radius: 4px;
+  background: white;
+  color: #262626;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #1890ff;
+  color: #1890ff;
+}
+
+.page-btn.active {
+  background: #1890ff;
+  border-color: #1890ff;
+  color: white;
+}
+
+.page-btn:disabled {
+  background: #f5f5f5;
+  border-color: #d9d9d9;
+  color: #bfbfbf;
+  cursor: not-allowed;
+}
+
+.page-dots {
+  color: #8c8c8c;
+}
 </style>

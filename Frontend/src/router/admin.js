@@ -1,7 +1,8 @@
 import AdminLogin from "../views/admin/AdminLogin.vue";
 import AdminDashboard from "../views/admin/Dashboard.vue";
+import AdminDashboardTest from "../views/admin/DashboardTest.vue";
 import BannerList from "../views/admin/BannerList.vue";
-import UserList from "../views/admin/UserList.vue";
+import CustomerList from "../views/admin/CustomerList.vue";
 
 const adminRoutes = [
   {
@@ -22,6 +23,12 @@ const adminRoutes = [
         path: "dashboard",
         name: "AdminDashboard",
         component: AdminDashboard,
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: "dashboardTest",
+        name: "AdminDashboardTest",
+        component: AdminDashboardTest,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
@@ -105,9 +112,9 @@ const adminRoutes = [
         },
       },
       {
-        path: "users",
-        name: "UserList",
-        component: UserList,
+        path: "Customers",
+        name: "CustomerList",
+        component: CustomerList,
         meta: { requiresAuth: true, requiresAdmin: true },
       },
       {

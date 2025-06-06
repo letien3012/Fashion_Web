@@ -1,5 +1,5 @@
 <template>
-  <div class="table-container">
+  <div class="product-catalogue-table">
     <table>
       <thead>
         <tr>
@@ -14,7 +14,7 @@
         <tr v-for="catalogue in catalogues" :key="catalogue._id">
           <td>{{ catalogue._id }}</td>
           <td>
-            <div class="catalogue-name">
+            <div class="catalogue-info">
               <img
                 :src="
                   catalogue.icon
@@ -24,22 +24,24 @@
                 :alt="catalogue.name"
                 class="catalogue-icon"
               />
-              {{ catalogue.name }}
+              <span class="name">{{ catalogue.name }}</span>
             </div>
           </td>
           <td>{{ catalogue.description || "-" }}</td>
           <td>{{ getParentName(catalogue.parentId) }}</td>
-          <td class="actions">
-            <button class="edit-btn" @click="$emit('edit', catalogue)">
-              <i class="fas fa-edit"></i>
-            </button>
-            <button class="delete-btn" @click="$emit('delete', catalogue)">
-              <i class="fas fa-trash"></i>
-            </button>
+          <td>
+            <div class="action-buttons">
+              <button class="edit-btn" @click="$emit('edit', catalogue)">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="delete-btn" @click="$emit('delete', catalogue)">
+                <i class="fas fa-trash"></i>
+              </button>
+            </div>
           </td>
         </tr>
         <tr v-if="catalogues.length === 0">
-          <td colspan="5" class="text-center">Không có dữ liệu</td>
+          <td colspan="5" class="no-data">Không có dữ liệu</td>
         </tr>
       </tbody>
     </table>
@@ -66,51 +68,84 @@ export default {
 </script>
 
 <style scoped>
-@import "../../assets/styles/admin/table.css";
-
-.table-container {
+.product-catalogue-table {
   width: 100%;
   overflow-x: auto;
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 table {
   width: 100%;
   border-collapse: collapse;
+  background: white;
 }
 
 th {
-  background-color: #fafafa;
-  font-weight: 600;
+  background: #fafafa;
+  padding: 12px 16px;
   text-align: left;
-  padding: 16px;
+  font-weight: 500;
+  color: #262626;
   border-bottom: 1px solid #f0f0f0;
 }
 
 td {
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
+  color: #262626;
 }
 
-.catalogue-name {
+.catalogue-info {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 500;
 }
 
 .catalogue-icon {
   width: 24px;
   height: 24px;
-  object-fit: contain;
   border-radius: 4px;
+  object-fit: cover;
 }
 
-.text-center {
+.name {
+  font-weight: 500;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn,
+.delete-btn {
+  padding: 6px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-btn {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+.edit-btn:hover {
+  background: #bae7ff;
+}
+
+.delete-btn {
+  background: #fff1f0;
+  color: #ff4d4f;
+}
+
+.delete-btn:hover {
+  background: #ffa39e;
+}
+
+.no-data {
   text-align: center;
-  color: #999;
-  padding: 24px;
+  color: #8c8c8c;
+  padding: 24px !important;
 }
 </style>

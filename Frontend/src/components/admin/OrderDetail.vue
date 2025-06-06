@@ -208,7 +208,7 @@ export default {
       error: null,
       newStatus: "",
       availableStatuses: [
-        { value: "processing", label: "Đang xử lý" },
+        { value: "processing", label: "Đã xác nhận" },
         { value: "shipping", label: "Đang giao hàng" },
         { value: "delivered", label: "Đã giao hàng" },
         { value: "cancelled", label: "Đã hủy" },
@@ -276,7 +276,7 @@ export default {
     getStatusText(status) {
       const statusMap = {
         pending: "Chờ xử lý",
-        processing: "Đang xử lý",
+        processing: "Đã xác nhận",
         shipping: "Đang giao hàng",
         delivered: "Đã giao hàng",
         cancelled: "Đã hủy",

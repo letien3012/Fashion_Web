@@ -175,28 +175,31 @@
               <div class="col-md-4">
                 <div class="border rounded p-3 text-center">
                   <h6 class="text-muted mb-2">Tổng sản phẩm đã bán</h6>
-                  <h3 class="mb-0">1,234</h3>
-                  <small class="text-success">
-                    <i class="fas fa-arrow-up"></i> 12% so với kỳ trước
-                  </small>
+                  <h3 class="mb-0">
+                    {{ topProductsSummary?.totalProductsSold ?? "Đang tải..." }}
+                  </h3>
                 </div>
               </div>
               <div class="col-md-4">
                 <div class="border rounded p-3 text-center">
                   <h6 class="text-muted mb-2">Doanh thu sản phẩm</h6>
-                  <h3 class="mb-0">45.678.000 ₫</h3>
-                  <small class="text-success">
-                    <i class="fas fa-arrow-up"></i> 8% so với kỳ trước
-                  </small>
+                  <h3 class="mb-0">
+                    {{
+                      formatCurrency(topProductsSummary?.totalRevenue) ||
+                      "Đang tải..."
+                    }}
+                  </h3>
                 </div>
               </div>
               <div class="col-md-4">
                 <div class="border rounded p-3 text-center">
                   <h6 class="text-muted mb-2">Đơn giá trung bình</h6>
-                  <h3 class="mb-0">370.000 ₫</h3>
-                  <small class="text-danger">
-                    <i class="fas fa-arrow-down"></i> 3% so với kỳ trước
-                  </small>
+                  <h3 class="mb-0">
+                    {{
+                      formatCurrency(topProductsSummary?.averagePrice) ||
+                      "Đang tải..."
+                    }}
+                  </h3>
                 </div>
               </div>
             </div>
@@ -212,79 +215,49 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
+                  <tr
+                    v-for="(product, idx) in topProducts"
+                    :key="product.productId"
+                  >
                     <td>
                       <div class="d-flex align-items-center">
                         <img
-                          src="https://via.placeholder.com/40"
+                          :src="
+                            product.image || 'https://via.placeholder.com/40'
+                          "
                           class="rounded me-2"
                           alt="Product"
                         />
                         <div>
-                          <h6 class="mb-0">Áo thun basic</h6>
-                          <small class="text-muted">Mã: AT001</small>
+                          <h6 class="mb-0">{{ product.name }}</h6>
+                          <small class="text-muted"
+                            >Mã: {{ product.sku }}</small
+                          >
                         </div>
                       </div>
                     </td>
-                    <td class="text-center">245</td>
-                    <td class="text-center">12.250.000 ₫</td>
+                    <td class="text-center">{{ product.totalQuantity }}</td>
+                    <td class="text-center">
+                      {{ formatCurrency(product.totalRevenue) }}
+                    </td>
                     <td class="text-center">
                       <div class="progress" style="height: 5px">
                         <div
                           class="progress-bar bg-primary"
-                          style="width: 75%"
+                          :style="{
+                            width:
+                              (product.totalQuantity /
+                                (topProducts[0]?.totalQuantity || 1)) *
+                                100 +
+                              '%',
+                          }"
                         ></div>
                       </div>
                     </td>
                   </tr>
-                  <tr>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <img
-                          src="https://via.placeholder.com/40"
-                          class="rounded me-2"
-                          alt="Product"
-                        />
-                        <div>
-                          <h6 class="mb-0">Quần jean slim</h6>
-                          <small class="text-muted">Mã: QJ002</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-center">180</td>
-                    <td class="text-center">18.000.000 ₫</td>
-                    <td class="text-center">
-                      <div class="progress" style="height: 5px">
-                        <div
-                          class="progress-bar bg-success"
-                          style="width: 60%"
-                        ></div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <img
-                          src="https://via.placeholder.com/40"
-                          class="rounded me-2"
-                          alt="Product"
-                        />
-                        <div>
-                          <h6 class="mb-0">Váy liền thân</h6>
-                          <small class="text-muted">Mã: VL003</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-center">120</td>
-                    <td class="text-center">9.600.000 ₫</td>
-                    <td class="text-center">
-                      <div class="progress" style="height: 5px">
-                        <div
-                          class="progress-bar bg-info"
-                          style="width: 45%"
-                        ></div>
-                      </div>
+                  <tr v-if="topProducts.length === 0">
+                    <td colspan="4" class="text-center text-muted">
+                      Không có dữ liệu
                     </td>
                   </tr>
                 </tbody>
@@ -350,6 +323,15 @@ import "vue3-toastify/dist/index.css";
 export default {
   name: "AdminDashboard",
   data() {
+    // Lấy ngày hiện tại (today) và ngày tiếp theo (tomorrow) (ngày hôm nay + 1)
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // (getMonth() trả về 0–11)
+    const currentDate = today.toISOString().split("T")[0]; // (format: YYYY–MM–DD)
+    const nextDate = tomorrow.toISOString().split("T")[0]; // (format: YYYY–MM–DD)
+
     return {
       backendUrl: "http://localhost:3005",
       employeeName: "",
@@ -358,11 +340,13 @@ export default {
       orderStatusChart: null,
       newCustomersChart: null,
       categoryChart: null,
-      timeFilter: "year",
-      selectedYear: new Date().getFullYear(),
-      selectedMonth: new Date().getMonth() + 1,
-      startDate: null,
-      endDate: null,
+      // (Mặc định lọc theo tháng hiện tại)
+      timeFilter: "month",
+      selectedYear: currentYear,
+      selectedMonth: currentMonth,
+      // (Mặc định cho tùy chọn: ngày bắt đầu là hôm nay, ngày kết thúc là ngày tiếp theo (hôm nay + 1))
+      startDate: currentDate,
+      endDate: nextDate,
       years: [],
       months: [
         "Tháng 1",
@@ -385,16 +369,33 @@ export default {
       totalProducts: null,
       totalRevenue: null,
       // Data for charts
-      salesData: {
-        labels: [],
-        datasets: [],
-      },
+      salesData: { labels: [], datasets: [] },
       orderStatusData: {
-        labels: [],
-        datasets: [],
+        labels: [
+          "Đang chờ",
+          "Đang xử lý",
+          "Đang giao",
+          "Đã giao",
+          "Đã hủy",
+          "Đã trả hàng",
+        ],
+        datasets: [
+          {
+            data: [0, 0, 0, 0, 0, 0],
+            backgroundColor: [
+              "#ffc107",
+              "#0dcaf0",
+              "#0d6efd",
+              "#198754",
+              "#dc3545",
+              "#6c757d",
+            ],
+          },
+        ],
       },
       // Data for top products table
       topProducts: [],
+      topProductsSummary: null,
     };
   },
   computed: {
@@ -425,17 +426,18 @@ export default {
     },
   },
   async mounted() {
-    // Initial data fetch for overview cards
+    // (Gọi updateChart() để lấy dữ liệu doanh thu mặc định (lọc theo tháng hiện tại) khi component được tạo)
+    await this.updateChart();
+    // (Gọi fetchOverviewStats() để lấy dữ liệu tổng quan)
     await this.fetchOverviewStats();
-
-    // Initialize charts after data is potentially fetched
-    this.renderSalesChart();
+    // (Khởi tạo biểu đồ trạng thái đơn hàng)
+    await this.fetchOrderStatusData();
     this.renderOrderStatusChart();
-
-    // Initial data fetch for charts and tables (example - need actual APIs)
-    // await this.fetchSalesData();
-    // await this.fetchOrderStatusData();
-    // await this.fetchTopProducts();
+    await this.fetchTopProducts();
+    // Khởi tạo các biểu đồ còn lại
+    this.initProductsChart();
+    this.initNewCustomersChart();
+    this.initCategoryChart();
   },
   methods: {
     formatCurrency(value) {
@@ -504,21 +506,7 @@ export default {
       const ctx = this.$refs.orderStatusChart.getContext("2d");
       this.orderStatusChart = new Chart(ctx, {
         type: "pie",
-        data: {
-          labels: ["Đang chờ", "Đang xử lý", "Đang giao", "Đã giao", "Đã hủy"],
-          datasets: [
-            {
-              data: [300, 150, 100, 500, 84], // Replace with actual data
-              backgroundColor: [
-                "#ffc107", // warning (pending)
-                "#0dcaf0", // info (processing)
-                "#0d6efd", // primary (shipping)
-                "#198754", // success (delivered)
-                "#dc3545", // danger (cancelled)
-              ],
-            },
-          ],
-        }, // Use actual data
+        data: this.orderStatusData,
         options: {
           responsive: true,
           maintainAspectRatio: false,
@@ -526,37 +514,296 @@ export default {
       });
     },
     updateChart() {
-      // This method will be updated later to fetch and update sales data
-      console.log(
-        "Updating chart for filter:",
-        this.timeFilter,
-        this.selectedYear,
-        this.selectedMonth,
-        this.startDate,
-        this.endDate
-      );
-      // Example data update (replace with API call)
-      // this.salesData = { labels: [...], datasets: [...] };
-      // this.renderSalesChart();
+      // Gọi fetchSalesData để lấy dữ liệu mới (dựa trên filter) và cập nhật biểu đồ
+      this.fetchSalesData().then(() => {
+        this.renderSalesChart();
+      });
     },
     updateProductChart() {
-      // This method will be updated later to fetch and update top products data
-      console.log("Updating product chart for filter:", this.productTimeFilter);
-      // Example data update (replace with API call)
-      // this.topProducts = [...];
+      this.fetchTopProducts();
+      // Có thể thêm renderProductsChart nếu có biểu đồ
     },
-    // Placeholder methods for fetching chart/table data
     async fetchSalesData() {
-      // Need backend API
-      console.log("Fetching sales data...");
+      // Gọi API để lấy dữ liệu doanh thu từ backend (order.controller.js)
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("Không tìm thấy token xác thực.");
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          return;
+        }
+        const headers = { Authorization: `Bearer ${token}` };
+        // Gọi API getSalesData với các tham số từ bộ lọc thời gian
+        const params = { timeFilter: this.timeFilter };
+        if (this.timeFilter === "year") {
+          params.year = this.selectedYear;
+        } else if (this.timeFilter === "month") {
+          params.year = this.selectedYear;
+          params.month = this.selectedMonth;
+        } else if (this.timeFilter === "custom") {
+          params.startDate = this.startDate;
+          params.endDate = this.endDate;
+        }
+        const response = await axios.get(
+          `${this.backendUrl}/api/orders/sales`,
+          { headers, params }
+        );
+        const { labels, datasets } = response.data.data; // (API trả về { data: { labels: [...], datasets: [...] } })
+        this.salesData = { labels, datasets };
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu doanh thu:", error);
+        toast.error("Lỗi khi tải dữ liệu doanh thu");
+      }
     },
     async fetchOrderStatusData() {
-      // Need backend API
-      console.log("Fetching order status data...");
+      const token = localStorage.getItem("token");
+      if (!token) {
+        this.$toast.error("Bạn chưa đăng nhập");
+        return;
+      }
+      try {
+        console.log(
+          "Gọi API lấy dữ liệu trạng thái đơn hàng (fetchOrderStatusData) tại:",
+          this.backendUrl + "/api/orders/order-status"
+        );
+        const res = await axios.get(
+          this.backendUrl + "/api/orders/order-status",
+          { headers: { Authorization: "Bearer " + token } }
+        );
+        console.log("Kết quả API (fetchOrderStatusData):", res.data);
+        if (res.data.success && res.data.data) {
+          this.orderStatusData = res.data.data;
+        } else {
+          console.warn(
+            "API không trả về đúng định dạng (hoặc không có dữ liệu), sử dụng dữ liệu mẫu."
+          );
+          this.orderStatusData = {
+            labels: [
+              "Đang chờ",
+              "Đang xử lý",
+              "Đang giao",
+              "Đã giao",
+              "Đã hủy",
+              "Đã trả hàng",
+            ],
+            datasets: [
+              {
+                data: [0, 0, 0, 0, 0, 0],
+                backgroundColor: [
+                  "#ffc107",
+                  "#0dcaf0",
+                  "#0d6efd",
+                  "#198754",
+                  "#dc3545",
+                  "#6c757d",
+                ],
+              },
+            ],
+          };
+        }
+      } catch (err) {
+        console.error(
+          "Lỗi khi lấy dữ liệu trạng thái đơn hàng (fetchOrderStatusData):",
+          err
+        );
+        // (Nếu có lỗi, sử dụng dữ liệu mẫu (hoặc mặc định) cho biểu đồ trạng thái đơn hàng.)
+        this.orderStatusData = {
+          labels: [
+            "Đang chờ",
+            "Đang xử lý",
+            "Đang giao",
+            "Đã giao",
+            "Đã hủy",
+            "Đã trả hàng",
+          ],
+          datasets: [
+            {
+              data: [0, 0, 0, 0, 0, 0],
+              backgroundColor: [
+                "#ffc107",
+                "#0dcaf0",
+                "#0d6efd",
+                "#198754",
+                "#dc3545",
+                "#6c757d",
+              ],
+            },
+          ],
+        };
+      }
     },
     async fetchTopProducts() {
-      // Need backend API
-      console.log("Fetching top products data...");
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          return;
+        }
+        const headers = { Authorization: `Bearer ${token}` };
+        const params = { timeFilter: this.productTimeFilter };
+        const response = await axios.get(
+          `${this.backendUrl}/api/orders/top-products`,
+          { headers, params }
+        );
+        const { topProducts, summary } = response.data.data;
+        this.topProducts = topProducts;
+        this.topProductsSummary = summary;
+      } catch (error) {
+        console.error("Lỗi khi lấy top sản phẩm bán chạy:", error);
+        toast.error("Lỗi khi tải top sản phẩm bán chạy");
+      }
+    },
+    initProductsChart() {
+      const ctx = this.$refs.productsChart.getContext("2d");
+      this.productsChart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+          labels: ["Áo thun", "Quần jean", "Váy", "Giày", "Phụ kiện"],
+          datasets: [
+            {
+              data: [30, 25, 20, 15, 10],
+              backgroundColor: [
+                "#0d6efd",
+                "#198754",
+                "#dc3545",
+                "#ffc107",
+                "#6f42c1",
+              ],
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                font: {
+                  size: 12,
+                },
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const label = context.label || "";
+                  const value = context.raw || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = Math.round((value / total) * 100);
+                  return `${label}: ${value} sản phẩm (${percentage}%)`;
+                },
+              },
+            },
+          },
+        },
+      });
+    },
+    initNewCustomersChart() {
+      const ctx = this.$refs.newCustomersChart.getContext("2d");
+      this.newCustomersChart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+          datasets: [
+            {
+              label: "Khách hàng mới",
+              data: [12, 19, 15, 25, 22, 30, 18],
+              borderColor: "#6f42c1",
+              backgroundColor: "rgba(111, 66, 193, 0.1)",
+              tension: 0.4,
+              fill: true,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  return `${context.raw} khách hàng mới`;
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: "#f0f0f0",
+              },
+              ticks: {
+                stepSize: 1,
+              },
+            },
+            x: {
+              grid: {
+                display: false,
+              },
+            },
+          },
+        },
+      });
+    },
+    initCategoryChart() {
+      const ctx = this.$refs.categoryChart.getContext("2d");
+      this.categoryChart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: ["Áo", "Quần", "Váy", "Giày", "Phụ kiện", "Túi xách"],
+          datasets: [
+            {
+              label: "Số lượng sản phẩm",
+              data: [120, 80, 60, 40, 30, 25],
+              backgroundColor: [
+                "#0d6efd",
+                "#198754",
+                "#dc3545",
+                "#ffc107",
+                "#6f42c1",
+                "#0dcaf0",
+              ],
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              display: false,
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  return `${context.raw} sản phẩm`;
+                },
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: {
+                color: "#f0f0f0",
+              },
+              ticks: {
+                stepSize: 1,
+              },
+            },
+            x: {
+              grid: {
+                display: false,
+              },
+            },
+          },
+        },
+      });
     },
   },
 };

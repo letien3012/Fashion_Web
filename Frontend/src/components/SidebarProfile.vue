@@ -266,11 +266,12 @@ onMounted(async () => {
 
 <style scoped>
 .sidebar-profile {
-  width: 280px;
-  background: #ffffff;
+  width: 100%;
   min-height: 100vh;
-  border-right: 1px solid #eee;
+  background: #f8f9fa;
   padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
 .profile-header {
@@ -326,6 +327,9 @@ onMounted(async () => {
   justify-content: space-around;
   padding: 20px 0;
   border-bottom: 1px solid #eee;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 15px 0;
 }
 
 .stat-item {
@@ -358,10 +362,12 @@ onMounted(async () => {
   margin-bottom: 5px;
   transition: all 0.3s ease;
   cursor: pointer;
+  background: #f8f9fa;
 }
 
 .menu-item:hover {
-  background: #f5f5f5;
+  background: #e9ecef;
+  transform: translateX(5px);
 }
 
 .menu-item i {
@@ -378,6 +384,7 @@ onMounted(async () => {
 .logout {
   margin-top: 20px;
   color: #dc3545;
+  background: #fff5f5;
 }
 
 .logout:hover {

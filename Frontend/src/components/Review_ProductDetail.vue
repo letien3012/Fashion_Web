@@ -4,7 +4,7 @@
 
     <div class="review-summary">
       <div class="average-rating">
-        <span class="rating-number">{{ averageRating || "-" }}</span> trên 5
+        <span class="rating-number">{{ averageRating }}</span> trên 5
         <div class="star-rating">
           <i
             class="fas fa-star"
@@ -15,13 +15,55 @@
         </div>
       </div>
       <div class="rating-filters">
-        <button class="filter-btn active">Tất Cả</button>
-        <button class="filter-btn">5 Sao ({{ getRatingCount(5) }})</button>
-        <button class="filter-btn">4 Sao ({{ getRatingCount(4) }})</button>
-        <button class="filter-btn">3 Sao ({{ getRatingCount(3) }})</button>
-        <button class="filter-btn">2 Sao ({{ getRatingCount(2) }})</button>
-        <button class="filter-btn">1 Sao ({{ getRatingCount(1) }})</button>
-        <button class="filter-btn">Có Bình Luận ({{ getCommentCount }})</button>
+        <button
+          class="filter-btn"
+          :class="{ active: currentFilter === 'all' }"
+          @click="currentFilter = 'all'"
+        >
+          Tất Cả
+        </button>
+        <button
+          class="filter-btn"
+          :class="{ active: currentFilter === '5' }"
+          @click="currentFilter = '5'"
+        >
+          5 Sao ({{ getRatingCount(5) }})
+        </button>
+        <button
+          class="filter-btn"
+          :class="{ active: currentFilter === '4' }"
+          @click="currentFilter = '4'"
+        >
+          4 Sao ({{ getRatingCount(4) }})
+        </button>
+        <button
+          class="filter-btn"
+          :class="{ active: currentFilter === '3' }"
+          @click="currentFilter = '3'"
+        >
+          3 Sao ({{ getRatingCount(3) }})
+        </button>
+        <button
+          class="filter-btn"
+          :class="{ active: currentFilter === '2' }"
+          @click="currentFilter = '2'"
+        >
+          2 Sao ({{ getRatingCount(2) }})
+        </button>
+        <button
+          class="filter-btn"
+          :class="{ active: currentFilter === '1' }"
+          @click="currentFilter = '1'"
+        >
+          1 Sao ({{ getRatingCount(1) }})
+        </button>
+        <button
+          class="filter-btn"
+          :class="{ active: currentFilter === 'withComment' }"
+          @click="currentFilter = 'withComment'"
+        >
+          Có Bình Luận ({{ getCommentCount }})
+        </button>
       </div>
     </div>
 
@@ -106,16 +148,48 @@ export default {
       fetchedReviews: [], // Data property to store fetched reviews array
       reviewsLoading: false, // Loading state
       reviewsError: null, // Error state
+      currentFilter: "all", // Add this line
     };
   },
   computed: {
     reviews() {
-      // Use fetchedReviews array if available, otherwise use product.reviews as a fallback
+      let filteredReviews =
+        this.fetchedReviews.length > 0
+          ? this.fetchedReviews
+          : this.product?.reviews || [];
+
+      // Apply filter
+      if (this.currentFilter !== "all") {
+        if (this.currentFilter === "withComment") {
+          filteredReviews = filteredReviews.filter(
+            (review) => review.content && review.content.trim() !== ""
+          );
+        } else {
+          const rating = parseInt(this.currentFilter);
+          filteredReviews = filteredReviews.filter(
+            (review) => review.star === rating
+          );
+        }
+      }
+
+      return filteredReviews;
+    },
+    totalReviews() {
       return this.fetchedReviews.length > 0
         ? this.fetchedReviews
         : this.product?.reviews || [];
     },
     averageRating() {
+      if (!this.totalReviews || this.totalReviews.length === 0) {
+        return 0;
+      }
+      const totalStars = this.totalReviews.reduce(
+        (sum, review) => sum + (review.star || 0),
+        0
+      );
+      return (totalStars / this.totalReviews.length).toFixed(1);
+    },
+    filteredAverageRating() {
       if (!this.reviews || this.reviews.length === 0) {
         return 0;
       }
@@ -123,7 +197,7 @@ export default {
         (sum, review) => sum + (review.star || 0),
         0
       );
-      return (totalStars / this.reviews.length).toFixed(1); // Calculate average and round to 1 decimal place
+      return (totalStars / this.reviews.length).toFixed(1);
     },
     getCommentCount() {
       return this.reviews.filter(
@@ -206,7 +280,6 @@ export default {
 
 <style scoped>
 .product-review-section {
-  width: 1100px;
   margin: 32px auto 40px auto;
   background: #fff;
   border-radius: 16px;
@@ -264,6 +337,13 @@ export default {
 .average-rating .star-rating i.active {
   color: #ffd700;
   text-shadow: 0 0 2px rgba(255, 215, 0, 0.3);
+}
+
+.average-rating .filtered-rating {
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 8px;
+  font-style: italic;
 }
 
 .rating-filters {

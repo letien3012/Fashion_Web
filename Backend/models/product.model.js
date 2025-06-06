@@ -144,30 +144,50 @@ Product.validateVariant = async function (variant) {
 
     // Validate attributeId1
     if (variant.attributeId1) {
+      console.log("Validating attributeId1:", variant.attributeId1);
       try {
         const attribute1 = await mongoose
           .model("Attribute")
           .findById(variant.attributeId1);
         if (!attribute1) {
+          console.error("AttributeId1 not found:", variant.attributeId1);
           throw new Error("First attribute does not exist");
         }
+        console.log(
+          "AttributeId1 validated successfully:",
+          variant.attributeId1
+        );
       } catch (error) {
-        console.error("Error validating first attribute:", error);
+        console.error(
+          "Error validating first attribute:",
+          variant.attributeId1,
+          error
+        );
         throw new Error("Invalid first attribute");
       }
     }
 
     // Validate attributeId2
     if (variant.attributeId2) {
+      console.log("Validating attributeId2:", variant.attributeId2);
       try {
         const attribute2 = await mongoose
           .model("Attribute")
           .findById(variant.attributeId2);
         if (!attribute2) {
+          console.error("AttributeId2 not found:", variant.attributeId2);
           throw new Error("Second attribute does not exist");
         }
+        console.log(
+          "AttributeId2 validated successfully:",
+          variant.attributeId2
+        );
       } catch (error) {
-        console.error("Error validating second attribute:", error);
+        console.error(
+          "Error validating second attribute:",
+          variant.attributeId2,
+          error
+        );
         throw new Error("Invalid second attribute");
       }
     }
@@ -230,7 +250,8 @@ Product.prototype.save = async function () {
     }
 
     // Use save instead of create to trigger pre-save middleware
-    const savedProduct = await this.save();
+    const productData = this.toObject();
+    const savedProduct = await Product.create(productData);
     console.log("Product saved:", savedProduct);
     return savedProduct._id;
   } catch (error) {
@@ -462,6 +483,72 @@ Product.getVariantPrice = async function (productId, variantId) {
     price: variant.price,
     priceSale: product.priceSale || null,
   };
+};
+
+// Static method to get best selling products
+Product.getBestSelling = async function (limit = 8) {
+  try {
+    const products = await this.aggregate([
+      {
+        $match: {
+          deletedAt: null,
+          publish: true,
+        },
+      },
+      {
+        $lookup: {
+          from: "orders",
+          let: { productId: "$_id" },
+          pipeline: [
+            { $unwind: "$items" },
+            { $match: { $expr: { $eq: ["$items.productId", "$$productId"] } } },
+            { $group: { _id: null, total: { $sum: "$items.quantity" } } },
+          ],
+          as: "sales",
+        },
+      },
+      {
+        $addFields: {
+          totalSold: { $ifNull: [{ $arrayElemAt: ["$sales.total", 0] }, 0] },
+        },
+      },
+      { $sort: { totalSold: -1 } },
+      { $limit: limit },
+      {
+        $project: {
+          _id: 1,
+          name: 1,
+          image: 1,
+          description: 1,
+          variants: 1,
+          totalSold: 1,
+          view_count: 1,
+          favorite_count: 1,
+        },
+      },
+    ]);
+    return products;
+  } catch (error) {
+    throw new Error(`Error getting best selling products: ${error.message}`);
+  }
+};
+
+Product.search = async function (keyword) {
+  try {
+    const searchRegex = new RegExp(keyword, "i");
+    const products = await this.find({
+      $or: [
+        { name: searchRegex },
+        { code: searchRegex },
+        { content: searchRegex },
+        { description: searchRegex },
+      ],
+      publish: true,
+    }).populate("catalogueId");
+    return products;
+  } catch (error) {
+    throw new Error(`Error searching products: ${error.message}`);
+  }
 };
 
 module.exports = Product;

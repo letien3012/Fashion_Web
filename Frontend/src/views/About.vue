@@ -1,47 +1,53 @@
 <template>
-  <div>
-    <Header />
-    <div class="about-container">
-      <h1 class="page-title">Về JUNO</h1>
+  <Header></Header>
+  <div class="about-container">
+    <!-- Breadcrumb -->
+    <div class="breadcrumb">
+      <router-link to="/">Trang chủ</router-link>
+      <span class="separator">/</span>
+      <span class="current">Về chúng tôi</span>
+    </div>
+    <h1 class="page-title">Về JUNO</h1>
 
-      <!-- Giới thiệu ngắn -->
-      <div class="intro-section">
-        <p>
-          JUNO - Thương hiệu thời trang trẻ trung, năng động với phong cách
-          thiết kế độc đáo và chất lượng vượt trội.
-        </p>
+    <!-- Giới thiệu ngắn -->
+    <div class="intro-section">
+      <p>
+        JUNO - Thương hiệu thời trang trẻ trung, năng động với phong cách thiết
+        kế độc đáo và chất lượng vượt trội.
+      </p>
+    </div>
+
+    <!-- Container chính cho danh sách cửa hàng và bản đồ -->
+    <div class="store-container">
+      <!-- Danh sách cửa hàng bên trái -->
+      <div class="store-list">
+        <h2>Hệ thống cửa hàng</h2>
+        <div
+          class="store-item"
+          v-for="store in stores"
+          :key="store.id"
+          @click="selectStore(store)"
+        >
+          <h3>{{ store.name }}</h3>
+          <p><i class="fas fa-map-marker-alt"></i> {{ store.address }}</p>
+          <p><i class="fas fa-phone"></i> {{ store.phone }}</p>
+          <p><i class="fas fa-clock"></i> {{ store.hours }}</p>
+        </div>
       </div>
 
-      <!-- Container chính cho danh sách cửa hàng và bản đồ -->
-      <div class="store-container">
-        <!-- Danh sách cửa hàng bên trái -->
-        <div class="store-list">
-          <h2>Hệ thống cửa hàng</h2>
-          <div
-            class="store-item"
-            v-for="store in stores"
-            :key="store.id"
-            @click="selectStore(store)"
-          >
-            <h3>{{ store.name }}</h3>
-            <p><i class="fas fa-map-marker-alt"></i> {{ store.address }}</p>
-            <p><i class="fas fa-phone"></i> {{ store.phone }}</p>
-            <p><i class="fas fa-clock"></i> {{ store.hours }}</p>
-          </div>
-        </div>
-
-        <!-- Bản đồ bên phải -->
-        <div class="map-container">
-          <div id="map" ref="map"></div>
-        </div>
+      <!-- Bản đồ bên phải -->
+      <div class="map-container">
+        <div id="map" ref="map"></div>
       </div>
     </div>
   </div>
+  <Footer></Footer>
 </template>
 
 <script>
 import { ref, onMounted } from "vue";
 import Header from "../components/Header.vue";
+import Footer from "../components/Footer.vue";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -49,6 +55,7 @@ export default {
   name: "About",
   components: {
     Header,
+    Footer,
   },
   setup() {
     const map = ref(null);
@@ -113,11 +120,29 @@ export default {
 </script>
 
 <style scoped>
-@import "leaflet/dist/leaflet.css";
 .about-container {
-  max-width: 1200px;
+  width: 95%;
   margin: 0 auto;
   padding: 20px;
+}
+
+.breadcrumb {
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.breadcrumb a {
+  color: #666;
+  text-decoration: none;
+}
+
+.breadcrumb .separator {
+  margin: 0 8px;
+  color: #999;
+}
+
+.breadcrumb .current {
+  color: #e63946;
 }
 
 .page-title {

@@ -1,7 +1,10 @@
 <template>
-  <Header></Header>
-  <div class="login-page">
-    <FormLogin :loading="loading" @submit-login="handleLogin" />
+  <div class="login-container">
+    <Header></Header>
+    <div class="login-page">
+      <FormLogin :loading="loading" @submit-login="handleLogin" />
+    </div>
+    <Footer></Footer>
   </div>
   <Footer></Footer>
 </template>

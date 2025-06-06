@@ -1,5 +1,6 @@
 const Order = require("../models/order.model");
 const Customer = require("../models/customer.model");
+const Consignment = require("../models/consignment.model");
 
 // Generate unique order code
 const generateOrderCode = () => {
@@ -22,6 +23,54 @@ exports.create = async (req, res) => {
       method,
       note,
     } = req.body;
+    console.log(req.body);
+    // Process each item and its variants to allocate consignments
+    for (const item of items) {
+      for (const variant of item.variants) {
+        let remainingQuantity = variant.quantity;
+        variant.consignments = [];
+
+        // Get all available consignments for this variant, sorted by creation date (oldest first)
+        const consignments = await Consignment.find({
+          productId: item.productId,
+          variantId: variant._id,
+          publish: true,
+          current_quantity: { $gt: 0 },
+        }).sort({ createdAt: 1 });
+
+        console.log(
+          `Found ${consignments.length} consignments for variant ${variant.sku} (ID: ${variant._id})`
+        );
+
+        // Allocate quantities from consignments
+        for (const consignment of consignments) {
+          if (remainingQuantity <= 0) break;
+
+          const quantityToTake = Math.min(
+            remainingQuantity,
+            consignment.current_quantity
+          );
+
+          // Add consignment allocation to variant
+          variant.consignments.push({
+            consignmentId: consignment._id,
+            quantity: quantityToTake,
+          });
+
+          // Update consignment's current quantity
+          await Consignment.decreaseQuantity(consignment._id, quantityToTake);
+
+          remainingQuantity -= quantityToTake;
+        }
+
+        // If we couldn't fulfill the entire order
+        if (remainingQuantity > 0) {
+          throw new Error(
+            `Không đủ số lượng cho biến thể ${variant.sku} (ID: ${variant._id}). Cần thêm ${remainingQuantity} sản phẩm.`
+          );
+        }
+      }
+    }
 
     // Create order
     const order = new Order({
@@ -163,5 +212,295 @@ exports.getTotalRevenue = async (req, res) => {
   } catch (error) {
     console.error("Error getting total revenue:", error);
     res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+// Lấy dữ liệu doanh thu theo thời gian
+exports.getSalesData = async (req, res) => {
+  try {
+    const { timeFilter, year, month, startDate, endDate } = req.query;
+    let matchQuery = { status: "delivered", deletedAt: null };
+    let groupBy = {};
+    let sortBy = {};
+
+    // Xây dựng query dựa trên bộ lọc thời gian
+    switch (timeFilter) {
+      case "year":
+        if (!year) {
+          return res.status(400).json({
+            success: false,
+            message: "Năm không được để trống",
+          });
+        }
+        matchQuery.createdAt = {
+          $gte: new Date(year, 0, 1),
+          $lt: new Date(parseInt(year) + 1, 0, 1),
+        };
+        groupBy = { $month: "$createdAt" };
+        sortBy = { _id: 1 };
+        break;
+
+      case "month":
+        if (!year || !month) {
+          return res.status(400).json({
+            success: false,
+            message: "Năm và tháng không được để trống",
+          });
+        }
+        matchQuery.createdAt = {
+          $gte: new Date(year, month - 1, 1),
+          $lt: new Date(year, month, 1),
+        };
+        groupBy = { $dayOfMonth: "$createdAt" };
+        sortBy = { _id: 1 };
+        break;
+
+      case "custom":
+        if (!startDate || !endDate) {
+          return res.status(400).json({
+            success: false,
+            message: "Ngày bắt đầu và kết thúc không được để trống",
+          });
+        }
+        matchQuery.createdAt = {
+          $gte: new Date(startDate),
+          $lt: new Date(endDate),
+        };
+        groupBy = { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } };
+        sortBy = { _id: 1 };
+        break;
+
+      default:
+        return res.status(400).json({
+          success: false,
+          message: "Bộ lọc thời gian không hợp lệ",
+        });
+    }
+
+    const salesData = await Order.aggregate([
+      { $match: matchQuery },
+      {
+        $group: {
+          _id: groupBy,
+          revenue: { $sum: "$total_price" },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: sortBy },
+    ]);
+
+    // Format dữ liệu cho biểu đồ
+    const labels = salesData.map((item) => {
+      if (timeFilter === "year") {
+        return `Tháng ${item._id}`;
+      } else if (timeFilter === "month") {
+        return `Ngày ${item._id}`;
+      } else {
+        return item._id;
+      }
+    });
+
+    const datasets = [
+      {
+        label: "Doanh thu",
+        data: salesData.map((item) => item.revenue),
+        borderColor: "#0d6efd",
+        backgroundColor: "rgba(13, 110, 253, 0.1)",
+        tension: 0.4,
+      },
+      {
+        label: "Số đơn hàng",
+        data: salesData.map((item) => item.count),
+        borderColor: "#198754",
+        backgroundColor: "rgba(25, 135, 84, 0.1)",
+        tension: 0.4,
+      },
+    ];
+
+    res.status(200).json({
+      success: true,
+      data: {
+        labels,
+        datasets,
+      },
+    });
+  } catch (error) {
+    console.error("Error getting sales data:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// Lấy top sản phẩm bán chạy
+exports.getTopProducts = async (req, res) => {
+  try {
+    const { timeFilter } = req.query;
+    let matchQuery = { status: "delivered", deletedAt: null };
+    let dateFilter = {};
+
+    // Xây dựng query dựa trên bộ lọc thời gian
+    const now = new Date();
+    switch (timeFilter) {
+      case "week":
+        // Lấy dữ liệu từ đầu tuần đến hiện tại
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay()); // Đầu tuần (Chủ nhật)
+        startOfWeek.setHours(0, 0, 0, 0);
+        dateFilter = { $gte: startOfWeek, $lte: now };
+        break;
+
+      case "month":
+        // Lấy dữ liệu từ đầu tháng đến hiện tại
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        dateFilter = { $gte: startOfMonth, $lte: now };
+        break;
+
+      case "year":
+        // Lấy dữ liệu từ đầu năm đến hiện tại
+        const startOfYear = new Date(now.getFullYear(), 0, 1);
+        dateFilter = { $gte: startOfYear, $lte: now };
+        break;
+
+      default:
+        return res.status(400).json({
+          success: false,
+          message: "Bộ lọc thời gian không hợp lệ",
+        });
+    }
+
+    matchQuery.createdAt = dateFilter;
+
+    const topProducts = await Order.aggregate([
+      { $match: matchQuery },
+      { $unwind: "$order_detail" },
+      {
+        $group: {
+          _id: {
+            productId: "$order_detail.productId",
+            name: "$order_detail.name",
+            image: "$order_detail.image",
+            sku: "$order_detail.variants.sku",
+          },
+          totalQuantity: { $sum: { $sum: "$order_detail.variants.quantity" } },
+          totalRevenue: {
+            $sum: {
+              $multiply: [
+                { $sum: "$order_detail.variants.quantity" },
+                "$order_detail.price",
+              ],
+            },
+          },
+        },
+      },
+      { $sort: { totalQuantity: -1 } },
+      { $limit: 5 },
+      {
+        $project: {
+          _id: 0,
+          productId: "$_id.productId",
+          name: "$_id.name",
+          image: "$_id.image",
+          sku: "$_id.sku",
+          totalQuantity: 1,
+          totalRevenue: 1,
+        },
+      },
+    ]);
+
+    // Tính tổng số sản phẩm đã bán và tổng doanh thu
+    const totals = await Order.aggregate([
+      { $match: matchQuery },
+      { $unwind: "$order_detail" },
+      {
+        $group: {
+          _id: null,
+          totalProductsSold: {
+            $sum: { $sum: "$order_detail.variants.quantity" },
+          },
+          totalRevenue: { $sum: "$total_price" },
+        },
+      },
+    ]);
+
+    // Tính đơn giá trung bình
+    const avgPrice =
+      totals.length > 0
+        ? totals[0].totalRevenue / totals[0].totalProductsSold
+        : 0;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        topProducts,
+        summary: {
+          totalProductsSold:
+            totals.length > 0 ? totals[0].totalProductsSold : 0,
+          totalRevenue: totals.length > 0 ? totals[0].totalRevenue : 0,
+          averagePrice: avgPrice,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Error getting top products:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// Lấy dữ liệu trạng thái đơn hàng cho biểu đồ trạng thái đơn hàng
+exports.getOrderStatus = async (req, res) => {
+  try {
+    const result = await Order.aggregate([
+      { $match: { deletedAt: null } },
+      { $group: { _id: "$status", count: { $sum: 1 } } },
+    ]);
+    const statusLabels = [
+      "pending",
+      "processing",
+      "shipping",
+      "delivered",
+      "cancelled",
+      "returned",
+    ];
+    const labelNames = [
+      "Đang chờ",
+      "Đang xử lý",
+      "Đang giao",
+      "Đã giao",
+      "Đã hủy",
+      "Đã trả hàng",
+    ];
+    const statusCounts = statusLabels.map((status) => {
+      const found = result.find((r) => r._id === status);
+      return found ? found.count : 0;
+    });
+    const data = {
+      labels: labelNames,
+      datasets: [
+        {
+          data: statusCounts,
+          backgroundColor: [
+            "#ffc107",
+            "#0dcaf0",
+            "#0d6efd",
+            "#198754",
+            "#dc3545",
+            "#6c757d",
+          ],
+        },
+      ],
+    };
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("Lỗi khi lấy dữ liệu trạng thái đơn hàng:", error);
+    res
+      .status(500)
+      .json({ success: false, message: "Lỗi server", error: error.message });
   }
 };

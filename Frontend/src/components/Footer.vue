@@ -16,7 +16,7 @@
         <div class="footer-section links">
           <h2>Liên kết hữu ích</h2>
           <ul>
-            <li><a href="#">Về chúng tôi</a></li>
+            <li><a href="/about">Về chúng tôi</a></li>
             <li><a href="#">Chính sách đổi trả</a></li>
             <li><a href="#">Hệ thống cửa hàng</a></li>
             <li><a href="#">Tuyển dụng</a></li>
@@ -42,7 +42,7 @@
 .footer {
   background-color: #f8f8f8;
   color: #333;
-  padding: 40px 0;
+  padding: 20px 0;
   width: 100%;
 }
 

@@ -36,7 +36,7 @@ export default {
   },
   created() {
     const employee = JSON.parse(localStorage.getItem("employee"));
-    const token = localStorage.getItem("token");
+    const token = localStorage.getItem("token-admin");
 
     if (employee && token) {
       this.employeeName = employee.fullname;
