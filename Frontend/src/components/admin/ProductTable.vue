@@ -7,7 +7,6 @@
           <th>Mã sản phẩm</th>
           <th>Tên sản phẩm</th>
           <th>Danh mục</th>
-          <th>Giá</th>
           <th>Trạng thái</th>
           <th>Thao tác</th>
         </tr>
@@ -42,7 +41,6 @@
             <div class="product-name">{{ product.name }}</div>
           </td>
           <td>{{ getCatalogueName(product.catalogueId) }}</td>
-          <td>{{ formatPrice(product.price) }}</td>
           <td>
             <span
               :class="[

@@ -16,6 +16,15 @@ router.delete("/profile", auth, customerController.deleteAccount);
 router.put("/change-password", auth, customerController.changePassword);
 router.get("/orders", auth, customerController.getCustomerOrders);
 
+// Wishlist routes
+router.post("/wishlist", auth, customerController.addToWishlist);
+router.delete(
+  "/wishlist/:productId",
+  auth,
+  customerController.removeFromWishlist
+);
+router.get("/wishlist", auth, customerController.getWishlist);
+
 // Admin routes
 router.get("/", customerController.getAllCustomers);
 router.put("/update-status/:id", customerController.updateStatus);

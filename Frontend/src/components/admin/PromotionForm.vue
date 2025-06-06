@@ -6,7 +6,11 @@
           <h5 class="modal-title">
             {{ promotion ? "Cập nhật khuyến mãi" : "Thêm khuyến mãi mới" }}
           </h5>
-          <button type="button" class="btn-close" @click="$emit('close')"></button>
+          <button
+            type="button"
+            class="btn-close"
+            @click="$emit('close')"
+          ></button>
         </div>
         <div class="modal-body">
           <form @submit.prevent="handleSubmit" class="promotion-form">
@@ -31,7 +35,9 @@
                         <div class="invalid-feedback">{{ errors.code }}</div>
                       </div>
                       <div class="col-md-6">
-                        <label class="form-label required">Tên khuyến mãi</label>
+                        <label class="form-label required"
+                          >Tên khuyến mãi</label
+                        >
                         <input
                           type="text"
                           class="form-control"
@@ -51,12 +57,16 @@
                         rows="3"
                         :class="{ 'is-invalid': errors.description }"
                       ></textarea>
-                      <div class="invalid-feedback">{{ errors.description }}</div>
+                      <div class="invalid-feedback">
+                        {{ errors.description }}
+                      </div>
                     </div>
 
                     <div class="row mb-3">
                       <div class="col-md-6">
-                        <label class="form-label required">Loại khuyến mãi</label>
+                        <label class="form-label required"
+                          >Loại khuyến mãi</label
+                        >
                         <select
                           class="form-select"
                           v-model="formData.type"
@@ -80,15 +90,23 @@
                           min="0"
                           max="100"
                         />
-                        <div class="invalid-feedback">{{ errors.discount }}</div>
+                        <div class="invalid-feedback">
+                          {{ errors.discount }}
+                        </div>
                       </div>
                     </div>
 
                     <!-- Product Selection for Product Type -->
                     <div v-if="formData.type === 'product'" class="mb-3">
-                      <label class="form-label required">Sản phẩm áp dụng</label>
+                      <label class="form-label required"
+                        >Sản phẩm áp dụng</label
+                      >
                       <div class="product-selection">
-                        <div v-for="(item, index) in formData.productId" :key="index" class="product-item mb-2">
+                        <div
+                          v-for="(item, index) in formData.productId"
+                          :key="index"
+                          class="product-item mb-2"
+                        >
                           <div class="row">
                             <div class="col-md-6">
                               <select
@@ -116,7 +134,9 @@
                               >
                                 <option value="">Chọn biến thể</option>
                                 <option
-                                  v-for="variant in getProductVariants(item.productId)"
+                                  v-for="variant in getProductVariants(
+                                    item.productId
+                                  )"
                                   :key="variant._id"
                                   :value="variant._id"
                                 >
@@ -150,7 +170,9 @@
                       <label class="form-label">Điều kiện áp dụng</label>
                       <div class="row">
                         <div class="col-md-6">
-                          <label class="form-label">Giá trị đơn hàng tối thiểu</label>
+                          <label class="form-label"
+                            >Giá trị đơn hàng tối thiểu</label
+                          >
                           <input
                             type="number"
                             class="form-control"
@@ -180,7 +202,9 @@
                           :class="{ 'is-invalid': errors.start_date }"
                           required
                         />
-                        <div class="invalid-feedback">{{ errors.start_date }}</div>
+                        <div class="invalid-feedback">
+                          {{ errors.start_date }}
+                        </div>
                       </div>
                       <div class="col-md-6">
                         <label class="form-label required">Ngày kết thúc</label>
@@ -191,7 +215,9 @@
                           :class="{ 'is-invalid': errors.end_date }"
                           required
                         />
-                        <div class="invalid-feedback">{{ errors.end_date }}</div>
+                        <div class="invalid-feedback">
+                          {{ errors.end_date }}
+                        </div>
                       </div>
                     </div>
 
@@ -251,7 +277,11 @@
             </div>
 
             <div class="modal-footer">
-              <button type="button" class="btn btn-secondary" @click="$emit('close')">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                @click="$emit('close')"
+              >
                 Hủy
               </button>
               <button type="submit" class="btn btn-primary">
@@ -266,40 +296,40 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from 'vue';
-import axios from 'axios';
+import { ref, onMounted, watch } from "vue";
+import axios from "axios";
 
-const backendUrl = 'http://localhost:3005';
+const backendUrl = "http://localhost:3005";
 
 export default {
-  name: 'PromotionForm',
+  name: "PromotionForm",
   props: {
     showForm: {
       type: Boolean,
-      required: true
+      required: true,
     },
     promotion: {
       type: Object,
-      default: null
-    }
+      default: null,
+    },
   },
-  emits: ['close', 'saved'],
+  emits: ["close", "saved"],
   setup(props, { emit }) {
     const formData = ref({
-      code: '',
-      name: '',
-      description: '',
-      image: '',
-      publish: 'inactive',
-      type: '',
+      code: "",
+      name: "",
+      description: "",
+      image: "",
+      publish: "inactive",
+      type: "",
       discount: 0,
       productId: [],
       voucher_condition: {
         min_order_value: 0,
-        max_discount: 0
+        max_discount: 0,
       },
-      start_date: '',
-      end_date: ''
+      start_date: "",
+      end_date: "",
     });
 
     const errors = ref({});
@@ -307,43 +337,45 @@ export default {
 
     const resetForm = () => {
       formData.value = {
-        code: '',
-        name: '',
-        description: '',
-        image: '',
-        publish: 'inactive',
-        type: '',
+        code: "",
+        name: "",
+        description: "",
+        image: "",
+        publish: "inactive",
+        type: "",
         discount: 0,
         productId: [],
         voucher_condition: {
           min_order_value: 0,
-          max_discount: 0
+          max_discount: 0,
         },
-        start_date: '',
-        end_date: ''
+        start_date: "",
+        end_date: "",
       };
       errors.value = {};
     };
 
     const getProductVariants = (productId) => {
       if (!Array.isArray(products.value)) return [];
-      const product = products.value.find(p => String(p._id) === String(productId));
+      const product = products.value.find(
+        (p) => String(p._id) === String(productId)
+      );
       return product ? product.variants : [];
     };
 
     const getVariantLabel = (variant) => {
-      return `${variant.sku} - ${variant.price.toLocaleString('vi-VN')}đ`;
+      return `${variant.sku} - ${variant.price.toLocaleString("vi-VN")}đ`;
     };
 
     const handleProductChange = (index) => {
       // Reset variantId when product changes
-      formData.value.productId[index].variantId = '';
+      formData.value.productId[index].variantId = "";
     };
 
     const addProduct = () => {
       formData.value.productId.push({
-        productId: '',
-        variantId: ''
+        productId: "",
+        variantId: "",
       });
     };
 
@@ -361,21 +393,32 @@ export default {
           };
           reader.readAsDataURL(file);
         } catch (error) {
-          console.error('Error uploading image:', error);
-          errors.value.image = 'Không thể tải lên hình ảnh';
+          console.error("Error uploading image:", error);
+          errors.value.image = "Không thể tải lên hình ảnh";
         }
       }
     };
 
     const removeImage = () => {
-      formData.value.image = '';
+      formData.value.image = "";
     };
 
     const getImageUrl = (image) => {
-      if (!image) return '';
-      if (image.startsWith('data:image')) return image;
-      if (image.startsWith('images/')) return `${backendUrl}/${image}`;
-      return image;
+      if (!image) return "";
+      if (image.startsWith("data:image")) return image;
+      if (image.startsWith("http")) return image;
+
+      // Debug log to see the actual image path
+      console.log("Original image path:", image);
+
+      // Remove any leading slashes and 'images/' to prevent duplication
+      const cleanPath = image.replace(/^\/?images\//, "");
+      console.log("Cleaned path:", cleanPath);
+
+      const finalUrl = `${backendUrl}/images/${cleanPath}`;
+      console.log("Final URL:", finalUrl);
+
+      return finalUrl;
     };
 
     const validateForm = () => {
@@ -383,38 +426,38 @@ export default {
       let isValid = true;
 
       if (!formData.value.code) {
-        errors.value.code = 'Mã khuyến mãi là bắt buộc';
+        errors.value.code = "Mã khuyến mãi là bắt buộc";
         isValid = false;
       }
 
       if (!formData.value.name) {
-        errors.value.name = 'Tên khuyến mãi là bắt buộc';
+        errors.value.name = "Tên khuyến mãi là bắt buộc";
         isValid = false;
       }
 
       if (!formData.value.type) {
-        errors.value.type = 'Loại khuyến mãi là bắt buộc';
+        errors.value.type = "Loại khuyến mãi là bắt buộc";
         isValid = false;
       }
 
       if (!formData.value.discount) {
-        errors.value.discount = 'Giảm giá là bắt buộc';
+        errors.value.discount = "Giảm giá là bắt buộc";
         isValid = false;
       }
 
-      if (formData.value.type === 'product') {
+      if (formData.value.type === "product") {
         if (formData.value.productId.length === 0) {
-          errors.value.productId = 'Vui lòng chọn ít nhất một sản phẩm';
+          errors.value.productId = "Vui lòng chọn ít nhất một sản phẩm";
           isValid = false;
         } else {
           // Validate each product and variant
           formData.value.productId.forEach((item, index) => {
             if (!item.productId) {
-              errors.value[`product_${index}`] = 'Vui lòng chọn sản phẩm';
+              errors.value[`product_${index}`] = "Vui lòng chọn sản phẩm";
               isValid = false;
             }
             if (!item.variantId) {
-              errors.value[`variant_${index}`] = 'Vui lòng chọn biến thể';
+              errors.value[`variant_${index}`] = "Vui lòng chọn biến thể";
               isValid = false;
             }
           });
@@ -422,12 +465,12 @@ export default {
       }
 
       if (!formData.value.start_date) {
-        errors.value.start_date = 'Ngày bắt đầu là bắt buộc';
+        errors.value.start_date = "Ngày bắt đầu là bắt buộc";
         isValid = false;
       }
 
       if (!formData.value.end_date) {
-        errors.value.end_date = 'Ngày kết thúc là bắt buộc';
+        errors.value.end_date = "Ngày kết thúc là bắt buộc";
         isValid = false;
       }
 
@@ -439,13 +482,20 @@ export default {
 
       try {
         const data = { ...formData.value };
+        // If updating and no new image is selected, keep the old image
+        if (props.promotion && !data.image) {
+          data.image = props.promotion.image;
+        }
         if (props.promotion) {
-          await axios.put(`${backendUrl}/api/promotions/${props.promotion._id}`, data);
+          await axios.put(
+            `${backendUrl}/api/promotions/${props.promotion._id}`,
+            data
+          );
         } else {
           await axios.post(`${backendUrl}/api/promotions`, data);
         }
-        emit('saved');
-        emit('close');
+        emit("saved");
+        emit("close");
         resetForm();
       } catch (error) {
         if (error.response?.data?.message) {
@@ -459,7 +509,7 @@ export default {
         const response = await axios.get(`${backendUrl}/api/products`);
         products.value = response.data.data;
       } catch (error) {
-        console.error('Error fetching products:', error);
+        console.error("Error fetching products:", error);
       }
     };
 
@@ -467,39 +517,45 @@ export default {
       fetchProducts();
     });
 
-    watch([() => props.promotion, products], ([newPromotion, productsVal]) => {
-      if (newPromotion && productsVal.length) {
-        formData.value = {
-          code: newPromotion.code || '',
-          name: newPromotion.name || '',
-          description: newPromotion.description || '',
-          image: newPromotion.image || '',
-          publish: newPromotion.publish || 'inactive',
-          type: newPromotion.type || '',
-          discount: newPromotion.discount || 0,
-          productId: Array.isArray(newPromotion.productId)
-            ? newPromotion.productId.map(item => ({
-                productId: typeof item.productId === 'object'
-                  ? String(item.productId._id)
-                  : String(item.productId),
-                variantId: typeof item.variantId === 'object'
-                  ? String(item.variantId._id)
-                  : String(item.variantId)
-              }))
-            : [],
-          voucher_condition: newPromotion.voucher_condition
-            ? { ...newPromotion.voucher_condition }
-            : { min_order_value: 0, max_discount: 0 },
-          start_date: toDatetimeLocal(newPromotion.start_date),
-          end_date: toDatetimeLocal(newPromotion.end_date)
-        };
-      } else if (!newPromotion) {
-        resetForm();
-      }
-    }, { immediate: true });
+    watch(
+      [() => props.promotion, products],
+      ([newPromotion, productsVal]) => {
+        if (newPromotion && productsVal.length) {
+          formData.value = {
+            code: newPromotion.code || "",
+            name: newPromotion.name || "",
+            description: newPromotion.description || "",
+            image: newPromotion.image || "",
+            publish: newPromotion.publish || "inactive",
+            type: newPromotion.type || "",
+            discount: newPromotion.discount || 0,
+            productId: Array.isArray(newPromotion.productId)
+              ? newPromotion.productId.map((item) => ({
+                  productId:
+                    typeof item.productId === "object"
+                      ? String(item.productId._id)
+                      : String(item.productId),
+                  variantId:
+                    typeof item.variantId === "object"
+                      ? String(item.variantId._id)
+                      : String(item.variantId),
+                }))
+              : [],
+            voucher_condition: newPromotion.voucher_condition
+              ? { ...newPromotion.voucher_condition }
+              : { min_order_value: 0, max_discount: 0 },
+            start_date: toDatetimeLocal(newPromotion.start_date),
+            end_date: toDatetimeLocal(newPromotion.end_date),
+          };
+        } else if (!newPromotion) {
+          resetForm();
+        }
+      },
+      { immediate: true }
+    );
 
     function toDatetimeLocal(dateStr) {
-      if (!dateStr) return '';
+      if (!dateStr) return "";
       const date = new Date(dateStr);
       const offset = date.getTimezoneOffset();
       const local = new Date(date.getTime() - offset * 60000);
@@ -518,9 +574,9 @@ export default {
       handleImageUpload,
       removeImage,
       getImageUrl,
-      handleSubmit
+      handleSubmit,
     };
-  }
+  },
 };
 </script>
 
@@ -545,7 +601,7 @@ export default {
   max-width: 1100px;
   max-height: 92vh;
   overflow-y: auto;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18), 0 1.5px 6px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 1.5px 6px rgba(0, 0, 0, 0.08);
   padding: 0;
 }
 
@@ -588,7 +644,7 @@ export default {
 
 .card {
   border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
   border: none;
   margin-bottom: 18px;
 }
@@ -610,7 +666,8 @@ export default {
   margin-bottom: 4px;
 }
 
-.form-control, .form-select {
+.form-control,
+.form-select {
   border-radius: 6px;
   border: 1px solid #d1d5db;
   font-size: 1rem;
@@ -619,7 +676,8 @@ export default {
   background: #fafbfc;
   transition: border 0.2s;
 }
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
   border-color: #409eff;
   outline: none;
   background: #fff;
@@ -657,7 +715,7 @@ export default {
   font-size: 1.1em;
   padding: 2px 6px;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
 }
 
 .product-item {
@@ -726,7 +784,8 @@ export default {
   .modal-content {
     padding: 0 4px 12px 4px;
   }
-  .modal-header, .modal-footer {
+  .modal-header,
+  .modal-footer {
     padding-left: 6px;
     padding-right: 6px;
   }
@@ -734,4 +793,4 @@ export default {
     padding: 8px 8px;
   }
 }
-</style> 
+</style>

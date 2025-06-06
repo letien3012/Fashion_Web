@@ -229,8 +229,9 @@ Product.prototype.save = async function () {
       }
     }
 
-    // Use save instead of create to trigger pre-save middleware
-    const savedProduct = await this.save();
+    // Create a new product using the model's create method
+    const productData = this.toObject();
+    const savedProduct = await Product.create(productData);
     console.log("Product saved:", savedProduct);
     return savedProduct._id;
   } catch (error) {

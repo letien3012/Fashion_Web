@@ -86,6 +86,7 @@ exports.create = async (req, res) => {
       method: method || "COD",
       note: note || "",
       status: "pending",
+      voucher: req.body.voucher || null,
     });
 
     // Update customer information if provided
@@ -137,6 +138,20 @@ exports.updateStatus = async (req, res) => {
 
     await Order.updateStatusByEmployee(req.params.id, employeeId, status);
     res.status(200).json({ message: "Order status updated successfully" });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Cancel order by customer
+exports.cancelOrder = async (req, res) => {
+  try {
+    const { note } = req.body;
+    const order = await Order.cancelOrder(req.params.id, note);
+    res.status(200).json({
+      message: "Order cancelled successfully",
+      order,
+    });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

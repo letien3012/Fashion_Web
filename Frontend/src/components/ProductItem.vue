@@ -7,8 +7,18 @@
       </div>
       <div class="product-overlay">
         <div class="overlay-buttons">
-          <button class="overlay-btn quick-view-btn">
+          <button
+            class="overlay-btn quick-view-btn"
+            @click.prevent="handleQuickView"
+          >
             <i class="fas fa-eye"></i>
+          </button>
+          <button
+            class="overlay-btn wishlist-btn"
+            @click.prevent="toggleWishlist"
+            :class="{ 'in-wishlist': isInWishlist }"
+          >
+            <i class="fas fa-heart"></i>
           </button>
         </div>
       </div>
@@ -18,14 +28,22 @@
         {{ product.name }}
       </h3>
       <div class="product-meta">
-        <span class="product-rating">
-          <i
-            class="fas fa-star"
-            v-for="n in 5"
-            :key="n"
-            :class="{ active: n <= (product.favorite_count || 0) }"
-          ></i>
-        </span>
+        <div class="product-rating">
+          <div class="stars">
+            <i
+              class="fas fa-star"
+              v-for="n in 5"
+              :key="n"
+              :class="{
+                active: n <= Math.floor(averageRating),
+                half: n === Math.ceil(averageRating) && averageRating % 1 !== 0,
+              }"
+            ></i>
+          </div>
+          <span class="rating-text" v-if="totalReviews > 0">
+            {{ averageRating.toFixed(1) }} ({{ totalReviews }})
+          </span>
+        </div>
         <div class="product-price-container">
           <span
             class="product-price"
@@ -43,6 +61,11 @@
 </template>
 
 <script>
+import { productService } from "../services/product.service";
+import { reviewService } from "../services/review.service";
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
+
 export default {
   name: "ProductItem",
   props: {
@@ -50,6 +73,16 @@ export default {
       type: Object,
       required: true,
     },
+  },
+  data() {
+    return {
+      isInWishlist: false,
+      averageRating: 0,
+      totalReviews: 0,
+    };
+  },
+  async created() {
+    await Promise.all([this.checkWishlistStatus(), this.loadProductReviews()]);
   },
   methods: {
     getProductDetailLink(product) {
@@ -62,6 +95,134 @@ export default {
     handleImageError(e) {
       console.error("Image load error:", e);
       this.product.image = "/images/placeholder.jpg";
+    },
+    async checkWishlistStatus() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.isInWishlist = false;
+          return;
+        }
+        const wishlist = await productService.getWishlist();
+        this.isInWishlist = wishlist.wishlist.some(
+          (item) => item._id === this.product._id
+        );
+      } catch (error) {
+        // Only log error if user is authenticated
+        if (localStorage.getItem("token")) {
+          console.error("Error checking wishlist status:", error);
+        }
+        this.isInWishlist = false;
+      }
+    },
+    async toggleWishlist() {
+      try {
+        // Check if user is logged in by checking if there's a token in localStorage
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.warning(
+            "Vui lòng đăng nhập để thêm sản phẩm vào danh sách yêu thích!",
+            {
+              position: "top-right",
+              autoClose: 2000,
+              hideProgressBar: false,
+              closeOnClick: true,
+              pauseOnHover: true,
+              draggable: true,
+              draggablePercent: 0.6,
+              showCloseButtonOnHover: false,
+              closeButton: "button",
+              icon: true,
+              rtl: false,
+            }
+          );
+          return;
+        }
+
+        if (this.isInWishlist) {
+          await productService.removeFromWishlist(this.product._id);
+          toast.success("Đã xóa khỏi danh sách yêu thích!", {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: false,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+          });
+        } else {
+          await productService.addToWishlist(this.product._id);
+          toast.success("Đã thêm vào danh sách yêu thích!", {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: false,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+          });
+        }
+        this.isInWishlist = !this.isInWishlist;
+      } catch (error) {
+        console.error("Error toggling wishlist:", error);
+        toast.error("Có lỗi xảy ra, vui lòng thử lại!", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          draggablePercent: 0.6,
+          showCloseButtonOnHover: false,
+          closeButton: "button",
+          icon: true,
+          rtl: false,
+        });
+      }
+    },
+    handleQuickView() {
+      this.$emit("quick-view", this.product);
+    },
+    async loadProductReviews() {
+      try {
+        const response = await reviewService.getReviewsByProduct(
+          this.product._id
+        );
+        console.log("Reviews response:", response);
+
+        if (response && response.success && response.data) {
+          const { reviews } = response.data;
+
+          if (reviews && reviews.length > 0) {
+            // Tính tổng số sao từ các đánh giá
+            const totalStars = reviews.reduce(
+              (sum, review) => sum + review.star,
+              0
+            );
+            // Tính điểm trung bình
+            this.averageRating = totalStars / reviews.length;
+            // Lưu số lượng đánh giá
+            this.totalReviews = reviews.length;
+
+            console.log("Rating calculation:", {
+              totalStars,
+              averageRating: this.averageRating,
+              totalReviews: this.totalReviews,
+              reviews,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error loading product reviews:", error);
+      }
     },
   },
 };
@@ -240,22 +401,45 @@ export default {
 }
 
 .product-rating {
-  color: #ffd700;
-  font-size: 0.9rem;
-  text-align: left;
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.stars {
+  display: flex;
+  align-items: center;
   gap: 2px;
-  flex-shrink: 0;
 }
 
-.product-rating i {
-  margin-right: 2px;
+.stars i {
+  color: #ddd;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
 }
 
-.product-rating i.active {
+.stars i.active {
   color: #ffd700;
+}
+
+.stars i.half {
+  position: relative;
+  color: #ddd;
+}
+
+.stars i.half::before {
+  content: "\f089";
+  position: absolute;
+  left: 0;
+  color: #ffd700;
+  width: 50%;
+  overflow: hidden;
+}
+
+.rating-text {
+  color: #666;
+  font-size: 0.85rem;
 }
 
 @media (max-width: 576px) {
@@ -272,5 +456,25 @@ export default {
   .product-rating {
     font-size: 0.8rem;
   }
+}
+
+.wishlist-btn {
+  background: white;
+  color: #333;
+}
+
+.wishlist-btn.in-wishlist {
+  background: #ff6b6b;
+  color: white;
+}
+
+.wishlist-btn:hover {
+  background: #ff6b6b;
+  color: white;
+  transform: scale(1.1);
+}
+
+.wishlist-btn.in-wishlist:hover {
+  background: #ff4757;
 }
 </style>

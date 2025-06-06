@@ -61,6 +61,7 @@ import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import authService from "../services/auth.service";
 import { orderService } from "../services/order.service";
+import { productService } from "../services/product.service";
 
 const router = useRouter();
 
@@ -184,6 +185,29 @@ const fetchOrderCount = async () => {
   }
 };
 
+const fetchWishlistCount = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      console.log("No token found for wishlist count");
+      router.push("/login");
+      return;
+    }
+
+    const response = await productService.getWishlist();
+    wishlistCount.value = response.wishlist.length;
+  } catch (error) {
+    console.error("Error fetching wishlist count:", error);
+    if (error.response?.status === 401) {
+      console.log("Token expired or invalid for wishlist");
+      localStorage.removeItem("user");
+      localStorage.removeItem("token");
+      router.push("/login");
+      toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+    }
+  }
+};
+
 const handleimageClick = () => {
   imageInput.value.click();
 };
@@ -252,7 +276,11 @@ onMounted(async () => {
   if (initCustomerData()) {
     loading.value = true;
     try {
-      await Promise.all([fetchCustomerProfile(), fetchOrderCount()]);
+      await Promise.all([
+        fetchCustomerProfile(),
+        fetchOrderCount(),
+        fetchWishlistCount(),
+      ]);
     } catch (error) {
       console.error("Error loading data:", error);
     } finally {

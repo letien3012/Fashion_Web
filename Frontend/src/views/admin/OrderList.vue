@@ -366,7 +366,15 @@ export default {
     },
     async handleUpdateStatus({ orderId, newStatus }) {
       try {
-        const userInfo = JSON.parse(localStorage.getItem("userInfo") || "{}");
+        const userInfo = JSON.parse(localStorage.getItem("employee") || "{}");
+        if (!userInfo._id) {
+          toast.error(
+            "Không tìm thấy thông tin nhân viên. Vui lòng đăng nhập lại!"
+          );
+          this.$router.push("/admin/login");
+          return;
+        }
+
         console.log("Updating order status:", {
           orderId,
           newStatus,
@@ -393,7 +401,9 @@ export default {
       } catch (error) {
         console.error("Lỗi khi cập nhật trạng thái đơn hàng:", error);
         const errorMessage =
-          error.message || "Không thể cập nhật trạng thái đơn hàng.";
+          error.response?.data?.message ||
+          error.message ||
+          "Không thể cập nhật trạng thái đơn hàng.";
         toast.error(errorMessage);
       }
     },

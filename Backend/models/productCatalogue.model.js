@@ -19,6 +19,12 @@ const productCatalogueSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: "ProductCatalogue",
     default: null,
+    set: function (v) {
+      return v === "" || v === null || v === undefined ? null : v;
+    },
+    get: function (v) {
+      return v === "" ? null : v;
+    },
   },
   createdAt: {
     type: Date,
@@ -34,8 +40,9 @@ const productCatalogueSchema = new mongoose.Schema({
   },
 });
 
-// Pre-save middleware to handle icon
+// Pre-save middleware to handle icon and parentId
 productCatalogueSchema.pre("save", async function (next) {
+  // Handle icon
   if (
     this.isModified("icon") &&
     this.icon &&
@@ -45,6 +52,15 @@ productCatalogueSchema.pre("save", async function (next) {
     const iconPath = await ImageModel.saveImage(this.icon, "icon");
     this.icon = iconPath;
   }
+
+  // Ensure parentId is null if empty
+  if (this.isModified("parentId")) {
+    this.parentId =
+      this.parentId === "" || this.parentId === undefined
+        ? null
+        : this.parentId;
+  }
+
   next();
 });
 

@@ -1,6 +1,8 @@
 const Product = require("../models/product.model");
 const ProductCatalogue = require("../models/productCatalogue.model");
 const ImageModel = require("../models/image.model");
+const fs = require("fs");
+const path = require("path");
 
 // Thêm sản phẩm mới
 exports.add = async (req, res) => {
@@ -15,7 +17,6 @@ exports.add = async (req, res) => {
       catalogueId,
       variants,
     } = req.body;
-    console.log(catalogueId);
 
     // Kiểm tra các trường bắt buộc
     if (!code || !name || !catalogueId) {
@@ -112,7 +113,6 @@ exports.update = async (req, res) => {
       catalogueId,
       variants,
     } = req.body;
-
     // Kiểm tra các trường bắt buộc
     if (!code || !name || !catalogueId) {
       return res.status(400).json({
@@ -146,9 +146,98 @@ exports.update = async (req, res) => {
       }
     }
 
-    await Product.update(req.params.id, req.body);
+    // Lấy thông tin sản phẩm cũ
+    const oldProduct = await Product.getById(req.params.id);
+    if (!oldProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Xử lý ảnh chính
+    let imagePath = oldProduct.image;
+    if (image && image.startsWith("data:image")) {
+      try {
+        imagePath = await ImageModel.saveImage(image, "product");
+      } catch (error) {
+        console.error("Error handling main image:", error);
+        return res.status(500).json({ message: "Error processing main image" });
+      }
+    }
+
+    // Xử lý album ảnh
+    let albumPaths = oldProduct.album || [];
+    if (album && album.length > 0) {
+      try {
+        // Tách ảnh mới và ảnh cũ
+        const newImages = album.filter((img) => img.startsWith("data:image"));
+        const existingImages = album.filter(
+          (img) => !img.startsWith("data:image")
+        );
+
+        // Lưu các ảnh mới
+        if (newImages.length > 0) {
+          const newPaths = await ImageModel.saveMultipleImages(
+            newImages,
+            "product"
+          );
+          albumPaths = [...existingImages, ...newPaths];
+        } else {
+          // Nếu không có ảnh mới, giữ nguyên album cũ
+          albumPaths = oldProduct.album || [];
+        }
+      } catch (error) {
+        console.error("Error handling album images:", error);
+        return res
+          .status(500)
+          .json({ message: "Error processing album images" });
+      }
+    } else {
+      // Nếu không có album mới, giữ nguyên album cũ
+      albumPaths = oldProduct.album || [];
+    }
+
+    // Xử lý ảnh variant
+    if (variants && variants.length > 0) {
+      const oldVariants = oldProduct.variants || [];
+
+      for (let i = 0; i < variants.length; i++) {
+        const variant = variants[i];
+        const oldVariant = oldVariants[i];
+
+        // Nếu có ảnh mới (base64)
+        if (variant.image && variant.image.startsWith("data:image")) {
+          try {
+            // Lưu ảnh mới vào thư mục images/product/
+            const savedImagePath = await ImageModel.saveImage(
+              variant.image,
+              "product"
+            );
+            // Cập nhật đường dẫn ảnh trong variant
+            variant.image = savedImagePath;
+          } catch (error) {
+            console.error("Error handling variant image:", error);
+            return res
+              .status(500)
+              .json({ message: "Error processing variant images" });
+          }
+        } else if (variant.image && !variant.image.startsWith("data:image")) {
+        } else {
+          // Nếu không có ảnh - giữ ảnh cũ hoặc null
+          variant.image = oldVariant?.image || null;
+        }
+      }
+    }
+
+    // Cập nhật thông tin sản phẩm
+    const updateData = {
+      ...req.body,
+      image: imagePath,
+      album: albumPaths,
+      variants: variants,
+    };
+    await Product.update(req.params.id, updateData);
     res.status(200).json({ message: "Product updated successfully" });
   } catch (error) {
+    console.error("Error updating product:", error);
     res.status(400).json({ message: error.message });
   }
 };
@@ -332,7 +421,6 @@ exports.findVariantIndex = async (req, res) => {
 exports.getVariantPrice = async (req, res) => {
   try {
     const { productId, variantId } = req.params;
-    console.log("getVariantPrice called with:", productId, variantId);
     const result = await Product.getVariantPrice(productId, variantId);
     res.json(result);
   } catch (error) {

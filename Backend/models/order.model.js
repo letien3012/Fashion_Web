@@ -107,6 +107,11 @@ const orderSchema = new mongoose.Schema({
     type: Date,
     default: null,
   },
+  voucher: {
+    code: { type: String },
+    discount: { type: Number },
+    max_discount: { type: Number },
+  },
 });
 
 // Static method to get order by ID
@@ -256,6 +261,49 @@ orderSchema.statics.getOrdersByCustomer = async function (customerId) {
     throw new Error(
       `Lỗi khi lấy danh sách đơn hàng của khách hàng: ${error.message}`
     );
+  }
+};
+
+// Static method to cancel order and update inventory
+orderSchema.statics.cancelOrder = async function (orderId, note) {
+  try {
+    const order = await this.findById(orderId);
+    if (!order) {
+      throw new Error("Không tìm thấy đơn hàng");
+    }
+
+    if (order.status !== "pending") {
+      throw new Error("Chỉ có thể hủy đơn hàng ở trạng thái chờ xử lý");
+    }
+
+    // Update consignments for each order item
+    for (const item of order.order_detail) {
+      for (const variant of item.variants) {
+        for (const consignment of variant.consignments) {
+          // Increase quantity in consignment
+          await mongoose
+            .model("Consignment")
+            .findByIdAndUpdate(consignment.consignmentId, {
+              $inc: { current_quantity: consignment.quantity },
+            });
+        }
+      }
+    }
+
+    // Update order status and note
+    const updatedOrder = await this.findByIdAndUpdate(
+      orderId,
+      {
+        status: "cancelled",
+        note: note || "Đơn hàng bị hủy bởi khách hàng",
+        updatedAt: new Date(),
+      },
+      { new: true }
+    );
+
+    return updatedOrder;
+  } catch (error) {
+    throw new Error(`Lỗi khi hủy đơn hàng: ${error.message}`);
   }
 };
 

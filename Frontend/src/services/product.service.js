@@ -266,6 +266,47 @@ const productService = {
       throw error;
     }
   },
+
+  // Wishlist methods
+  async addToWishlist(productId) {
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/customers/wishlist`,
+        { productId },
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error adding to wishlist:", error);
+      throw error;
+    }
+  },
+
+  async removeFromWishlist(productId) {
+    try {
+      const response = await axios.delete(
+        `${backendUrl}/api/customers/wishlist/${productId}`,
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error removing from wishlist:", error);
+      throw error;
+    }
+  },
+
+  async getWishlist() {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/customers/wishlist`,
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error getting wishlist:", error);
+      throw error;
+    }
+  },
 };
 
 export const getVariantPrice = async (productId, variantId) => {
