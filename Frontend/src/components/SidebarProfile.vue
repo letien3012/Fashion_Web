@@ -2,7 +2,11 @@
   <div class="sidebar-profile">
     <div class="profile-header">
       <div class="image-container">
-        <img :src="customer?.image" alt="User image" class="image" />
+        <img
+          :src="getimageUrl(customer?.image)"
+          alt="User image"
+          class="image"
+        />
         <div class="edit-image" @click="handleimageClick">
           <i class="fas fa-camera"></i>
           <input
@@ -62,6 +66,7 @@ import { toast } from "vue3-toastify";
 import authService from "../services/auth.service";
 import { orderService } from "../services/order.service";
 import { productService } from "../services/product.service";
+import { customerService } from "../services/customer.service";
 
 const router = useRouter();
 
@@ -112,13 +117,9 @@ const fetchCustomerProfile = async () => {
     const token = localStorage.getItem("token");
 
     if (!userData || !token) {
-      console.log("No user data or token found");
       router.push("/login");
       return;
     }
-
-    console.log("Fetching profile with token:", token);
-    console.log("User data:", userData);
 
     const response = await axios.get(
       "http://localhost:3005/api/customers/profile",
@@ -129,8 +130,6 @@ const fetchCustomerProfile = async () => {
         },
       }
     );
-
-    console.log("Profile response:", response.data);
 
     if (response.data) {
       customer.value = {
@@ -149,7 +148,6 @@ const fetchCustomerProfile = async () => {
   } catch (error) {
     console.error("Error fetching customer profile:", error);
     if (error.response?.status === 401) {
-      console.log("Token expired or invalid");
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       router.push("/login");
@@ -164,19 +162,14 @@ const fetchOrderCount = async () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
-      console.log("No token found for order count");
       router.push("/login");
       return;
     }
-
-    console.log("Fetching orders with token:", token);
     const orders = await orderService.getCustomerOrders();
-    console.log("Orders response:", orders);
     orderCount.value = orders.length;
   } catch (error) {
     console.error("Error fetching order count:", error);
     if (error.response?.status === 401) {
-      console.log("Token expired or invalid for orders");
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       router.push("/login");
@@ -189,7 +182,6 @@ const fetchWishlistCount = async () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
-      console.log("No token found for wishlist count");
       router.push("/login");
       return;
     }
@@ -199,7 +191,6 @@ const fetchWishlistCount = async () => {
   } catch (error) {
     console.error("Error fetching wishlist count:", error);
     if (error.response?.status === 401) {
-      console.log("Token expired or invalid for wishlist");
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       router.push("/login");
@@ -216,39 +207,25 @@ const handleimageChange = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
 
-  const formData = new FormData();
-  formData.append("image", file);
-
   try {
     const userData = JSON.parse(localStorage.getItem("user"));
     const token = localStorage.getItem("token");
 
     if (!userData || !token) {
-      console.log("No user data or token found for image upload");
       router.push("/login");
       return;
     }
 
-    console.log("Uploading image with token:", token);
-    const response = await axios.post(
-      "http://localhost:3005/api/customers/upload-image",
-      formData,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+    const response = await customerService.uploadProfileImage(file);
 
-    if (response.data) {
-      customer.value.image = response.data.image;
+    if (response) {
+      customer.value.image = response.image;
       // Cập nhật lại localStorage với image mới
       localStorage.setItem(
         "user",
         JSON.stringify({
           ...userData,
-          image: response.data.image,
+          image: response.image,
         })
       );
       toast.success("Cập nhật ảnh đại diện thành công!");
@@ -256,7 +233,6 @@ const handleimageChange = async (event) => {
   } catch (error) {
     console.error("Error uploading image:", error);
     if (error.response?.status === 401) {
-      console.log("Token expired or invalid for image upload");
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       router.push("/login");
@@ -269,7 +245,18 @@ const handleimageChange = async (event) => {
 
 const getimageUrl = (image) => {
   if (!image) return "/default-image.png";
-  return image; // Google image URL is already complete
+
+  // Nếu là URL từ internet
+  if (image.startsWith("http")) {
+    return image;
+  }
+
+  // Nếu là ảnh local từ thư mục images
+  if (image.startsWith("/images/")) {
+    return `http://localhost:3005${image}`;
+  }
+
+  return "/default-image.png";
 };
 
 onMounted(async () => {

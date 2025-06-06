@@ -15,6 +15,7 @@ router.put("/profile", auth, customerController.updateProfile);
 router.delete("/profile", auth, customerController.deleteAccount);
 router.put("/change-password", auth, customerController.changePassword);
 router.get("/orders", auth, customerController.getCustomerOrders);
+router.post("/upload-image", auth, customerController.uploadProfileImage);
 
 // Wishlist routes
 router.post("/wishlist", auth, customerController.addToWishlist);

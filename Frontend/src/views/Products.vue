@@ -229,7 +229,7 @@ export default {
       error: null,
       viewMode: "grid",
       currentPage: 1,
-      itemsPerPage: 12,
+      itemsPerPage: 20,
       sortBy: "newest",
       selectedCategories: [],
       selectedAttributes: [],
@@ -1067,10 +1067,16 @@ export default {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  padding: 15px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .results-count {
   color: #666;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .view-options {
@@ -1080,10 +1086,24 @@ export default {
 }
 
 .sort-select {
-  padding: 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  padding: 8px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
   outline: none;
+  font-size: 14px;
+  color: #333;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.sort-select:hover {
+  border-color: #ff6b6b;
+}
+
+.sort-select:focus {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 2px rgba(255, 107, 107, 0.1);
 }
 
 .view-toggle {
@@ -1092,17 +1112,28 @@ export default {
 }
 
 .view-btn {
-  padding: 8px;
-  background: none;
-  border: 1px solid #ddd;
+  width: 35px;
+  height: 35px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
+  color: #666;
+}
+
+.view-btn:hover {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
 }
 
 .view-btn.active {
-  background: #e63946;
+  background: #ff6b6b;
   color: white;
-  border-color: #e63946;
+  border-color: #ff6b6b;
 }
 
 /* Products Grid/List */
@@ -1278,33 +1309,51 @@ export default {
 .pagination {
   display: flex;
   justify-content: center;
-  gap: 5px;
+  align-items: center;
+  gap: 8px;
   margin-top: 30px;
+  padding: 20px 0;
 }
 
 .page-btn {
-  width: 35px;
-  height: 35px;
+  min-width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #ddd;
-  background: white;
-  border-radius: 4px;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
   cursor: pointer;
   transition: all 0.3s ease;
+  padding: 0 12px;
 }
 
-.page-btn:disabled {
-  background: #f8f9fa;
-  cursor: not-allowed;
-  color: #999;
+.page-btn:hover:not(:disabled) {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.1);
 }
 
 .page-btn.active {
-  background: #e63946;
+  background: #ff6b6b;
   color: white;
-  border-color: #e63946;
+  border-color: #ff6b6b;
+  font-weight: 500;
+}
+
+.page-btn:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #e0e0e0;
+}
+
+.page-btn i {
+  font-size: 12px;
 }
 
 /* Responsive Design */
@@ -1332,14 +1381,7 @@ export default {
   .products-header {
     flex-direction: column;
     gap: 15px;
-  }
-
-  .products-grid.list .product-card {
-    grid-template-columns: 1fr;
-  }
-
-  .products-grid.list .product-image {
-    height: 250px;
+    padding: 12px;
   }
 
   .view-options {
@@ -1376,6 +1418,19 @@ export default {
   .subcategory-item label {
     font-size: 12px;
     padding: 6px 10px;
+  }
+
+  .pagination {
+    gap: 5px;
+    margin-top: 20px;
+    padding: 15px 0;
+  }
+
+  .page-btn {
+    min-width: 35px;
+    height: 35px;
+    font-size: 13px;
+    padding: 0 8px;
   }
 }
 
@@ -1429,21 +1484,25 @@ export default {
 
   .sort-select {
     font-size: 13px;
-    padding: 6px;
+    padding: 6px 10px;
   }
 
   .view-btn {
-    padding: 6px;
+    width: 30px;
+    height: 30px;
   }
 
   .pagination {
     gap: 3px;
+    margin-top: 15px;
+    padding: 10px 0;
   }
 
   .page-btn {
-    width: 30px;
+    min-width: 30px;
     height: 30px;
-    font-size: 13px;
+    font-size: 12px;
+    padding: 0 6px;
   }
 
   .slider-range input[type="range"]::-webkit-slider-thumb {
