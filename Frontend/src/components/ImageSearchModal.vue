@@ -27,44 +27,92 @@
             style="display: none"
           />
         </div>
-        <div
-          class="relative mt-4 image-container"
-          v-if="imageUrl"
-          style="position: relative"
-          ref="imageContainerRef"
-        >
-          <img
-            :src="imageUrl"
-            ref="imgRef"
-            @load="onImageLoad"
-            alt="uploaded image"
-            class="resized-image"
-          />
+        <div v-if="imageUrl" class="main-content">
           <div
-            v-if="!selectedBox"
-            class="highlight-mask"
-            :style="highlightMaskStyle"
-          ></div>
-          <div v-for="(box, i) in boxes" :key="i">
+            class="relative mt-4 image-container"
+            style="position: relative"
+            ref="imageContainerRef"
+          >
+            <img
+              :src="imageUrl"
+              ref="imgRef"
+              @load="onImageLoad"
+              alt="uploaded image"
+              class="resized-image"
+            />
             <div
-              class="dot"
-              :style="dotStyle(box)"
-              @click="onDotClick(box, i)"
+              v-if="!selectedBox"
+              class="highlight-mask"
+              :style="highlightMaskStyle"
             ></div>
-            <div
-              v-if="selectedBoxIndex === i"
-              class="highlight-box"
-              :style="boxStyle(box)"
-            ></div>
+            <div v-for="(box, i) in boxes" :key="i">
+              <div
+                class="dot"
+                :style="dotStyle(box)"
+                @click="onDotClick(box, i)"
+              ></div>
+              <div
+                v-if="selectedBoxIndex === i"
+                class="highlight-box"
+                :style="boxStyle(box)"
+              ></div>
+            </div>
+          </div>
+          <div v-if="showResults" class="search-results-section">
+            <h3 class="results-title">Sản phẩm tương tự</h3>
+            <div v-if="searchResults.length > 0" class="results-grid">
+              <div v-for="(result, idx) in searchResults" :key="idx" class="result-item">
+                <div class="result-image-wrapper">
+                  <div v-if="!result.loaded && !result.error" class="image-loading">
+                    <div class="loading-spinner"></div>
+                  </div>
+                  <img 
+                    v-show="!result.error"
+                    :src="result.displayUrl" 
+                    :alt="'Kết quả ' + (idx + 1)" 
+                    class="result-image"
+                    @error="handleImageError($event, result, idx)"
+                    @load="handleImageLoad($event, result, idx)"
+                  />
+                  <div v-if="result.error" class="image-error-state">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span>Không thể tải ảnh</span>
+                  </div>
+                  <div class="result-rank">{{ idx + 1 }}</div>
+                  <button 
+                    v-if="result.loaded && !result.error"
+                    @click="openOriginalImage(result.originalUrl)"
+                    class="view-original-button"
+                    title="Xem ảnh gốc"
+                  >
+                    <i class="fas fa-external-link-alt"></i>
+                  </button>
+                </div>
+                <div class="result-info">
+                  <div class="similarity-badge">
+                    <span class="similarity">{{ result.similarityPercentage }}</span>
+                  </div>
+                  <div class="result-details">
+                    <button 
+                      v-if="!result.error"
+                      @click="openOriginalImage(result.originalUrl)"
+                      class="image-link-button"
+                    >
+                      {{ result.displayUrl.split('/').pop() }}
+                    </button>
+                    <span v-else class="error-filename">{{ result.displayUrl.split('/').pop() }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div v-else class="no-results">
+              <p>Không tìm thấy sản phẩm tương tự</p>
+            </div>
           </div>
         </div>
-        <div class="mt-4 cropped-result" v-if="croppedImage">
-          <h3 class="cropped-title">Kết quả cắt vật thể</h3>
-          <img
-            :src="'data:image/jpeg;base64,' + croppedImage"
-            class="border rounded shadow cropped-img"
-          />
-          <button class="search-similar-btn">Tìm kiếm sản phẩm tương tự</button>
+        <div v-if="isSearching" class="searching-overlay">
+          <div class="searching-spinner"></div>
+          <span>Đang tìm kiếm sản phẩm tương tự...</span>
         </div>
       </div>
     </div>
@@ -89,6 +137,9 @@ const boxes = ref([]);
 const imageUrl = ref(null);
 const imagePath = ref("");
 const croppedImage = ref(null);
+const searchResults = ref([]);
+const isSearching = ref(false);
+const showResults = ref(false);
 const imgRef = ref(null);
 const scaleX = ref(1);
 const scaleY = ref(1);
@@ -97,8 +148,21 @@ const offsetY = ref(0);
 const selectedBoxIndex = ref(null);
 const imageContainerRef = ref(null);
 
-const onClose = () => {
+const onClose = async () => {
   emit("close");
+  if (imagePath.value) {
+    try {
+      await axios.post("/api/imageService/delete", { imagePath: imagePath.value });
+    } catch (err) {
+      console.error("Không thể xóa file ảnh trên server:", err);
+    }
+  }
+  imageUrl.value = null;
+  boxes.value = [];
+  imagePath.value = "";
+  selectedBoxIndex.value = null;
+  searchResults.value = [];
+  showResults.value = false;
 };
 
 const onOverlayClick = (event) => {
@@ -129,7 +193,7 @@ const onFileChange = async (e) => {
 
   try {
     const res = await axios.post(
-      "http://localhost:3005/api/imageService/detect",
+      "/api/imageService/detect",
       formData,
       {
         headers: { "Content-Type": "multipart/form-data" },
@@ -171,28 +235,44 @@ const onImageLoad = () => {
   }
 };
 
-const boxStyle = (box) => {
+const getImageFitContainInfo = () => {
   const img = imgRef.value;
-  if (!img || !img.naturalWidth || !img.naturalHeight) return {};
+  const container = imageContainerRef.value;
+  if (!img || !container) return null;
+  const containerW = container.clientWidth;
+  const containerH = container.clientHeight;
+  const imgW = img.naturalWidth;
+  const imgH = img.naturalHeight;
+  const scale = Math.min(containerW / imgW, containerH / imgH);
+  const displayW = imgW * scale;
+  const displayH = imgH * scale;
+  const offsetLeft = (containerW - displayW) / 2;
+  const offsetTop = (containerH - displayH) / 2;
+  return { scale, displayW, displayH, offsetLeft, offsetTop };
+};
+
+const boxStyle = (box) => {
+  const info = getImageFitContainInfo();
+  if (!info) return {};
   return {
     position: "absolute",
-    left: `${box.x * scaleX.value + offsetX.value}px`,
-    top: `${box.y * scaleY.value + offsetY.value}px`,
-    width: `${box.width * scaleX.value}px`,
-    height: `${box.height * scaleY.value}px`,
-    border: "2px solid white",
-    boxShadow: "0 0 0 2px rgba(255,255,255,0.5)",
-    zIndex: 11,
+    left: `${box.x * info.scale + info.offsetLeft}px`,
+    top: `${box.y * info.scale + info.offsetTop}px`,
+    width: `${box.width * info.scale}px`,
+    height: `${box.height * info.scale}px`,
+    outline: "2.5px solid #fff",
     boxSizing: "border-box",
+    zIndex: 11,
+    pointerEvents: "none"
   };
 };
 
 const dotStyle = (box) => {
-  const img = imgRef.value;
-  if (!img) return {};
-  const cx = (box.x + box.width / 2) * scaleX.value + offsetX.value;
-  const cy = (box.y + box.height / 2) * scaleY.value + offsetY.value;
-  const size = 12;
+  const info = getImageFitContainInfo();
+  if (!info) return {};
+  const cx = (box.x + box.width / 2) * info.scale + info.offsetLeft;
+  const cy = (box.y + box.height / 2) * info.scale + info.offsetTop;
+  const size = 6;
   return {
     position: "absolute",
     left: `${cx - size / 2}px`,
@@ -201,17 +281,24 @@ const dotStyle = (box) => {
     height: `${size}px`,
     borderRadius: "50%",
     backgroundColor: "#fff",
-    border: "2px solid #000",
+    border: "none",
     zIndex: 20,
     pointerEvents: "auto",
     cursor: "pointer",
+    boxShadow: "0 0 0 4px #4ea1ff55, 0 2px 8px rgba(0,0,0,0.10)",
+    transition: "box-shadow 0.2s, transform 0.15s"
   };
 };
 
 const onDotClick = async (box, index) => {
   selectedBoxIndex.value = index;
+  isSearching.value = true;
+  searchResults.value = [];
+  showResults.value = false;
+  
   try {
-    const payload = {
+    // Step 1: Crop the image
+    const cropPayload = {
       x: Math.round(box.x),
       y: Math.round(box.y),
       width: Math.round(box.width),
@@ -219,20 +306,128 @@ const onDotClick = async (box, index) => {
       imagePath: imagePath.value,
     };
 
-    const res = await axios.post(
-      "http://localhost:3005/api/imageService/crop",
-      payload
+    const cropRes = await axios.post(
+      "/api/imageService/crop",
+      cropPayload
     );
-    croppedImage.value = res.data.image_base64;
+    croppedImage.value = cropRes.data.image_base64;
+
+    // Step 2: Convert base64 to file for upload
+    const base64Data = cropRes.data.image_base64.replace(/^data:image\/\w+;base64,/, '');
+    const blob = await fetch(`data:image/jpeg;base64,${base64Data}`).then(res => res.blob());
+    const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
+
+    // Step 3: Create form data for upload
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('limit', '10'); // Get top 10 similar images
+
+    // Step 4: Find similar images without saving features
+    const searchRes = await axios.post(
+      "/api/imageService/find-similar",
+      formData,
+      {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      }
+    );
+    
+    // Transform results to include both display and original URLs
+    searchResults.value = searchRes.data.similarImages.map(img => {
+      const filename = img.imagePath.split(/[\\/]/).pop();
+      const displayUrl = `/uploads/${filename}`;
+      const originalUrl = `http://localhost:3005/uploads/${filename}`;
+
+      const imgPreload = new Image();
+      imgPreload.src = displayUrl;
+
+      return {
+        displayUrl,
+        originalUrl,
+        similarity: img.similarity,
+        similarityPercentage: img.similarityPercentage,
+        originalPath: img.imagePath,
+        loaded: false,
+        error: false
+      };
+    });
+
+    // Show results in the same modal
+    showResults.value = true;
   } catch (err) {
     console.error("Error in onDotClick:", err);
-    alert("Không thể cắt ảnh. Hãy thử lại.");
+    alert("Không thể xử lý ảnh hoặc tìm kiếm. Hãy thử lại.");
+  } finally {
+    isSearching.value = false;
   }
 };
 
 const onDrop = (e) => {
   const file = e.dataTransfer.files[0];
   if (file) onFileChange({ target: { files: [file] } });
+};
+
+const handleImageLoad = (event, result, index) => {
+  result.loaded = true;
+  result.error = false;
+  event.target.classList.add('image-loaded');
+};
+
+const handleImageError = (event, result, index) => {
+  result.loaded = false;
+  result.error = true;
+  console.error("Image load error:", {
+    url: result.displayUrl,
+    originalPath: result.originalPath
+  });
+  event.target.classList.add('image-error');
+};
+
+// Update the openOriginalImage method
+const openOriginalImage = (url) => {
+  console.log('Opening original image:', url);
+  
+  // Create a temporary link element
+  const link = document.createElement('a');
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  
+  // Add a click event listener to handle the response
+  link.onclick = (e) => {
+    e.preventDefault();
+    
+    // Try to fetch the image first to check if it's accessible
+    fetch(url)
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        // Get content type from response
+        const contentType = response.headers.get('content-type');
+        console.log('Image content type:', contentType);
+        return response.blob();
+      })
+      .then(blob => {
+        // Create object URL from the blob with the correct type
+        const objectUrl = URL.createObjectURL(blob);
+        
+        // Open in new tab
+        const newWindow = window.open(objectUrl, '_blank');
+        if (!newWindow) {
+          // If popup blocked, try to open in same window
+          window.location.href = objectUrl;
+        }
+        
+        // Clean up the object URL after a delay
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      })
+      .catch(error => {
+        console.error('Error fetching image:', error);
+        // Fallback: try to open the original URL directly
+        window.open(url, '_blank');
+      });
+  };
+  
+  // Trigger the click
+  link.click();
 };
 </script>
 
@@ -301,8 +496,16 @@ const onDrop = (e) => {
 .modal-body {
   background: #f8f9fa;
   border-radius: 10px;
-  padding: 24px 12px 18px 12px;
-  min-height: 320px;
+  padding: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.main-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
 }
 
 .drop-area {
@@ -342,26 +545,26 @@ const onDrop = (e) => {
 
 .image-container {
   width: 100%;
-  aspect-ratio: var(--img-aspect, 1/1);
-  overflow: hidden;
-  position: relative;
+  height: 400px; /* Fixed height for image container */
   background: #fff;
   border-radius: 12px;
-  margin-top: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-  border: 1.5px solid #e0e0e0;
-  padding: 16px 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+  border: 8px solid #fff;
+  position: relative;
+  overflow: hidden;
 }
 
 .resized-image {
   width: 100%;
   height: 100%;
+  max-width: 100%;
+  max-height: 100%;
   object-fit: contain;
-  border-radius: 8px;
-  background: #f8f9fa;
+  border-radius: 0;
+  background: #fff;
+  display: block;
+  margin: 0 auto;
+  box-shadow: none;
 }
 
 .highlight-mask {
@@ -386,8 +589,8 @@ const onDrop = (e) => {
   transition: transform 0.2s;
 }
 .dot:hover {
-  transform: scale(1.2);
-  box-shadow: 0 0 0 4px #4ea1ff44;
+  transform: scale(1.3);
+  box-shadow: 0 0 0 8px #4ea1ff99, 0 2px 12px rgba(0,0,0,0.18);
 }
 
 .mt-4 {
@@ -464,5 +667,295 @@ const onDrop = (e) => {
 .search-similar-btn:hover {
   background: linear-gradient(90deg, #ff0000 0%, #ff7e5f 100%);
   transform: translateY(-2px) scale(1.04);
+}
+
+.search-results-section {
+  width: 100%;
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+}
+
+.results-title {
+  color: #ff0000;
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin-bottom: 20px;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.result-item {
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  transition: transform 0.2s, box-shadow 0.2s;
+  width: 100%;
+  aspect-ratio: 1;
+}
+
+.result-item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+}
+
+.result-image-wrapper {
+  position: relative;
+  width: 100%;
+  padding-top: 100%;
+  background: #f8f9fa;
+}
+
+.result-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: opacity 0.3s ease;
+}
+
+.result-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 255, 255, 0.95);
+  padding: 12px;
+  border-top: 1px solid #eee;
+}
+
+.similarity-badge {
+  display: inline-block;
+  background: linear-gradient(90deg, #ff7e5f 0%, #ff0000 100%);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: 6px;
+}
+
+.result-details {
+  font-size: 0.75rem;
+  color: #666;
+  word-break: break-all;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.image-link-button {
+  background: none;
+  border: none;
+  color: #666;
+  text-decoration: none;
+  font-family: monospace;
+  font-size: 0.7rem;
+  width: 100%;
+  text-align: left;
+  padding: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.view-original-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #666;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  padding: 0;
+  z-index: 2;
+}
+
+.result-rank {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  background: rgba(255, 0, 0, 0.9);
+  color: white;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 0.8rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  z-index: 2;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .results-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+  }
+}
+
+@media (max-width: 992px) {
+  .results-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+  
+  .image-container {
+    height: 350px;
+  }
+}
+
+@media (max-width: 576px) {
+  .results-grid {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .image-container {
+    height: 300px;
+  }
+}
+
+.searching-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255,255,255,0.95);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  backdrop-filter: blur(4px);
+}
+
+.searching-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #ff0000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.result-image.image-error {
+  opacity: 0.5;
+  background-color: #f8f9fa;
+}
+
+.result-image.image-loaded {
+  opacity: 1;
+}
+
+.image-error::after {
+  content: '⚠️';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  color: #ff0000;
+}
+
+.image-error-message {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(255, 0, 0, 0.1);
+  color: #ff0000;
+  padding: 8px;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.error-filename {
+  font-family: monospace;
+  font-size: 0.7rem;
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+.image-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #f8f9fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #ff0000;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.image-error-state {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff5f5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #ff0000;
+  padding: 16px;
+  text-align: center;
+}
+
+.image-error-state i {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.result-image {
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.result-image.image-loaded {
+  opacity: 1;
 }
 </style>

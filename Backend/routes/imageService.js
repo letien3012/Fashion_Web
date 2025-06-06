@@ -12,9 +12,56 @@ const {
 const router = express.Router();
 
 // Cấu hình multer
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    // Lấy phần mở rộng của file gốc
+    const ext = path.extname(file.originalname);
+    // Tạo tên file mới với timestamp và giữ nguyên phần mở rộng
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + ext);
+  }
+});
+
 const upload = multer({
-  dest: "uploads/", // thư mục tạm lưu ảnh
+  storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // giới hạn 5MB
+  fileFilter: function (req, file, cb) {
+    // Hỗ trợ tất cả các định dạng ảnh phổ biến
+    const allowedExtensions = [
+      // JPEG
+      '.jpg', '.jpeg', '.jpe', '.jif', '.jfif', '.jfi',
+      // PNG
+      '.png',
+      // GIF
+      '.gif',
+      // WebP
+      '.webp',
+      // TIFF
+      '.tiff', '.tif',
+      // BMP
+      '.bmp', '.dib',
+      // ICO
+      '.ico',
+      // SVG
+      '.svg', '.svgz',
+      // HEIF/HEIC
+      '.heif', '.heic',
+      // AVIF
+      '.avif',
+      // Raw formats
+      '.raw', '.arw', '.cr2', '.cr3', '.dng', '.nef', '.raf', '.rw2'
+    ];
+    
+    const ext = path.extname(file.originalname).toLowerCase();
+    if (allowedExtensions.includes(ext)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Định dạng file không được hỗ trợ. Các định dạng được hỗ trợ: ${allowedExtensions.join(', ')}`), false);
+    }
+  }
 });
 
 // Route: POST /detect
@@ -134,6 +181,20 @@ router.post("/extract-and-compare", upload.single("image"), async (req, res) => 
     });
   } catch (err) {
     fs.unlink(filePath, () => {}); // chỉ xóa file tạm nếu có lỗi
+    res.status(500).json({ error: err.toString() });
+  }
+});
+
+// Route: POST /delete
+router.post("/delete", async (req, res) => {
+  const { imagePath } = req.body;
+  if (!imagePath || !fs.existsSync(imagePath)) {
+    return res.status(400).json({ error: "Image not found or path invalid" });
+  }
+  try {
+    fs.unlinkSync(imagePath);
+    res.json({ success: true, message: "Image deleted" });
+  } catch (err) {
     res.status(500).json({ error: err.toString() });
   }
 });
