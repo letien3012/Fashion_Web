@@ -69,5 +69,5 @@ app.use(passport.session());
 
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, "public")));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 module.exports = app;

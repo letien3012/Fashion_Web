@@ -1214,9 +1214,9 @@ const handleReviewSubmitted = async () => {
   border-color: #ff4d4f;
   color: #ff4d4f;
   margin-left: 0;
-  width: 120px;
+  width: 150px;
   min-width: 120px;
-  max-width: 120px;
+  max-width: 150px;
   padding: 8px 0;
   text-align: center;
 }

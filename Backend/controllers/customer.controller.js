@@ -535,3 +535,47 @@ exports.getWishlist = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Upload profile image
+exports.uploadProfileImage = async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.customer.id);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const { image } = req.body;
+    if (!image) {
+      return res.status(400).json({ message: "No image data provided" });
+    }
+
+    // Validate base64 image
+    if (!image.startsWith("data:image/")) {
+      return res.status(400).json({ message: "Invalid image format" });
+    }
+
+    // Delete old image if exists
+    if (customer.image) {
+      await ImageModel.deleteImage(customer.image);
+    }
+
+    // Save new image
+    const imagePath = await ImageModel.saveImage(image, "customers");
+
+    // Update customer profile
+    customer.image = imagePath;
+    customer.updatedAt = new Date();
+    await customer.save();
+
+    res.json({
+      message: "Profile image updated successfully",
+      image: imagePath,
+    });
+  } catch (error) {
+    console.error("Upload profile image error:", error);
+    res.status(500).json({
+      message: "Error uploading profile image",
+      error: error.message,
+    });
+  }
+};

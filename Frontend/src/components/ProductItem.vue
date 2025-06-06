@@ -7,12 +7,12 @@
       </div>
       <div class="product-overlay">
         <div class="overlay-buttons">
-          <button
+          <router-link
+            :to="getProductDetailLink(product)"
             class="overlay-btn quick-view-btn"
-            @click.prevent="handleQuickView"
           >
             <i class="fas fa-eye"></i>
-          </button>
+          </router-link>
           <button
             class="overlay-btn wishlist-btn"
             @click.prevent="toggleWishlist"

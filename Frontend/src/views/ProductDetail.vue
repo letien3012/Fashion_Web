@@ -207,15 +207,34 @@
     <!-- Mô tả sản phẩm -->
     <div class="product-desc-section mt-5">
       <h2 class="h3 mb-4">Mô tả sản phẩm</h2>
-      <div class="card">
-        <div class="card-body">
-          <div
-            v-if="product.content"
-            class="product-content"
-            v-html="product.content"
-          ></div>
-          <div v-if="product.description" class="product-description">
+      <div class="description-container">
+        <div class="description-content">
+          <div v-if="product.description" class="product-description mb-4">
             <p>{{ product.description }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chi tiết sản phẩm -->
+    <div class="product-detail-section mt-4">
+      <h2 class="h3 mb-4">Chi tiết sản phẩm</h2>
+      <div class="detail-container">
+        <div class="detail-content">
+          <div v-if="product.content" class="product-content">
+            <div
+              :class="{ 'content-preview': !showFullContent }"
+              v-html="product.content"
+            ></div>
+            <div class="text-center mt-3">
+              <button
+                v-if="hasLongContent"
+                @click="toggleContent"
+                class="btn btn-link"
+              >
+                {{ showFullContent ? "THU GỌN" : "XEM THÊM" }}
+              </button>
+            </div>
           </div>
           <div
             v-if="!product.content && !product.description"
@@ -265,6 +284,8 @@ export default {
       quantity: 1,
       selectedAttribute1: "",
       selectedAttribute2: "",
+      showFullContent: false,
+      hasLongContent: false,
       product: {
         name: "",
         price: 0,
@@ -304,8 +325,11 @@ export default {
       this.loading = true;
       const productId = this.$route.params.id;
 
-      // Check wishlist status
-      await this.checkWishlistStatus();
+      // Check wishlist status only if user is logged in
+      const token = localStorage.getItem("token");
+      if (token) {
+        await this.checkWishlistStatus();
+      }
 
       const response = await productService.getProductById(productId);
 
@@ -392,6 +416,14 @@ export default {
       handler: "loadVariantData",
       immediate: false,
     },
+    "product.content": {
+      handler() {
+        this.$nextTick(() => {
+          this.checkContentLength();
+        });
+      },
+      immediate: true,
+    },
   },
   computed: {
     canBuy() {
@@ -431,20 +463,48 @@ export default {
   methods: {
     async checkWishlistStatus() {
       try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          this.isInWishlist = false;
+          return;
+        }
         const wishlist = await productService.getWishlist();
         this.isInWishlist = wishlist.wishlist.some(
           (item) => item._id === this.$route.params.id
         );
       } catch (error) {
-        console.error("Error checking wishlist status:", error);
+        // Only log error if user is authenticated
+        if (localStorage.getItem("token")) {
+          console.error("Error checking wishlist status:", error);
+        }
+        this.isInWishlist = false;
       }
     },
     async toggleWishlist() {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-          toast.error("Vui lòng đăng nhập để thêm vào danh sách yêu thích");
-          this.$router.push("/login");
+          toast.warning("Vui lòng đăng nhập để thêm vào danh sách yêu thích!", {
+            position: "top-right",
+            autoClose: 3000,
+            hideProgressBar: true,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: false,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+            style: {
+              color: "#333",
+              fontSize: "14px",
+              fontWeight: "500",
+            },
+            onClick: () => {
+              this.$router.push("/login");
+            },
+          });
           return;
         }
 
@@ -453,7 +513,7 @@ export default {
           toast.success("Đã xóa khỏi danh sách yêu thích!", {
             position: "top-right",
             autoClose: 2000,
-            hideProgressBar: false,
+            hideProgressBar: true,
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
@@ -462,13 +522,18 @@ export default {
             closeButton: "button",
             icon: true,
             rtl: false,
+            style: {
+              color: "#333",
+              fontSize: "14px",
+              fontWeight: "500",
+            },
           });
         } else {
           await productService.addToWishlist(this.$route.params.id);
           toast.success("Đã thêm vào danh sách yêu thích!", {
             position: "top-right",
             autoClose: 2000,
-            hideProgressBar: false,
+            hideProgressBar: true,
             closeOnClick: true,
             pauseOnHover: true,
             draggable: true,
@@ -477,6 +542,11 @@ export default {
             closeButton: "button",
             icon: true,
             rtl: false,
+            style: {
+              color: "#333",
+              fontSize: "14px",
+              fontWeight: "500",
+            },
           });
         }
         this.isInWishlist = !this.isInWishlist;
@@ -485,7 +555,7 @@ export default {
         toast.error("Có lỗi xảy ra, vui lòng thử lại!", {
           position: "top-right",
           autoClose: 2000,
-          hideProgressBar: false,
+          hideProgressBar: true,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
@@ -494,6 +564,11 @@ export default {
           closeButton: "button",
           icon: true,
           rtl: false,
+          style: {
+            color: "#333",
+            fontSize: "14px",
+            fontWeight: "500",
+          },
         });
       }
     },
@@ -897,6 +972,16 @@ export default {
         this.reviews = [];
       }
     },
+    toggleContent() {
+      this.showFullContent = !this.showFullContent;
+    },
+    checkContentLength() {
+      if (this.product.content) {
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = this.product.content;
+        this.hasLongContent = tempDiv.textContent.length > 500;
+      }
+    },
   },
 };
 </script>
@@ -1236,57 +1321,96 @@ export default {
   margin-top: 3rem;
 }
 
-.product-desc-section h2 {
+.product-desc-section h2,
+.product-detail-section h2 {
   color: #333;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+}
+
+.description-container {
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.detail-container {
+  background-color: #f8f9fa;
+  border-radius: 12px;
+  padding: 2rem;
+}
+
+.description-content,
+.detail-content {
+  color: #444;
+  line-height: 1.8;
+}
+
+.product-description p {
+  font-size: 1.1rem;
   margin-bottom: 1.5rem;
 }
 
-.product-content,
-.product-description {
-  color: #666;
-  line-height: 1.6;
+.product-content {
+  font-size: 1rem;
+}
+
+.content-preview {
+  max-height: 200px;
+  overflow: hidden;
+  position: relative;
+}
+
+.content-preview::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(transparent, #fff);
+}
+
+.btn-link {
+  color: #ee4d2d;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.5rem 1.5rem;
+  display: inline-block;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid #ee4d2d;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.btn-link:hover {
+  color: #fff;
+  background-color: #ee4d2d;
+  text-decoration: none;
+  transform: translateY(-1px);
 }
 
 .no-description {
   color: #666;
   font-style: italic;
+  text-align: center;
+  padding: 2rem 0;
 }
 
-@media (max-width: 992px) {
-  .product-gallery {
-    margin-bottom: 2rem;
+@media (max-width: 768px) {
+  .description-container,
+  .detail-container {
+    padding: 1.5rem;
   }
 
-  .thumbnail-list img {
-    width: 60px;
-    height: 60px;
+  .product-description p {
+    font-size: 1rem;
   }
 
-  .product-title {
-    font-size: 1.5rem;
-  }
-}
-
-@media (max-width: 576px) {
-  .thumbnail-list img {
-    width: 50px;
-    height: 50px;
-  }
-
-  .product-title {
-    font-size: 1.3rem;
-  }
-
-  .product-price {
-    font-size: 1.5rem;
-  }
-
-  .product-sale-price {
-    font-size: 1.2rem;
-  }
-
-  .product-actions .d-grid {
-    grid-template-columns: 1fr;
+  .product-content {
+    font-size: 0.95rem;
   }
 }
 
