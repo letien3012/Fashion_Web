@@ -258,11 +258,13 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script>
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Chatbot from "../components/Chatbot.vue";
 import Review_ProductDetail from "../components/Review_ProductDetail.vue";
 import { productService } from "../services/product.service";
 import { cartService } from "../services/cart.service";
@@ -275,6 +277,7 @@ export default {
     Header,
     Review_ProductDetail,
     Footer,
+    Chatbot,
   },
   data() {
     return {

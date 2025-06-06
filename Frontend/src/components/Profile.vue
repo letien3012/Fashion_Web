@@ -66,6 +66,7 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script setup>
@@ -74,6 +75,7 @@ import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import Header from "./Header.vue";
 import Footer from "./Footer.vue";
+import Chatbot from "./Chatbot.vue";
 import SidebarProfile from "./SidebarProfile.vue";
 import { customerService } from "../services/customer.service";
 

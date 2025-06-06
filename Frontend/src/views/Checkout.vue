@@ -345,12 +345,14 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Chatbot from "../components/Chatbot.vue";
 import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import { orderService } from "../services/order.service";

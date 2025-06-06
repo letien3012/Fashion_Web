@@ -247,6 +247,7 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script setup>
@@ -255,9 +256,9 @@ import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Chatbot from "../components/Chatbot.vue";
 import { cartService } from "../services/cart.service";
 import { productService } from "../services/product.service";
-import axios from "axios";
 import { getVariantPrice } from "../services/product.service";
 import { promotionService } from "../services/promotion.service";
 
@@ -355,10 +356,6 @@ const bestPossiblePrice = computed(() => {
       }
     }
   });
-
-  console.log("Selected items:", selectedItems.value);
-  console.log("Available vouchers:", availableVouchers.value);
-  console.log("Subtotal:", subtotal);
 
   return {
     price: bestPrice,
@@ -657,13 +654,7 @@ const copyVoucherCode = (code) => {
 };
 
 // Remove unrelated logs, add watch for bestPossiblePrice
-watch(
-  bestPossiblePrice,
-  (val) => {
-    console.log("Best possible price:", val);
-  },
-  { immediate: true }
-);
+watch(bestPossiblePrice, (val) => {}, { immediate: true });
 
 onMounted(async () => {
   const token = localStorage.getItem("token");

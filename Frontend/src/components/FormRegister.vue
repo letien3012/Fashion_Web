@@ -36,7 +36,7 @@
 
     <div class="signup-section">
       <p>Đã có tài khoản?</p>
-      <router-link to="/">
+      <router-link to="/login">
         <button class="btn signup">Đăng nhập</button>
       </router-link>
     </div>

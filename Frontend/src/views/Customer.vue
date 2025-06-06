@@ -247,6 +247,7 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script setup>
@@ -254,6 +255,7 @@ import { ref, onMounted, computed } from "vue";
 import SidebarProfile from "../components/SidebarProfile.vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Chatbot from "../components/Chatbot.vue";
 import Review from "./Review.vue";
 import { orderService } from "../services/order.service";
 import { productService, getVariantPrice } from "../services/product.service";

@@ -54,12 +54,14 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Chatbot from "../components/Chatbot.vue";
 import SidebarProfile from "../components/SidebarProfile.vue";
 import ProductItem from "../components/ProductItem.vue";
 import { productService } from "../services/product.service";
