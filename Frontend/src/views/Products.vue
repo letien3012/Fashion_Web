@@ -215,14 +215,12 @@ import { productService } from "../services/product.service";
 import { productCatalogueService } from "../services/productCatalogue.service";
 import { attributeService } from "../services/attribute.service";
 import { attributeCatalogueService } from "../services/attributeCatalogue.service";
-import Vue3Slider from "vue3-slider";
 
 export default {
   name: "ProductList",
   components: {
     Header,
     Footer,
-    Vue3Slider,
     ProductItem,
   },
   data() {
