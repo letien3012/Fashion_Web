@@ -9,7 +9,9 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng đơn hàng</h6>
-              <h3 class="card-title mb-0">1.234</h3>
+              <h3 class="card-title mb-0">
+                {{ totalOrders !== null ? totalOrders : "Đang tải..." }}
+              </h3>
             </div>
           </div>
         </div>
@@ -23,7 +25,9 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng khách hàng</h6>
-              <h3 class="card-title mb-0">856</h3>
+              <h3 class="card-title mb-0">
+                {{ totalCustomers !== null ? totalCustomers : "Đang tải..." }}
+              </h3>
             </div>
           </div>
         </div>
@@ -37,7 +41,9 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng sản phẩm</h6>
-              <h3 class="card-title mb-0">432</h3>
+              <h3 class="card-title mb-0">
+                {{ totalProducts !== null ? totalProducts : "Đang tải..." }}
+              </h3>
             </div>
           </div>
         </div>
@@ -51,7 +57,13 @@
             </div>
             <div>
               <h6 class="card-subtitle text-muted mb-1">Tổng doanh thu</h6>
-              <h3 class="card-title mb-0">45.678.000 ₫</h3>
+              <h3 class="card-title mb-0">
+                {{
+                  totalRevenue !== null
+                    ? formatCurrency(totalRevenue)
+                    : "Đang tải..."
+                }}
+              </h3>
             </div>
           </div>
         </div>
@@ -163,28 +175,31 @@
               <div class="col-md-4">
                 <div class="border rounded p-3 text-center">
                   <h6 class="text-muted mb-2">Tổng sản phẩm đã bán</h6>
-                  <h3 class="mb-0">1,234</h3>
-                  <small class="text-success">
-                    <i class="fas fa-arrow-up"></i> 12% so với kỳ trước
-                  </small>
+                  <h3 class="mb-0">
+                    {{ topProductsSummary?.totalProductsSold ?? "Đang tải..." }}
+                  </h3>
                 </div>
               </div>
               <div class="col-md-4">
                 <div class="border rounded p-3 text-center">
                   <h6 class="text-muted mb-2">Doanh thu sản phẩm</h6>
-                  <h3 class="mb-0">45.678.000 ₫</h3>
-                  <small class="text-success">
-                    <i class="fas fa-arrow-up"></i> 8% so với kỳ trước
-                  </small>
+                  <h3 class="mb-0">
+                    {{
+                      formatCurrency(topProductsSummary?.totalRevenue) ||
+                      "Đang tải..."
+                    }}
+                  </h3>
                 </div>
               </div>
               <div class="col-md-4">
                 <div class="border rounded p-3 text-center">
                   <h6 class="text-muted mb-2">Đơn giá trung bình</h6>
-                  <h3 class="mb-0">370.000 ₫</h3>
-                  <small class="text-danger">
-                    <i class="fas fa-arrow-down"></i> 3% so với kỳ trước
-                  </small>
+                  <h3 class="mb-0">
+                    {{
+                      formatCurrency(topProductsSummary?.averagePrice) ||
+                      "Đang tải..."
+                    }}
+                  </h3>
                 </div>
               </div>
             </div>
@@ -200,79 +215,49 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
+                  <tr
+                    v-for="(product, idx) in topProducts"
+                    :key="product.productId"
+                  >
                     <td>
                       <div class="d-flex align-items-center">
                         <img
-                          src="https://via.placeholder.com/40"
+                          :src="
+                            product.image || 'https://via.placeholder.com/40'
+                          "
                           class="rounded me-2"
                           alt="Product"
                         />
                         <div>
-                          <h6 class="mb-0">Áo thun basic</h6>
-                          <small class="text-muted">Mã: AT001</small>
+                          <h6 class="mb-0">{{ product.name }}</h6>
+                          <small class="text-muted"
+                            >Mã: {{ product.sku }}</small
+                          >
                         </div>
                       </div>
                     </td>
-                    <td class="text-center">245</td>
-                    <td class="text-center">12.250.000 ₫</td>
+                    <td class="text-center">{{ product.totalQuantity }}</td>
+                    <td class="text-center">
+                      {{ formatCurrency(product.totalRevenue) }}
+                    </td>
                     <td class="text-center">
                       <div class="progress" style="height: 5px">
                         <div
                           class="progress-bar bg-primary"
-                          style="width: 75%"
+                          :style="{
+                            width:
+                              (product.totalQuantity /
+                                (topProducts[0]?.totalQuantity || 1)) *
+                                100 +
+                              '%',
+                          }"
                         ></div>
                       </div>
                     </td>
                   </tr>
-                  <tr>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <img
-                          src="https://via.placeholder.com/40"
-                          class="rounded me-2"
-                          alt="Product"
-                        />
-                        <div>
-                          <h6 class="mb-0">Quần jean slim</h6>
-                          <small class="text-muted">Mã: QJ002</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-center">180</td>
-                    <td class="text-center">18.000.000 ₫</td>
-                    <td class="text-center">
-                      <div class="progress" style="height: 5px">
-                        <div
-                          class="progress-bar bg-success"
-                          style="width: 60%"
-                        ></div>
-                      </div>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      <div class="d-flex align-items-center">
-                        <img
-                          src="https://via.placeholder.com/40"
-                          class="rounded me-2"
-                          alt="Product"
-                        />
-                        <div>
-                          <h6 class="mb-0">Váy liền thân</h6>
-                          <small class="text-muted">Mã: VL003</small>
-                        </div>
-                      </div>
-                    </td>
-                    <td class="text-center">120</td>
-                    <td class="text-center">9.600.000 ₫</td>
-                    <td class="text-center">
-                      <div class="progress" style="height: 5px">
-                        <div
-                          class="progress-bar bg-info"
-                          style="width: 45%"
-                        ></div>
-                      </div>
+                  <tr v-if="topProducts.length === 0">
+                    <td colspan="4" class="text-center text-muted">
+                      Không có dữ liệu
                     </td>
                   </tr>
                 </tbody>
@@ -331,22 +316,37 @@
 
 <script>
 import Chart from "chart.js/auto";
+import axios from "axios";
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
 
 export default {
   name: "AdminDashboard",
   data() {
+    // Lấy ngày hiện tại (today) và ngày tiếp theo (tomorrow) (ngày hôm nay + 1)
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth() + 1; // (getMonth() trả về 0–11)
+    const currentDate = today.toISOString().split("T")[0]; // (format: YYYY–MM–DD)
+    const nextDate = tomorrow.toISOString().split("T")[0]; // (format: YYYY–MM–DD)
+
     return {
+      backendUrl: "http://localhost:3005",
       employeeName: "",
       salesChart: null,
       productsChart: null,
       orderStatusChart: null,
       newCustomersChart: null,
       categoryChart: null,
-      timeFilter: "year",
-      selectedYear: new Date().getFullYear(),
-      selectedMonth: new Date().getMonth() + 1,
-      startDate: "",
-      endDate: "",
+      // (Mặc định lọc theo tháng hiện tại)
+      timeFilter: "month",
+      selectedYear: currentYear,
+      selectedMonth: currentMonth,
+      // (Mặc định cho tùy chọn: ngày bắt đầu là hôm nay, ngày kết thúc là ngày tiếp theo (hôm nay + 1))
+      startDate: currentDate,
+      endDate: nextDate,
       years: [],
       months: [
         "Tháng 1",
@@ -363,136 +363,295 @@ export default {
         "Tháng 12",
       ],
       productTimeFilter: "week",
+      // Data for overview cards
+      totalOrders: null,
+      totalCustomers: null,
+      totalProducts: null,
+      totalRevenue: null,
+      // Data for charts
+      salesData: { labels: [], datasets: [] },
+      orderStatusData: {
+        labels: [
+          "Đang chờ",
+          "Đang xử lý",
+          "Đang giao",
+          "Đã giao",
+          "Đã hủy",
+          "Đã trả hàng",
+        ],
+        datasets: [
+          {
+            data: [0, 0, 0, 0, 0, 0],
+            backgroundColor: [
+              "#ffc107",
+              "#0dcaf0",
+              "#0d6efd",
+              "#198754",
+              "#dc3545",
+              "#6c757d",
+            ],
+          },
+        ],
+      },
+      // Data for top products table
+      topProducts: [],
+      topProductsSummary: null,
     };
   },
-  created() {
-    const employee = JSON.parse(localStorage.getItem("employee"));
-    if (employee) {
-      this.employeeName = employee.fullname;
-    }
-
-    // Generate years array (current year - 5 years)
-    const currentYear = new Date().getFullYear();
-    this.years = Array.from({ length: 6 }, (_, i) => currentYear - i);
-
-    // Set default date range
-    const today = new Date();
-    this.endDate = today.toISOString().split("T")[0];
-    const lastMonth = new Date(
-      today.getFullYear(),
-      today.getMonth() - 1,
-      today.getDate()
-    );
-    this.startDate = lastMonth.toISOString().split("T")[0];
+  computed: {
+    years() {
+      const currentYear = new Date().getFullYear();
+      const startYear = 2020; // Adjust as needed
+      const yearsArray = [];
+      for (let i = currentYear; i >= startYear; i--) {
+        yearsArray.push(i);
+      }
+      return yearsArray;
+    },
+    months() {
+      return [
+        "Tháng 1",
+        "Tháng 2",
+        "Tháng 3",
+        "Tháng 4",
+        "Tháng 5",
+        "Tháng 6",
+        "Tháng 7",
+        "Tháng 8",
+        "Tháng 9",
+        "Tháng 10",
+        "Tháng 11",
+        "Tháng 12",
+      ];
+    },
   },
-  mounted() {
-    this.initSalesChart();
+  async mounted() {
+    // (Gọi updateChart() để lấy dữ liệu doanh thu mặc định (lọc theo tháng hiện tại) khi component được tạo)
+    await this.updateChart();
+    // (Gọi fetchOverviewStats() để lấy dữ liệu tổng quan)
+    await this.fetchOverviewStats();
+    // (Khởi tạo biểu đồ trạng thái đơn hàng)
+    await this.fetchOrderStatusData();
+    this.renderOrderStatusChart();
+    await this.fetchTopProducts();
+    // Khởi tạo các biểu đồ còn lại
     this.initProductsChart();
-    this.initOrderStatusChart();
     this.initNewCustomersChart();
     this.initCategoryChart();
   },
   methods: {
     formatCurrency(value) {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-        minimumFractionDigits: 0,
-      }).format(value);
+      if (value === null || value === undefined) return "";
+      return value.toLocaleString("vi-VN") + " ₫";
     },
-    updateChart() {
+    async fetchOverviewStats() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          // Or redirect to login
+          console.error("Authentication token not found.");
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          // Redirect to login page if using Vue Router
+          // this.$router.push('/admin/login');
+          return;
+        }
+
+        const headers = { Authorization: `Bearer ${token}` };
+
+        const [ordersRes, customersRes, productsRes, revenueRes] =
+          await Promise.all([
+            axios.get(`${this.backendUrl}/api/orders/total`, { headers }),
+            axios.get(`${this.backendUrl}/api/customers/total`, { headers }),
+            axios.get(`${this.backendUrl}/api/products/total`, { headers }),
+            axios.get(`${this.backendUrl}/api/orders/revenue`, { headers }),
+          ]);
+
+        this.totalOrders = ordersRes.data.data.totalOrders;
+        this.totalCustomers = customersRes.data.data.totalCustomers;
+        this.totalProducts = productsRes.data.data.totalProducts;
+        this.totalRevenue = revenueRes.data.data.totalRevenue;
+      } catch (error) {
+        console.error("Error fetching overview stats:", error);
+        toast.error("Lỗi khi tải dữ liệu tổng quan");
+      }
+    },
+    renderSalesChart() {
       if (this.salesChart) {
         this.salesChart.destroy();
       }
-      this.initSalesChart();
-    },
-    initSalesChart() {
       const ctx = this.$refs.salesChart.getContext("2d");
-
-      // Generate data based on selected time filter
-      let labels = [];
-      let data = [];
-
-      if (this.timeFilter === "year") {
-        labels = this.months;
-        data = Array.from(
-          { length: 12 },
-          () => Math.floor(Math.random() * 30000000) + 10000000
-        );
-      } else if (this.timeFilter === "month") {
-        labels = Array.from({ length: 30 }, (_, i) => `Ngày ${i + 1}`);
-        data = Array.from(
-          { length: 30 },
-          () => Math.floor(Math.random() * 2000000) + 500000
-        );
-      } else {
-        // Custom range - generate daily data
-        const start = new Date(this.startDate);
-        const end = new Date(this.endDate);
-        const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
-
-        labels = Array.from({ length: days }, (_, i) => {
-          const date = new Date(start);
-          date.setDate(date.getDate() + i);
-          return date.toLocaleDateString("vi-VN");
-        });
-
-        data = Array.from(
-          { length: days },
-          () => Math.floor(Math.random() * 1000000) + 200000
-        );
-      }
-
       this.salesChart = new Chart(ctx, {
         type: "line",
-        data: {
-          labels: labels,
-          datasets: [
-            {
-              label: "Doanh thu",
-              data: data,
-              borderColor: "#0d6efd",
-              backgroundColor: "rgba(13, 110, 253, 0.1)",
-              tension: 0.4,
-              fill: true,
-            },
-          ],
-        },
+        data: this.salesData, // Use actual data
         options: {
           responsive: true,
           maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  return `Doanh thu: ${this.formatCurrency(context.raw)}`;
-                },
-              },
-            },
-          },
           scales: {
             y: {
               beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
-              },
               ticks: {
-                callback: (value) => {
-                  return this.formatCurrency(value);
+                callback: function (value) {
+                  return value.toLocaleString("vi-VN") + " ₫";
                 },
-              },
-            },
-            x: {
-              grid: {
-                display: false,
               },
             },
           },
         },
       });
+    },
+    renderOrderStatusChart() {
+      if (this.orderStatusChart) {
+        this.orderStatusChart.destroy();
+      }
+      const ctx = this.$refs.orderStatusChart.getContext("2d");
+      this.orderStatusChart = new Chart(ctx, {
+        type: "pie",
+        data: this.orderStatusData,
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+        },
+      });
+    },
+    updateChart() {
+      // Gọi fetchSalesData để lấy dữ liệu mới (dựa trên filter) và cập nhật biểu đồ
+      this.fetchSalesData().then(() => {
+        this.renderSalesChart();
+      });
+    },
+    updateProductChart() {
+      this.fetchTopProducts();
+      // Có thể thêm renderProductsChart nếu có biểu đồ
+    },
+    async fetchSalesData() {
+      // Gọi API để lấy dữ liệu doanh thu từ backend (order.controller.js)
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          console.error("Không tìm thấy token xác thực.");
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          return;
+        }
+        const headers = { Authorization: `Bearer ${token}` };
+        // Gọi API getSalesData với các tham số từ bộ lọc thời gian
+        const params = { timeFilter: this.timeFilter };
+        if (this.timeFilter === "year") {
+          params.year = this.selectedYear;
+        } else if (this.timeFilter === "month") {
+          params.year = this.selectedYear;
+          params.month = this.selectedMonth;
+        } else if (this.timeFilter === "custom") {
+          params.startDate = this.startDate;
+          params.endDate = this.endDate;
+        }
+        const response = await axios.get(
+          `${this.backendUrl}/api/orders/sales`,
+          { headers, params }
+        );
+        const { labels, datasets } = response.data.data; // (API trả về { data: { labels: [...], datasets: [...] } })
+        this.salesData = { labels, datasets };
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu doanh thu:", error);
+        toast.error("Lỗi khi tải dữ liệu doanh thu");
+      }
+    },
+    async fetchOrderStatusData() {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        this.$toast.error("Bạn chưa đăng nhập");
+        return;
+      }
+      try {
+        console.log(
+          "Gọi API lấy dữ liệu trạng thái đơn hàng (fetchOrderStatusData) tại:",
+          this.backendUrl + "/api/orders/order-status"
+        );
+        const res = await axios.get(
+          this.backendUrl + "/api/orders/order-status",
+          { headers: { Authorization: "Bearer " + token } }
+        );
+        console.log("Kết quả API (fetchOrderStatusData):", res.data);
+        if (res.data.success && res.data.data) {
+          this.orderStatusData = res.data.data;
+        } else {
+          console.warn(
+            "API không trả về đúng định dạng (hoặc không có dữ liệu), sử dụng dữ liệu mẫu."
+          );
+          this.orderStatusData = {
+            labels: [
+              "Đang chờ",
+              "Đang xử lý",
+              "Đang giao",
+              "Đã giao",
+              "Đã hủy",
+              "Đã trả hàng",
+            ],
+            datasets: [
+              {
+                data: [0, 0, 0, 0, 0, 0],
+                backgroundColor: [
+                  "#ffc107",
+                  "#0dcaf0",
+                  "#0d6efd",
+                  "#198754",
+                  "#dc3545",
+                  "#6c757d",
+                ],
+              },
+            ],
+          };
+        }
+      } catch (err) {
+        console.error(
+          "Lỗi khi lấy dữ liệu trạng thái đơn hàng (fetchOrderStatusData):",
+          err
+        );
+        // (Nếu có lỗi, sử dụng dữ liệu mẫu (hoặc mặc định) cho biểu đồ trạng thái đơn hàng.)
+        this.orderStatusData = {
+          labels: [
+            "Đang chờ",
+            "Đang xử lý",
+            "Đang giao",
+            "Đã giao",
+            "Đã hủy",
+            "Đã trả hàng",
+          ],
+          datasets: [
+            {
+              data: [0, 0, 0, 0, 0, 0],
+              backgroundColor: [
+                "#ffc107",
+                "#0dcaf0",
+                "#0d6efd",
+                "#198754",
+                "#dc3545",
+                "#6c757d",
+              ],
+            },
+          ],
+        };
+      }
+    },
+    async fetchTopProducts() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          return;
+        }
+        const headers = { Authorization: `Bearer ${token}` };
+        const params = { timeFilter: this.productTimeFilter };
+        const response = await axios.get(
+          `${this.backendUrl}/api/orders/top-products`,
+          { headers, params }
+        );
+        const { topProducts, summary } = response.data.data;
+        this.topProducts = topProducts;
+        this.topProductsSummary = summary;
+      } catch (error) {
+        console.error("Lỗi khi lấy top sản phẩm bán chạy:", error);
+        toast.error("Lỗi khi tải top sản phẩm bán chạy");
+      }
     },
     initProductsChart() {
       const ctx = this.$refs.productsChart.getContext("2d");
@@ -525,53 +684,15 @@ export default {
                 },
               },
             },
-          },
-        },
-      });
-    },
-    initOrderStatusChart() {
-      const ctx = this.$refs.orderStatusChart.getContext("2d");
-      this.orderStatusChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: [
-            "Chờ xác nhận",
-            "Đã xác nhận",
-            "Đang giao",
-            "Hoàn thành",
-            "Đã hủy",
-          ],
-          datasets: [
-            {
-              data: [15, 25, 10, 40, 5],
-              backgroundColor: [
-                "#ffc107",
-                "#0dcaf0",
-                "#0d6efd",
-                "#198754",
-                "#dc3545",
-              ],
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
-              },
-            },
-            x: {
-              grid: {
-                display: false,
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const label = context.label || "";
+                  const value = context.raw || 0;
+                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                  const percentage = Math.round((value / total) * 100);
+                  return `${label}: ${value} sản phẩm (${percentage}%)`;
+                },
               },
             },
           },
@@ -602,12 +723,22 @@ export default {
             legend: {
               display: false,
             },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  return `${context.raw} khách hàng mới`;
+                },
+              },
+            },
           },
           scales: {
             y: {
               beginAtZero: true,
               grid: {
                 color: "#f0f0f0",
+              },
+              ticks: {
+                stepSize: 1,
               },
             },
             x: {
@@ -647,12 +778,22 @@ export default {
             legend: {
               display: false,
             },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  return `${context.raw} sản phẩm`;
+                },
+              },
+            },
           },
           scales: {
             y: {
               beginAtZero: true,
               grid: {
                 color: "#f0f0f0",
+              },
+              ticks: {
+                stepSize: 1,
               },
             },
             x: {
@@ -663,12 +804,6 @@ export default {
           },
         },
       });
-    },
-    updateProductChart() {
-      if (this.productsChart) {
-        this.productsChart.destroy();
-      }
-      this.initProductsChart();
     },
   },
 };

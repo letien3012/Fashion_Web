@@ -144,30 +144,50 @@ Product.validateVariant = async function (variant) {
 
     // Validate attributeId1
     if (variant.attributeId1) {
+      console.log("Validating attributeId1:", variant.attributeId1);
       try {
         const attribute1 = await mongoose
           .model("Attribute")
           .findById(variant.attributeId1);
         if (!attribute1) {
+          console.error("AttributeId1 not found:", variant.attributeId1);
           throw new Error("First attribute does not exist");
         }
+        console.log(
+          "AttributeId1 validated successfully:",
+          variant.attributeId1
+        );
       } catch (error) {
-        console.error("Error validating first attribute:", error);
+        console.error(
+          "Error validating first attribute:",
+          variant.attributeId1,
+          error
+        );
         throw new Error("Invalid first attribute");
       }
     }
 
     // Validate attributeId2
     if (variant.attributeId2) {
+      console.log("Validating attributeId2:", variant.attributeId2);
       try {
         const attribute2 = await mongoose
           .model("Attribute")
           .findById(variant.attributeId2);
         if (!attribute2) {
+          console.error("AttributeId2 not found:", variant.attributeId2);
           throw new Error("Second attribute does not exist");
         }
+        console.log(
+          "AttributeId2 validated successfully:",
+          variant.attributeId2
+        );
       } catch (error) {
-        console.error("Error validating second attribute:", error);
+        console.error(
+          "Error validating second attribute:",
+          variant.attributeId2,
+          error
+        );
         throw new Error("Invalid second attribute");
       }
     }
@@ -228,8 +248,6 @@ Product.prototype.save = async function () {
         }
       }
     }
-
-    // Create a new product using the model's create method
     const productData = this.toObject();
     const savedProduct = await Product.create(productData);
     console.log("Product saved:", savedProduct);

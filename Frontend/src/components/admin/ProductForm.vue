@@ -1026,6 +1026,13 @@ export default {
         };
 
         const token = localStorage.getItem("token-admin");
+
+        // Log data before sending
+        console.log(
+          "Submitting product form data:",
+          JSON.parse(JSON.stringify(formData.value))
+        );
+
         if (props.product) {
           const response = await axios.put(
             `${backendUrl}/api/products/update/${props.product._id}`,

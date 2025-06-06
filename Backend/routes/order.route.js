@@ -5,10 +5,16 @@ const auth = require("../middleware/auth");
 
 // Lấy tất cả đơn hàng (cho admin)
 router.get("/", orderController.getAllOrders);
+router.get("/total", auth, orderController.getTotalOrders);
+router.get("/revenue", auth, orderController.getTotalRevenue);
+router.get("/sales", auth, orderController.getSalesData);
+// Thêm route mới cho API getTopProducts
+router.get("/top-products", auth, orderController.getTopProducts);
 
 // Lấy tất cả đơn hàng của khách hàng đang đăng nhập
 router.get("/customer", auth, orderController.getOrdersByCustomer);
-
+// Thêm route mới (GET /order-status) để gọi API getOrderStatus từ order.controller (nếu chưa có route này)
+router.get("/order-status", auth, orderController.getOrderStatus);
 // Public routes
 router.get("/:id", orderController.getById);
 router.post("/", orderController.create);

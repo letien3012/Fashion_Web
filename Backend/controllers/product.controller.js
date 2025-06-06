@@ -429,6 +429,17 @@ exports.getVariantPrice = async (req, res) => {
   }
 };
 
+// Get total number of products
+exports.getTotalProducts = async (req, res) => {
+  try {
+    const count = await Product.countDocuments();
+    res.status(200).json({ success: true, data: { totalProducts: count } });
+  } catch (error) {
+    console.error("Error getting total products:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
 // Lấy sản phẩm bán chạy
 exports.getBestSelling = async (req, res) => {
   try {

@@ -27,6 +27,9 @@ router.delete(
 router.get("/wishlist", auth, customerController.getWishlist);
 
 // Admin routes
+router.get("/", auth, customerController.getAllCustomers);
+router.put("/update-status/:id", auth, customerController.updateStatus);
+router.get("/total", auth, customerController.getTotalCustomers);
 router.get("/", customerController.getAllCustomers);
 router.put("/update-status/:id", customerController.updateStatus);
 router.delete("/:id", customerController.softDelete);
