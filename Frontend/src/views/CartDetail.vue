@@ -163,6 +163,36 @@
             </div>
           </div>
 
+          <!-- Voucher Selection -->
+          <div class="voucher-section">
+            <div class="voucher-header">
+              <h3>Mã giảm giá</h3>
+              <div class="best-price-info" v-if="bestPossiblePrice.voucher">
+                <div class="voucher-info">
+                  <span class="voucher-name">{{
+                    bestPossiblePrice.voucher.name
+                  }}</span>
+                  <span class="voucher-code">{{
+                    bestPossiblePrice.voucher.code
+                  }}</span>
+                  <span class="voucher-discount"
+                    >-{{ bestPossiblePrice.voucher.discount }}%</span
+                  >
+                </div>
+                <div class="price-info">
+                  <span class="best-price-value"
+                    >₫{{ bestPossiblePrice.price.toLocaleString() }}</span
+                  >
+                  <span class="best-price-save"
+                    >(Tiết kiệm: ₫{{
+                      bestPossiblePrice.discount.toLocaleString()
+                    }})</span
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+
           <!-- Cart Summary -->
           <div class="cart-summary">
             <div class="summary-content">
@@ -220,7 +250,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import Header from "../components/Header.vue";
@@ -229,12 +259,18 @@ import { cartService } from "../services/cart.service";
 import { productService } from "../services/product.service";
 import axios from "axios";
 import { getVariantPrice } from "../services/product.service";
+import { promotionService } from "../services/promotion.service";
 
 const router = useRouter();
 const cartItems = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const selectedItems = ref([]);
+
+// Voucher related states
+const appliedVoucher = ref(null);
+const availableVouchers = ref([]);
+const loadingVouchers = ref(true);
 
 const flattenedCartItems = computed(() => {
   return cartItems.value.flatMap((item) =>
@@ -256,15 +292,79 @@ const isAllSelected = computed(() => {
 });
 
 const selectedTotalPrice = computed(() => {
-  return selectedItems.value.reduce((total, item) => {
+  let total = selectedItems.value.reduce((total, item) => {
     return total + item.variant.price * item.variant.quantity;
   }, 0);
+
+  if (appliedVoucher.value) {
+    const discount = (total * appliedVoucher.value.discount) / 100;
+    const maxDiscount =
+      appliedVoucher.value.voucher_condition?.max_discount || Infinity;
+    total -= Math.min(discount, maxDiscount);
+  }
+
+  return total;
 });
 
 const selectedTotalOldPrice = computed(() => {
   return selectedItems.value.reduce((total, item) => {
     return total + item.variant.originPrice * item.variant.quantity;
   }, 0);
+});
+
+const bestPossiblePrice = computed(() => {
+  if (
+    availableVouchers.value.length === 0 ||
+    selectedItems.value.length === 0
+  ) {
+    const subtotal = selectedItems.value.reduce(
+      (sum, item) => sum + item.variant.price * item.variant.quantity,
+      0
+    );
+    return {
+      price: subtotal,
+      voucher: null,
+      discount: 0,
+    };
+  }
+
+  const subtotal = selectedItems.value.reduce(
+    (sum, item) => sum + item.variant.price * item.variant.quantity,
+    0
+  );
+  let bestPrice = subtotal;
+  let bestVoucher = null;
+  let bestDiscount = 0;
+
+  availableVouchers.value.forEach((voucher) => {
+    if (voucher.type === "voucher") {
+      if (
+        !voucher.voucher_condition?.min_order_value ||
+        subtotal >= voucher.voucher_condition.min_order_value
+      ) {
+        const discount = (subtotal * voucher.discount) / 100;
+        const maxDiscount = voucher.voucher_condition?.max_discount || Infinity;
+        const finalDiscount = Math.min(discount, maxDiscount);
+        const priceAfterDiscount = subtotal - finalDiscount;
+
+        if (priceAfterDiscount < bestPrice) {
+          bestPrice = priceAfterDiscount;
+          bestVoucher = voucher;
+          bestDiscount = finalDiscount;
+        }
+      }
+    }
+  });
+
+  console.log("Selected items:", selectedItems.value);
+  console.log("Available vouchers:", availableVouchers.value);
+  console.log("Subtotal:", subtotal);
+
+  return {
+    price: bestPrice,
+    voucher: bestVoucher,
+    discount: bestDiscount,
+  };
 });
 
 const fetchCart = async () => {
@@ -276,16 +376,8 @@ const fetchCart = async () => {
       cartItems.value = cart.items;
       // Fetch stock quantity for each variant
       for (const item of cartItems.value) {
-        console.log("Processing item:", item);
         for (const variant of item.variants) {
           try {
-            // Log productId và variantId trước khi gọi API
-            console.log(
-              "Call getVariantPrice with:",
-              item.productId._id,
-              variant._id
-            );
-
             // Lấy giá gốc/giá giảm từ backend
             const priceData = await getVariantPrice(
               item.productId._id,
@@ -315,7 +407,6 @@ const fetchCart = async () => {
             variant.stockQuantity = 0;
             variant.originPrice = variant.price; // fallback
             variant.priceSale = null;
-            console.error("getVariantPrice error:", err);
           }
         }
       }
@@ -332,13 +423,11 @@ const fetchCart = async () => {
 
 const updateQuantity = async (item, variant, change) => {
   const newQuantity = variant.quantity + change;
-  console.log("Updating quantity:", { item, variant, change, newQuantity });
 
   if (newQuantity > 0) {
     try {
       // Get current cart first
       const cartResponse = await cartService.getCart();
-      console.log("Current cart:", cartResponse);
 
       if (!cartResponse || !cartResponse._id) {
         throw new Error("Không tìm thấy giỏ hàng");
@@ -349,7 +438,6 @@ const updateQuantity = async (item, variant, change) => {
         item.productId._id,
         variant._id
       );
-      console.log("Current stock response:", stockResponse);
 
       let currentStock = 0;
       if (stockResponse?.data?.stockQuantity !== undefined) {
@@ -358,18 +446,7 @@ const updateQuantity = async (item, variant, change) => {
         currentStock = stockResponse.data.data.stockQuantity;
       }
 
-      console.log(
-        "Current stock:",
-        currentStock,
-        "Requested quantity:",
-        newQuantity
-      );
-
       if (currentStock < newQuantity) {
-        console.log("Insufficient stock:", {
-          current: currentStock,
-          requested: newQuantity,
-        });
         toast.warning(`Chỉ còn ${currentStock} sản phẩm trong kho!`);
         return;
       }
@@ -382,18 +459,17 @@ const updateQuantity = async (item, variant, change) => {
           variant._id,
           newQuantity
         );
-        console.log("Update cart response:", updateResponse);
 
         if (updateResponse && updateResponse.success) {
           // Update local state only if API call succeeds
           variant.quantity = newQuantity;
           variant.stockQuantity = currentStock;
           toast.success("Cập nhật số lượng thành công!");
+          applyOptimalVoucher();
         } else {
           throw new Error(updateResponse?.message || "Cập nhật thất bại");
         }
       } catch (updateError) {
-        console.error("Error updating cart:", updateError);
         if (updateError.response?.status === 400) {
           toast.error(
             updateError.response?.data?.message || "Số lượng không hợp lệ!"
@@ -405,7 +481,6 @@ const updateQuantity = async (item, variant, change) => {
         await fetchCart();
       }
     } catch (error) {
-      console.error("Error checking stock:", error);
       toast.error("Không thể kiểm tra số lượng tồn kho!");
     }
   } else {
@@ -433,8 +508,9 @@ const removeItem = async (item) => {
       (i) => i.variantId !== item.variant._id
     );
     toast.success("Đã xóa sản phẩm khỏi giỏ hàng!");
+    // Tự động áp dụng voucher tối ưu sau khi xóa sản phẩm
+    applyOptimalVoucher();
   } catch (error) {
-    console.error("Error removing item:", error);
     toast.error("Xóa sản phẩm thất bại!");
   }
 };
@@ -442,8 +518,12 @@ const removeItem = async (item) => {
 const toggleSelectAll = () => {
   if (isAllSelected.value) {
     selectedItems.value = [];
+    // Xóa voucher khi bỏ chọn tất cả
+    appliedVoucher.value = null;
   } else {
     selectedItems.value = [...flattenedCartItems.value];
+    // Tự động áp dụng voucher tối ưu khi chọn tất cả
+    applyOptimalVoucher();
   }
 };
 
@@ -451,15 +531,27 @@ const toggleItemSelection = (item) => {
   const index = selectedItems.value.findIndex(
     (i) => i.variantId === item.variantId
   );
+
   if (index === -1) {
     selectedItems.value.push(item);
   } else {
     selectedItems.value.splice(index, 1);
   }
+
+  // Tự động áp dụng voucher tối ưu khi thay đổi sản phẩm được chọn
+  if (selectedItems.value.length > 0) {
+    applyOptimalVoucher();
+  } else {
+    // Nếu không có sản phẩm nào được chọn, xóa voucher đang áp dụng
+    appliedVoucher.value = null;
+  }
 };
 
 const isItemSelected = (item) => {
-  return selectedItems.value.some((i) => i.variantId === item.variantId);
+  const isSelected = selectedItems.value.some(
+    (i) => i.variantId === item.variantId
+  );
+  return isSelected;
 };
 
 const removeSelectedItems = async () => {
@@ -480,6 +572,8 @@ const removeSelectedItems = async () => {
     await fetchCart();
     selectedItems.value = [];
     toast.success("Đã xóa các sản phẩm đã chọn!");
+    // Tự động áp dụng voucher tối ưu sau khi xóa nhiều sản phẩm
+    applyOptimalVoucher();
   } catch (error) {
     toast.error("Xóa sản phẩm thất bại!");
   }
@@ -495,13 +589,89 @@ const checkout = () => {
   router.push("/checkout");
 };
 
+// Thêm hàm findOptimalVoucher
+const findOptimalVoucher = (vouchers, orderValue) => {
+  let optimalVoucher = null;
+  let maxDiscount = 0;
+
+  vouchers.forEach((voucher) => {
+    if (
+      voucher.type === "voucher" &&
+      (!voucher.voucher_condition?.min_order_value ||
+        orderValue >= voucher.voucher_condition.min_order_value)
+    ) {
+      const discount = (orderValue * voucher.discount) / 100;
+      const maxDiscountAmount =
+        voucher.voucher_condition?.max_discount || Infinity;
+      const finalDiscount = Math.min(discount, maxDiscountAmount);
+
+      if (finalDiscount > maxDiscount) {
+        maxDiscount = finalDiscount;
+        optimalVoucher = voucher;
+      }
+    }
+  });
+
+  return optimalVoucher;
+};
+
+// Thêm hàm applyOptimalVoucher
+const applyOptimalVoucher = () => {
+  if (availableVouchers.value.length > 0) {
+    const optimalVoucher = findOptimalVoucher(
+      availableVouchers.value,
+      selectedTotalPrice.value
+    );
+    if (optimalVoucher) {
+      appliedVoucher.value = optimalVoucher;
+    }
+  }
+};
+
+// Sửa lại hàm fetchAvailableVouchers
+const fetchAvailableVouchers = async () => {
+  loadingVouchers.value = true;
+  try {
+    const response = await promotionService.getActivePromotions();
+    if (response?.data) {
+      availableVouchers.value = response.data.filter(
+        (promotion) => promotion.type === "voucher"
+      );
+    }
+  } catch (error) {
+    console.error("Error fetching vouchers:", error);
+  } finally {
+    loadingVouchers.value = false;
+  }
+};
+
+const copyVoucherCode = (code) => {
+  navigator.clipboard
+    .writeText(code)
+    .then(() => {
+      toast.success("Đã sao chép mã giảm giá!");
+    })
+    .catch(() => {
+      toast.error("Không thể sao chép mã giảm giá!");
+    });
+};
+
+// Remove unrelated logs, add watch for bestPossiblePrice
+watch(
+  bestPossiblePrice,
+  (val) => {
+    console.log("Best possible price:", val);
+  },
+  { immediate: true }
+);
+
 onMounted(async () => {
   const token = localStorage.getItem("token");
   if (!token) {
     toast.warning("Vui lòng đăng nhập để xem giỏ hàng!");
     router.push("/login");
   } else {
-    await fetchCart();
+    await Promise.all([fetchCart(), fetchAvailableVouchers()]);
   }
 });
 </script>
@@ -939,78 +1109,98 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
+/* Voucher Section Styles */
+.voucher-section {
+  background: white;
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 0.8rem 0;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.voucher-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid #eee;
+}
+
+.voucher-header h3 {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  margin: 0;
+  font-weight: 600;
+}
+
+.best-price-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: #f0f7ff;
+  padding: 0.8rem;
+  border-radius: 6px;
+  border: 1px dashed #3498db;
+}
+
+.voucher-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.voucher-name {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.voucher-code {
+  color: #3498db;
+  font-weight: 600;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+}
+
+.voucher-discount {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.price-info {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.best-price-value {
+  color: #e74c3c;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.best-price-save {
+  color: #27ae60;
+  font-size: 0.9rem;
+}
+
 @media (max-width: 768px) {
-  .cart-container {
-    padding: 1rem 0;
-  }
-
-  .cart-header h1 {
-    font-size: 2rem;
-  }
-
-  .item-content {
+  .voucher-info,
+  .price-info {
     flex-direction: column;
-  }
-
-  .item-image img {
-    width: 100%;
-    height: 200px;
-  }
-
-  .item-price {
-    text-align: left;
-    margin-top: 1rem;
-  }
-
-  .cart-actions {
-    flex-direction: column;
-    gap: 1rem;
     align-items: flex-start;
-  }
-
-  .summary-content {
-    max-width: 100%;
-  }
-
-  .cart-item {
-    flex-direction: column;
-    padding: 1rem;
-  }
-
-  .item-select {
-    position: absolute;
-    top: 1rem;
-    left: 1rem;
-    margin-right: 0;
-    z-index: 1;
-  }
-
-  .item-content {
-    margin-left: 2rem;
+    gap: 0.3rem;
   }
 }
 
-/* Additional responsive styles */
-@media (max-width: 576px) {
-  .page-container {
-    padding: 5px;
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
   }
-
-  .breadcrumb {
-    font-size: 11px;
-    padding: 0 5px;
-  }
-
-  .cart-container {
-    padding: 1rem 0;
-  }
-
-  .cart-header h1 {
-    font-size: 1.8rem;
-  }
-
-  .cart-subtitle {
-    font-size: 0.9rem;
+  100% {
+    transform: rotate(360deg);
   }
 }
 </style>

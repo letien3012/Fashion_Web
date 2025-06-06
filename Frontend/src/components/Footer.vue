@@ -40,10 +40,11 @@
 
 <style scoped>
 .footer {
-  background-color: #f8f8f8;
+  background-color: #ffffff;
   color: #333;
   padding: 20px 0;
   width: 100%;
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
 }
 
 .container {

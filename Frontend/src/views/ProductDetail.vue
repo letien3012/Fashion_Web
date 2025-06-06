@@ -18,6 +18,12 @@
     <div v-else class="row">
       <div class="col-lg-6 mb-4">
         <div class="product-gallery">
+          <div class="wishlist-button" @click="toggleWishlist">
+            <i
+              class="fas fa-heart"
+              :class="{ 'in-wishlist': isInWishlist }"
+            ></i>
+          </div>
           <img
             :src="displayImages[activeImage]"
             class="main-image img-fluid rounded"
@@ -56,20 +62,31 @@
         <div class="product-info">
           <h1 class="product-title h2 mb-3">{{ product.name }}</h1>
           <div class="product-rating mb-3">
-            <i
-              class="fas fa-star"
-              v-for="n in 5"
-              :key="n"
-              :class="{ active: n <= product.rating }"
-            ></i>
-            <span class="rating-number">({{ product.rating }})</span>
-          </div>
-          <div class="product-price-container mb-4">
-            <div class="product-price h3" :class="{ 'has-sale': salePrice }">
-              {{ formatPrice(displayPrice) }}
+            <div class="stars">
+              <i
+                class="fas fa-star"
+                v-for="n in 5"
+                :key="n"
+                :class="{
+                  active: n <= Math.floor(product.rating),
+                  half:
+                    n === Math.ceil(product.rating) && product.rating % 1 !== 0,
+                }"
+              ></i>
             </div>
-            <div v-if="salePrice" class="product-sale-price h4">
-              {{ formatPrice(salePrice) }}
+            <span class="rating-text" v-if="product.totalReviews > 0">
+              {{ product.rating }} ({{ product.totalReviews }} đánh giá)
+            </span>
+            <span class="rating-text" v-else>Chưa có đánh giá</span>
+          </div>
+          <div class="product-price-container">
+            <div class="price-row">
+              <div class="product-price h3" :class="{ 'has-sale': salePrice }">
+                {{ formatPrice(displayPrice) }}
+              </div>
+              <div v-if="salePrice" class="product-sale-price h4">
+                {{ formatPrice(salePrice) }}
+              </div>
             </div>
             <div v-if="activePromotion" class="promotion-info">
               <div class="discount-badge">-{{ discountPercentage }}%</div>
@@ -214,6 +231,9 @@
     <div class="mt-5">
       <Review_ProductDetail
         :product="product"
+        :reviews="reviews"
+        :total-reviews="product.totalReviews"
+        :average-rating="product.rating"
         @submit-review="handleReviewSubmit"
       />
     </div>
@@ -227,6 +247,7 @@ import Footer from "../components/Footer.vue";
 import Review_ProductDetail from "../components/Review_ProductDetail.vue";
 import { productService } from "../services/product.service";
 import { cartService } from "../services/cart.service";
+import { reviewService } from "../services/review.service";
 import { toast } from "vue3-toastify";
 
 export default {
@@ -238,6 +259,7 @@ export default {
   },
   data() {
     return {
+      isInWishlist: false,
       activeImage: 0,
       thumbnailStartIndex: 0,
       quantity: 1,
@@ -247,6 +269,7 @@ export default {
         name: "",
         price: 0,
         rating: 0,
+        totalReviews: 0,
         stock: 0,
         description: "",
         images: [],
@@ -273,21 +296,21 @@ export default {
       loading: false,
       error: null,
       attributesLoaded: false,
+      reviews: [],
     };
   },
   async created() {
-    console.log("ProductDetail created hook running.");
     try {
       this.loading = true;
       const productId = this.$route.params.id;
-      console.log("Fetching product with ID:", productId);
+
+      // Check wishlist status
+      await this.checkWishlistStatus();
 
       const response = await productService.getProductById(productId);
-      console.log("Product response in component:", response);
 
       if (response && response.data) {
         const productData = response.data;
-        console.log("Product data received:", productData);
         // Xử lý ảnh chính và album
         const mainImage = productData.image.startsWith("http")
           ? productData.image
@@ -311,6 +334,9 @@ export default {
           Array.from(attribute2Ids)
         );
 
+        // Fetch reviews for the product
+        await this.loadProductReviews(productId);
+
         this.product = {
           ...productData,
           image: mainImage,
@@ -324,7 +350,6 @@ export default {
           attributes1: Array.from(attribute1Ids),
           attributes2: Array.from(attribute2Ids),
         };
-        console.log("Product data assigned to this.product:", this.product);
 
         // Set initial attributes if available
         if (this.product.variants.length > 0) {
@@ -339,7 +364,6 @@ export default {
         }
       } else {
         this.error = "Không tìm thấy thông tin sản phẩm";
-        console.log("Product fetch successful but no data received.", response);
       }
     } catch (error) {
       console.error("Error in created hook:", error);
@@ -357,7 +381,6 @@ export default {
     } finally {
       this.loading = false;
       this.attributesLoaded = true;
-      console.log("ProductDetail created hook finished.");
     }
   },
   watch: {
@@ -406,56 +429,125 @@ export default {
     },
   },
   methods: {
+    async checkWishlistStatus() {
+      try {
+        const wishlist = await productService.getWishlist();
+        this.isInWishlist = wishlist.wishlist.some(
+          (item) => item._id === this.$route.params.id
+        );
+      } catch (error) {
+        console.error("Error checking wishlist status:", error);
+      }
+    },
+    async toggleWishlist() {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để thêm vào danh sách yêu thích");
+          this.$router.push("/login");
+          return;
+        }
+
+        if (this.isInWishlist) {
+          await productService.removeFromWishlist(this.$route.params.id);
+          toast.success("Đã xóa khỏi danh sách yêu thích!", {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: false,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+          });
+        } else {
+          await productService.addToWishlist(this.$route.params.id);
+          toast.success("Đã thêm vào danh sách yêu thích!", {
+            position: "top-right",
+            autoClose: 2000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            draggablePercent: 0.6,
+            showCloseButtonOnHover: false,
+            closeButton: "button",
+            icon: true,
+            rtl: false,
+          });
+        }
+        this.isInWishlist = !this.isInWishlist;
+      } catch (error) {
+        console.error("Error toggling wishlist:", error);
+        toast.error("Có lỗi xảy ra, vui lòng thử lại!", {
+          position: "top-right",
+          autoClose: 2000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: true,
+          draggable: true,
+          draggablePercent: 0.6,
+          showCloseButtonOnHover: false,
+          closeButton: "button",
+          icon: true,
+          rtl: false,
+        });
+      }
+    },
     async fetchAttributeDetails(attribute1Ids, attribute2Ids) {
       try {
+        console.log("Starting fetchAttributeDetails with IDs:", {
+          attribute1Ids,
+          attribute2Ids,
+        });
+
         // Fetch attribute1 details
         const attribute1Promises = attribute1Ids.map((id) =>
           productService.getAttributeById(id)
         );
         const fetchedAttributes1 = await Promise.all(attribute1Promises);
-        console.log("Fetched Attributes 1:", fetchedAttributes1); // Debug log
+        console.log("Raw Attributes 1 Response:", fetchedAttributes1);
 
         // Process valid responses and populate attributes.attribute1
         const attribute1Data = {};
-        let firstAttribute1 = null; // To get catalogue ID from the first valid attribute
+        let firstAttribute1 = null;
         fetchedAttributes1.forEach((attribute) => {
-          // API trả về trực tiếp object thuộc tính, kiểm tra attribute và _id
-          if (attribute && attribute._id) {
-            // Assuming API returns attribute object directly
-            attribute1Data[attribute._id] = attribute;
+          console.log("Processing Attribute 1:", attribute);
+          if (attribute && attribute.data) {
+            attribute1Data[attribute.data._id] = attribute.data;
             if (!firstAttribute1) {
-              // Keep the first valid attribute to find catalogue ID
-              firstAttribute1 = attribute;
+              firstAttribute1 = attribute.data;
             }
-          } else {
-            console.warn("Skipping invalid attribute 1 response:", attribute); // Log invalid responses
           }
         });
-        // Gán dữ liệu thuộc tính 1
-        this.attributes.attribute1 = attribute1Data; // Gán object đầy đủ
-        console.log("Final attributes 1 state:", this.attributes.attribute1); // Debug log: Show final state
+        this.attributes.attribute1 = attribute1Data;
+        console.log("Processed Attributes 1:", this.attributes.attribute1);
+        console.log("First Attribute 1:", firstAttribute1);
 
-        // Lấy catalogue ID từ attribute đầu tiên (nếu có dữ liệu thuộc tính)
-        if (firstAttribute1 && firstAttribute1.attributeCatalogueId) {
-          // attributeCatalogueId là một object { _id, name }, cần lấy _id
-          const catalogueId = firstAttribute1.attributeCatalogueId._id
-            ? firstAttribute1.attributeCatalogueId._id.toString()
+        // Lấy catalogue ID từ attribute đầu tiên
+        if (firstAttribute1 && firstAttribute1.attributeCatalogue) {
+          console.log(
+            "First Attribute 1 Catalogue:",
+            firstAttribute1.attributeCatalogue
+          );
+          const catalogueId = firstAttribute1.attributeCatalogue._id
+            ? firstAttribute1.attributeCatalogue._id.toString()
             : null;
 
           if (catalogueId) {
-            console.log("Fetching catalogue 1 with ID:", catalogueId); // Debug log
+            console.log("Fetching Catalogue 1 with ID:", catalogueId);
             const catalogueResponse =
               await productService.getAttributeCatalogueById(catalogueId);
-            console.log(
-              "Response for Attribute 1 catalogue:",
-              catalogueResponse
-            ); // Debug log: Check catalogue response
+            console.log("Catalogue 1 Response:", catalogueResponse);
             if (catalogueResponse?.data) {
-              this.attributeCatalogues.attribute1 = catalogueResponse.data; // Gán object catalogue đầy đủ từ response.data
+              this.attributeCatalogues.attribute1 = catalogueResponse.data;
               console.log(
-                "Attribute 1 catalogue data assigned:",
+                "Set Catalogue 1 Data:",
                 this.attributeCatalogues.attribute1
-              ); // Debug log
+              );
             }
           }
         }
@@ -465,52 +557,52 @@ export default {
           productService.getAttributeById(id)
         );
         const fetchedAttributes2 = await Promise.all(attribute2Promises);
-        console.log("Fetched Attributes 2:", fetchedAttributes2); // Debug log
+        console.log("Raw Attributes 2 Response:", fetchedAttributes2);
 
         // Process valid responses and populate attributes.attribute2
         const attribute2Data = {};
-        let firstAttribute2 = null; // To get catalogue ID from the first valid attribute
+        let firstAttribute2 = null;
         fetchedAttributes2.forEach((attribute) => {
-          // API trả về trực tiếp object thuộc tính, kiểm tra attribute và _id
-          if (attribute && attribute._id) {
-            // Assuming API returns attribute object directly
-            attribute2Data[attribute._id] = attribute;
+          console.log("Processing Attribute 2:", attribute);
+          if (attribute && attribute.data) {
+            attribute2Data[attribute.data._id] = attribute.data;
             if (!firstAttribute2) {
-              // Keep the first valid attribute to find catalogue ID
-              firstAttribute2 = attribute;
+              firstAttribute2 = attribute.data;
             }
-          } else {
-            console.warn("Skipping invalid attribute 2 response:", attribute); // Log invalid responses
           }
         });
-        // Gán dữ liệu thuộc tính 2
-        this.attributes.attribute2 = attribute2Data; // Gán object đầy đủ
-        console.log("Final attributes 2 state:", this.attributes.attribute2); // Debug log: Show final state
+        this.attributes.attribute2 = attribute2Data;
+        console.log("Processed Attributes 2:", this.attributes.attribute2);
+        console.log("First Attribute 2:", firstAttribute2);
 
-        // Lấy catalogue ID từ attribute đầu tiên (nếu có dữ liệu thuộc tính)
-        if (firstAttribute2 && firstAttribute2.attributeCatalogueId) {
-          // attributeCatalogueId là một object { _id, name }, cần lấy _id
-          const catalogueId = firstAttribute2.attributeCatalogueId._id
-            ? firstAttribute2.attributeCatalogueId._id.toString()
+        // Lấy catalogue ID từ attribute đầu tiên
+        if (firstAttribute2 && firstAttribute2.attributeCatalogue) {
+          console.log(
+            "First Attribute 2 Catalogue:",
+            firstAttribute2.attributeCatalogue
+          );
+          const catalogueId = firstAttribute2.attributeCatalogue._id
+            ? firstAttribute2.attributeCatalogue._id.toString()
             : null;
 
           if (catalogueId) {
-            console.log("Fetching catalogue 2 with ID:", catalogueId); // Debug log
+            console.log("Fetching Catalogue 2 with ID:", catalogueId);
             const catalogueResponse =
               await productService.getAttributeCatalogueById(catalogueId);
-            console.log(
-              "Response for Attribute 2 catalogue:",
-              catalogueResponse
-            ); // Debug log: Check catalogue response
+            console.log("Catalogue 2 Response:", catalogueResponse);
             if (catalogueResponse?.data) {
-              this.attributeCatalogues.attribute2 = catalogueResponse.data; // Gán object catalogue đầy đủ từ response.data
+              this.attributeCatalogues.attribute2 = catalogueResponse.data;
               console.log(
-                "Attribute 2 catalogue data assigned:",
+                "Set Catalogue 2 Data:",
                 this.attributeCatalogues.attribute2
-              ); // Debug log
+              );
             }
           }
         }
+
+        // Log final state
+        console.log("Final Attributes State:", this.attributes);
+        console.log("Final Catalogues State:", this.attributeCatalogues);
       } catch (error) {
         console.error("Error fetching attribute details:", error);
       }
@@ -529,16 +621,10 @@ export default {
       if (!this.selectedAttribute1 || !this.selectedAttribute2) return;
 
       try {
-        console.log("Loading variant data for:", {
-          attribute1: this.selectedAttribute1,
-          attribute2: this.selectedAttribute2,
-        });
-
         const variant = this.findVariant(
           this.selectedAttribute1,
           this.selectedAttribute2
         );
-        console.log("Found variant:", variant);
 
         if (variant) {
           // Xử lý ảnh variant
@@ -567,12 +653,13 @@ export default {
           }
 
           this.currentVariant = {
-            price: variant.price,
+            price: variant.price || 0,
             stock: stockQuantity,
             images: variantImages,
             _id: variant._id,
             attributeId1: variant.attributeId1,
             attributeId2: variant.attributeId2,
+            sku: variant.sku,
           };
           this.activeImage = 0; // Reset to first image when variant changes
 
@@ -587,6 +674,7 @@ export default {
             _id: null,
             attributeId1: "",
             attributeId2: "",
+            sku: "",
           };
           this.activePromotion = null;
         }
@@ -600,6 +688,7 @@ export default {
           _id: null,
           attributeId1: "",
           attributeId2: "",
+          sku: "",
         };
         this.activePromotion = null;
       }
@@ -754,6 +843,60 @@ export default {
         toast.error("Có lỗi xảy ra khi gửi đánh giá");
       }
     },
+    async loadProductReviews(productId) {
+      try {
+        const response = await reviewService.getReviewsByProduct(productId);
+        console.log("Reviews response:", response);
+        if (response?.success && response?.data?.reviews) {
+          const reviews = response.data.reviews;
+          const activeReviews = reviews.filter((review) => {
+            return !review.deletedAt && review.star >= 1 && review.star <= 5;
+          });
+
+          // Lưu danh sách reviews để hiển thị
+          this.reviews = activeReviews;
+
+          if (activeReviews.length > 0) {
+            // Tính tổng số sao
+            const totalStars = activeReviews.reduce(
+              (sum, review) => sum + Number(review.star),
+              0
+            );
+
+            // Tính điểm trung bình và làm tròn đến 1 chữ số thập phân
+            const averageRating = totalStars / activeReviews.length;
+
+            // Cập nhật rating và totalReviews
+            this.product.rating = Number(averageRating.toFixed(1));
+            this.product.totalReviews = activeReviews.length;
+
+            // Log để debug
+            console.log("Review stats:", {
+              totalReviews: activeReviews.length,
+              totalStars,
+              averageRating: this.product.rating,
+              reviews: activeReviews,
+            });
+          } else {
+            // Reset nếu không có review hợp lệ
+            this.product.rating = 0;
+            this.product.totalReviews = 0;
+            this.reviews = [];
+          }
+        } else {
+          // Reset nếu không có dữ liệu
+          this.product.rating = 0;
+          this.product.totalReviews = 0;
+          this.reviews = [];
+        }
+      } catch (error) {
+        console.error("Error loading reviews:", error);
+        // Reset khi có lỗi
+        this.product.rating = 0;
+        this.product.totalReviews = 0;
+        this.reviews = [];
+      }
+    },
   },
 };
 </script>
@@ -873,29 +1016,68 @@ export default {
 }
 
 .product-rating {
-  color: #ffc107;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
-.product-rating .fa-star {
-  margin-right: 2px;
+.stars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
 }
 
-.product-rating .fa-star.active {
-  color: #ffc107;
+.stars i {
+  color: #ddd;
+  font-size: 0.9rem;
+  transition: color 0.2s ease;
 }
 
-.rating-number {
+.stars i.active {
+  color: #ffd700;
+}
+
+.stars i.half {
+  position: relative;
+  color: #ddd;
+}
+
+.stars i.half::before {
+  content: "\f089";
+  position: absolute;
+  left: 0;
+  color: #ffd700;
+  width: 50%;
+  overflow: hidden;
+}
+
+.stars i.inactive {
+  color: #ddd;
+}
+
+.rating-text {
   color: #666;
-  margin-left: 5px;
+  font-size: 0.85rem;
 }
 
 .product-price-container {
   margin: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.price-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .product-price {
   color: #ff0000;
   font-weight: 600;
+  margin: 0;
 }
 
 .product-price.has-sale {
@@ -907,9 +1089,13 @@ export default {
 .product-sale-price {
   color: #ff0000;
   font-weight: 600;
+  margin: 0;
 }
 
 .promotion-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin-top: 0.5rem;
 }
 
@@ -922,10 +1108,15 @@ export default {
   font-weight: 600;
 }
 
+.promotion-details {
+  display: flex;
+  align-items: center;
+}
+
 .promotion-period {
   color: #666;
   font-size: 0.9rem;
-  margin-top: 0.25rem;
+  margin: 0;
 }
 
 .product-options {
@@ -1096,6 +1287,60 @@ export default {
 
   .product-actions .d-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.wishlist-button {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.9);
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(5px);
+  border: 2px solid transparent;
+}
+
+.wishlist-button:hover {
+  transform: scale(1.15);
+  background: white;
+  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.2);
+  border-color: #ff6b6b;
+}
+
+.wishlist-button i {
+  font-size: 1.4rem;
+  color: #666;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wishlist-button i.in-wishlist {
+  color: #ff6b6b;
+  animation: heartBeat 0.3s ease-in-out;
+}
+
+.wishlist-button:hover i {
+  color: #ff6b6b;
+  transform: scale(1.1);
+}
+
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
   }
 }
 </style>

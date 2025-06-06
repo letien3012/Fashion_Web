@@ -63,4 +63,28 @@ export const orderService = {
       throw error;
     }
   },
+
+  async cancelOrder(orderId, note) {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Vui lòng đăng nhập để hủy đơn hàng");
+      }
+
+      const response = await axios.put(
+        `${API_URL}/orders/${orderId}/cancel`,
+        { note },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error cancelling order:", error);
+      throw error;
+    }
+  },
 };

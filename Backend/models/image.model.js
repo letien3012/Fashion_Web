@@ -43,7 +43,10 @@ class ImageModel {
 
   static async deleteImage(imagePath) {
     try {
-      if (!imagePath) return;
+      // Chỉ xóa ảnh nếu đường dẫn là base64 (ảnh mới)
+      if (!imagePath || !imagePath.startsWith("data:image")) {
+        return;
+      }
 
       const fullPath = path.join(__dirname, "../public", imagePath);
       if (fs.existsSync(fullPath)) {
@@ -56,7 +59,11 @@ class ImageModel {
 
   static async deleteMultipleImages(imagePaths) {
     try {
-      for (const imagePath of imagePaths) {
+      // Chỉ xóa những ảnh là base64 (ảnh mới)
+      const newImages = imagePaths.filter((path) =>
+        path.startsWith("data:image")
+      );
+      for (const imagePath of newImages) {
         await this.deleteImage(imagePath);
       }
     } catch (error) {

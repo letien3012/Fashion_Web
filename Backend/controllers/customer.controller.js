@@ -457,3 +457,81 @@ exports.softDelete = async (req, res) => {
     });
   }
 };
+
+// Thêm sản phẩm vào wishlist
+exports.addToWishlist = async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const customer = await Customer.findById(req.customer.id);
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Kiểm tra xem sản phẩm đã có trong wishlist chưa
+    if (customer.wishlist.includes(productId)) {
+      return res.status(400).json({ message: "Product already in wishlist" });
+    }
+
+    // Thêm sản phẩm vào wishlist
+    customer.wishlist.push(productId);
+    await customer.save();
+
+    res.json({
+      message: "Product added to wishlist successfully",
+      wishlist: customer.wishlist,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Xóa sản phẩm khỏi wishlist
+exports.removeFromWishlist = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const customer = await Customer.findById(req.customer.id);
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    // Kiểm tra xem sản phẩm có trong wishlist không
+    if (!customer.wishlist.includes(productId)) {
+      return res.status(400).json({ message: "Product not in wishlist" });
+    }
+
+    // Xóa sản phẩm khỏi wishlist
+    customer.wishlist = customer.wishlist.filter(
+      (id) => id.toString() !== productId
+    );
+    await customer.save();
+
+    res.json({
+      message: "Product removed from wishlist successfully",
+      wishlist: customer.wishlist,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Lấy danh sách wishlist
+exports.getWishlist = async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.customer.id).populate(
+      "wishlist",
+      "name price images"
+    );
+
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    res.json({
+      wishlist: customer.wishlist,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

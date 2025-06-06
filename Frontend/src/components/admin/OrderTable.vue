@@ -124,8 +124,7 @@ export default {
     formatPaymentMethod(method) {
       const methodMap = {
         COD: "Thanh toán khi nhận hàng",
-        VNPAY: "VNPay",
-        MOMO: "MoMo",
+        ONLINE: "Thanh toán online",
       };
       return methodMap[method] || method;
     },
@@ -259,39 +258,27 @@ td {
 }
 
 .status-pending {
-  background: #fff7e6;
   color: #d46b08;
-  border: 1px solid #ffd591;
 }
 
 .status-processing {
-  background: #e6f7ff;
   color: #096dd9;
-  border: 1px solid #91d5ff;
 }
 
 .status-shipping {
-  background: #f6ffed;
   color: #389e0d;
-  border: 1px solid #b7eb8f;
 }
 
 .status-delivered {
-  background: #f9f0ff;
   color: #531dab;
-  border: 1px solid #d3adf7;
 }
 
 .status-cancelled {
-  background: #fff1f0;
   color: #cf1322;
-  border: 1px solid #ffa39e;
 }
 
 .status-returned {
-  background: #f5f5f5;
   color: #595959;
-  border: 1px solid #d9d9d9;
 }
 
 .actions {

@@ -1,186 +1,207 @@
 <template>
-  <div class="modal-overlay">
-    <div class="order-detail">
-      <div class="detail-header">
-        <h3>Chi tiết đơn hàng</h3>
-        <div class="header-actions">
-          <button
-            class="btn btn-secondary"
-            @click="printOrder"
-            v-if="!isLoading && !error"
-          >
-            <i class="fas fa-print"></i> In đơn hàng
-          </button>
-          <button class="close-btn" @click="$emit('close')">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="detail-content">
-        <div v-if="isLoading" class="loading-state">
-          <div class="spinner"></div>
-          <p>Đang tải thông tin đơn hàng...</p>
+  <div>
+    <div v-if="showInvoice" class="print-only">
+      <!-- Đã xóa OrderInvoice -->
+    </div>
+    <div v-else class="modal-overlay">
+      <div class="order-detail">
+        <div class="detail-header">
+          <h3>Chi tiết đơn hàng</h3>
+          <div class="header-actions">
+            <button
+              class="btn btn-secondary"
+              @click="printOrder"
+              v-if="!isLoading && !error"
+            >
+              <i class="fas fa-print"></i> In đơn hàng
+            </button>
+            <button class="close-btn" @click="$emit('close')">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
         </div>
 
-        <div v-else-if="error" class="error-state">
-          <i class="fas fa-exclamation-circle"></i>
-          <p>{{ error }}</p>
-          <button class="btn btn-primary" @click="loadOrderDetails">
-            Thử lại
-          </button>
-        </div>
+        <div class="detail-content">
+          <div v-if="isLoading" class="loading-state">
+            <div class="spinner"></div>
+            <p>Đang tải thông tin đơn hàng...</p>
+          </div>
 
-        <template v-else>
-          <!-- Thông tin đơn hàng -->
-          <div class="detail-section">
-            <div class="section-header">
-              <h4>Thông tin đơn hàng</h4>
-            </div>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="label">Mã đơn hàng:</span>
-                <span class="value code">{{ order.code }}</span>
+          <div v-else-if="error" class="error-state">
+            <i class="fas fa-exclamation-circle"></i>
+            <p>{{ error }}</p>
+            <button class="btn btn-primary" @click="loadOrderDetails">
+              Thử lại
+            </button>
+          </div>
+
+          <template v-else>
+            <!-- Thông tin đơn hàng -->
+            <div class="detail-section">
+              <div class="section-header">
+                <h4>Thông tin đơn hàng</h4>
               </div>
-              <div class="info-item">
-                <span class="label">Ngày đặt:</span>
-                <span class="value">{{ formatDate(order.createdAt) }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">Trạng thái:</span>
-                <div class="status-container">
-                  <span class="value status-badge" :class="order.status">
-                    {{ getStatusText(order.status) }}
-                  </span>
-                  <select
-                    v-if="canUpdateStatus"
-                    v-model="newStatus"
-                    class="status-select"
-                    @change="handleStatusChange"
-                  >
-                    <option value="">Cập nhật trạng thái</option>
-                    <option
-                      v-for="status in availableStatuses"
-                      :key="status.value"
-                      :value="status.value"
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Mã đơn hàng:</span>
+                  <span class="value code">{{ order.code }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Ngày đặt:</span>
+                  <span class="value">{{ formatDate(order.createdAt) }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Trạng thái:</span>
+                  <div class="status-container">
+                    <span class="value status-badge" :class="order.status">
+                      {{ getStatusText(order.status) }}
+                    </span>
+                    <select
+                      v-if="canUpdateStatus"
+                      v-model="newStatus"
+                      class="status-select"
+                      @change="handleStatusChange"
                     >
-                      {{ status.label }}
-                    </option>
-                  </select>
+                      <option value="">Cập nhật trạng thái</option>
+                      <option
+                        v-for="status in availableStatuses"
+                        :key="status.value"
+                        :value="status.value"
+                      >
+                        {{ status.label }}
+                      </option>
+                    </select>
+                  </div>
+                </div>
+                <div class="info-item">
+                  <span class="label">Phương thức thanh toán:</span>
+                  <span class="value">{{
+                    getPaymentMethod(order.method)
+                  }}</span>
                 </div>
               </div>
-              <div class="info-item">
-                <span class="label">Phương thức thanh toán:</span>
-                <span class="value">{{ getPaymentMethod(order.method) }}</span>
-              </div>
             </div>
-          </div>
 
-          <!-- Thông tin khách hàng -->
-          <div class="detail-section">
-            <div class="section-header">
-              <h4>Thông tin khách hàng</h4>
+            <!-- Thông tin khách hàng -->
+            <div class="detail-section">
+              <div class="section-header">
+                <h4>Thông tin khách hàng</h4>
+              </div>
+              <div class="info-grid">
+                <div class="info-item">
+                  <span class="label">Họ tên:</span>
+                  <span class="value">{{ order.fullname || "N/A" }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Email:</span>
+                  <span class="value">{{
+                    order.customerId?.email || "N/A"
+                  }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">Số điện thoại:</span>
+                  <span class="value">{{ order.phone || "N/A" }}</span>
+                </div>
+                <div class="info-item full-width">
+                  <span class="label">Địa chỉ:</span>
+                  <span class="value">{{ order.address || "N/A" }}</span>
+                </div>
+              </div>
             </div>
-            <div class="info-grid">
-              <div class="info-item">
-                <span class="label">Họ tên:</span>
-                <span class="value">{{ order.fullname || "N/A" }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">Email:</span>
-                <span class="value">{{
-                  order.customerId?.email || "N/A"
-                }}</span>
-              </div>
-              <div class="info-item">
-                <span class="label">Số điện thoại:</span>
-                <span class="value">{{ order.phone || "N/A" }}</span>
-              </div>
-              <div class="info-item full-width">
-                <span class="label">Địa chỉ:</span>
-                <span class="value">{{ order.address || "N/A" }}</span>
-              </div>
-            </div>
-          </div>
 
-          <!-- Danh sách sản phẩm -->
-          <div class="detail-section">
-            <div class="section-header">
-              <h4>Danh sách sản phẩm</h4>
-            </div>
-            <div class="products-table">
-              <table>
-                <thead>
-                  <tr>
-                    <th class="product-col">Sản phẩm</th>
-                    <th class="price-col">Giá</th>
-                    <th class="quantity-col">Số lượng</th>
-                    <th class="total-col">Thành tiền</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="item in order.order_detail" :key="item._id">
-                    <td>
-                      <div class="product-info">
-                        <img
-                          :src="getImageUrl(item.productId?.image)"
-                          :alt="item.productId?.name"
-                          class="product-image"
-                        />
-                        <div class="product-details">
-                          <span class="product-name">{{
-                            item.productId?.name || "N/A"
-                          }}</span>
+            <!-- Danh sách sản phẩm -->
+            <div class="detail-section">
+              <div class="section-header">
+                <h4>Danh sách sản phẩm</h4>
+              </div>
+              <div class="products-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th class="product-col">Sản phẩm</th>
+                      <th class="price-col">Giá</th>
+                      <th class="quantity-col">Số lượng</th>
+                      <th class="total-col">Thành tiền</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in order.order_detail" :key="item._id">
+                      <td>
+                        <div class="product-info">
+                          <img
+                            :src="getImageUrl(item.productId?.image)"
+                            :alt="item.productId?.name"
+                            class="product-image"
+                          />
+                          <div class="product-details">
+                            <span class="product-name">{{
+                              item.productId?.name || "N/A"
+                            }}</span>
+                          </div>
                         </div>
-                      </div>
-                    </td>
-                    <td class="price">{{ formatPrice(item.price) }}đ</td>
-                    <td class="quantity">{{ item.quantity }}</td>
-                    <td class="total">
-                      {{ formatPrice(item.price * item.quantity) }}đ
-                    </td>
-                  </tr>
-                </tbody>
-                <tfoot>
-                  <tr class="summary-row">
-                    <td colspan="3" class="text-right">Tổng tiền sản phẩm:</td>
-                    <td class="subtotal">
-                      {{ formatPrice(order.total_product_price) }}đ
-                    </td>
-                  </tr>
-                  <tr class="summary-row">
-                    <td colspan="3" class="text-right">Phí vận chuyển:</td>
-                    <td class="shipping">
-                      {{ formatPrice(order.total_ship_fee) }}đ
-                    </td>
-                  </tr>
-                  <tr class="summary-row">
-                    <td colspan="3" class="text-right">Giảm giá:</td>
-                    <td class="discount">
-                      -{{ formatPrice(order.discount) }}đ
-                    </td>
-                  </tr>
-                  <tr class="summary-row total">
-                    <td colspan="3" class="text-right">Tổng thanh toán:</td>
-                    <td class="total-amount">
-                      {{ formatPrice(order.total_price) }}đ
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+                      </td>
+                      <td class="price">{{ formatPrice(item.price) }}đ</td>
+                      <td class="quantity">{{ item.quantity }}</td>
+                      <td class="total">
+                        {{ formatPrice(item.price * item.quantity) }}đ
+                      </td>
+                    </tr>
+                  </tbody>
+                  <tfoot>
+                    <tr class="summary-row">
+                      <td colspan="3" class="text-right">
+                        Tổng tiền sản phẩm:
+                      </td>
+                      <td class="subtotal">
+                        {{ formatPrice(order.total_product_price) }}đ
+                      </td>
+                    </tr>
+                    <tr class="summary-row">
+                      <td colspan="3" class="text-right">Phí vận chuyển:</td>
+                      <td class="shipping">
+                        {{ formatPrice(order.total_ship_fee) }}đ
+                      </td>
+                    </tr>
+                    <tr class="summary-row">
+                      <td colspan="3" class="text-right">Giảm giá:</td>
+                      <td class="discount">
+                        -{{ formatPrice(order.discount) }}đ
+                      </td>
+                    </tr>
+                    <tr class="summary-row total">
+                      <td colspan="3" class="text-right">Tổng thanh toán:</td>
+                      <td class="total-amount">
+                        {{ formatPrice(order.total_price) }}đ
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </div>
-          </div>
 
-          <!-- Ghi chú -->
-          <div class="detail-section" v-if="order.note">
-            <div class="section-header">
-              <h4>Ghi chú</h4>
+            <!-- Ghi chú -->
+            <div class="detail-section" v-if="order.note">
+              <div class="section-header">
+                <h4>Ghi chú</h4>
+              </div>
+              <div class="note-container">
+                <p class="note">{{ order.note }}</p>
+              </div>
             </div>
-            <div class="note-container">
-              <p class="note">{{ order.note }}</p>
-            </div>
-          </div>
-        </template>
+
+            <ShippingLabel
+              ref="shippingLabel"
+              :order="order"
+              style="display: none"
+            />
+          </template>
+        </div>
+      </div>
+    </div>
+    <div v-if="showPdfPreview" class="pdf-modal">
+      <div class="pdf-modal-content">
+        <button class="close-btn" @click="closePdfPreview">Đóng</button>
+        <iframe :src="pdfUrl" width="100%" height="600px"></iframe>
       </div>
     </div>
   </div>
@@ -189,9 +210,14 @@
 <script>
 import OrderService from "../../services/admin/order.service";
 import { toast } from "vue3-toastify";
+import ShippingLabel from "./ShippingLabel.vue";
+import html2pdf from "html2pdf.js";
 
 export default {
   name: "OrderDetail",
+  components: {
+    ShippingLabel,
+  },
   props: {
     order: {
       type: Object,
@@ -214,6 +240,9 @@ export default {
         { value: "cancelled", label: "Đã hủy" },
         { value: "returned", label: "Đã trả hàng" },
       ],
+      showInvoice: false,
+      showPdfPreview: false,
+      pdfUrl: null,
     };
   },
   methods: {
@@ -256,8 +285,24 @@ export default {
         );
       }
     },
-    printOrder() {
-      window.print();
+    async printOrder() {
+      await this.$nextTick();
+      const element = this.$refs.shippingLabel.$el;
+      // Tạo PDF và lấy blob url
+      const opt = {
+        margin: 5,
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: [90, 130], orientation: "portrait" },
+      };
+      const worker = html2pdf().set(opt).from(element);
+      const pdfBlob = await worker.outputPdf("blob");
+      this.pdfUrl = URL.createObjectURL(pdfBlob);
+      this.showPdfPreview = true;
+    },
+    closePdfPreview() {
+      this.showPdfPreview = false;
+      if (this.pdfUrl) URL.revokeObjectURL(this.pdfUrl);
+      this.pdfUrl = null;
     },
     formatDate(date) {
       if (!date) return "";
@@ -286,9 +331,8 @@ export default {
     },
     getPaymentMethod(method) {
       const methodMap = {
-        COD: "Thanh toán khi nhận hàng",
-        BANKING: "Chuyển khoản ngân hàng",
-        VNPAY: "Thanh toán qua VNPAY",
+        COD: "Thanh toán khi nhận hàng (COD)",
+        ONLINE: "Thanh toán online",
       };
       return methodMap[method] || method;
     },
@@ -740,27 +784,45 @@ th {
   margin-bottom: 16px;
 }
 
+.print-only {
+  display: none;
+}
+
 @media print {
   .modal-overlay {
-    position: static;
-    background: none;
-  }
-
-  .order-detail {
-    position: static;
-    transform: none;
-    width: 100%;
-    height: auto;
-    box-shadow: none;
-  }
-
-  .header-actions,
-  .close-btn {
     display: none;
   }
 
-  .detail-content {
-    overflow: visible;
+  .print-only {
+    display: block;
   }
+}
+
+.pdf-modal {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pdf-modal-content {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  width: 90vw;
+  max-width: 700px;
+  box-shadow: 0 2px 16px #0003;
+  position: relative;
+}
+.pdf-modal .close-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
 }
 </style>

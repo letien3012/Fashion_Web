@@ -1,44 +1,53 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
-const attributeSchema = new mongoose.Schema({
-  name: {
-    type: String,
-    required: true
+const attributeSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: true,
+    },
+    attributeCatalogueId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AttributeCatalogue",
+      required: true,
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now,
+    },
+    updatedAt: {
+      type: Date,
+      default: null,
+    },
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
-  attributeCatalogueId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'AttributeCatalogue',
-    required: true
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: null
-  },
-  deletedAt: {
-    type: Date,
-    default: null
+  {
+    timestamps: true,
   }
-});
+);
 
 // Static method to get all attributes
-attributeSchema.statics.getAll = async function() {
+attributeSchema.statics.getAll = async function () {
   try {
-    return await this.find({ deletedAt: null })
-      .populate('attributeCatalogueId', 'name');
+    return await this.find({ deletedAt: null }).populate(
+      "attributeCatalogueId",
+      "name"
+    );
   } catch (error) {
     throw new Error(`Error fetching attribute list: ${error.message}`);
   }
 };
 
 // Static method to get attribute by ID
-attributeSchema.statics.getById = async function(id) {
+attributeSchema.statics.getById = async function (id) {
   try {
-    const attribute = await this.findById(id)
-      .populate('attributeCatalogueId', 'name');
+    const attribute = await this.findById(id).populate(
+      "attributeCatalogueId",
+      "name"
+    );
     if (!attribute) {
       throw new Error("Attribute not found");
     }
@@ -52,19 +61,21 @@ attributeSchema.statics.getById = async function(id) {
 };
 
 // Static method to get attributes by catalogue ID
-attributeSchema.statics.getByCatalogueId = async function(catalogueId) {
+attributeSchema.statics.getByCatalogueId = async function (catalogueId) {
   try {
     return await this.find({
       attributeCatalogueId: catalogueId,
-      deletedAt: null
-    });
+      deletedAt: null,
+    }).populate("attributeCatalogueId", "name");
   } catch (error) {
-    throw new Error(`Error fetching attributes by catalogue ID: ${error.message}`);
+    throw new Error(
+      `Error fetching attributes by catalogue ID: ${error.message}`
+    );
   }
 };
 
 // Static method to create new attribute
-attributeSchema.statics.create = async function(data) {
+attributeSchema.statics.create = async function (data) {
   try {
     const attribute = new this(data);
     await attribute.save();
@@ -75,7 +86,7 @@ attributeSchema.statics.create = async function(data) {
 };
 
 // Static method to update attribute
-attributeSchema.statics.update = async function(id, data) {
+attributeSchema.statics.update = async function (id, data) {
   try {
     const attribute = await this.findById(id);
     if (!attribute) {
@@ -84,7 +95,7 @@ attributeSchema.statics.update = async function(id, data) {
     if (attribute.deletedAt) {
       throw new Error("Attribute has been deleted");
     }
-    
+
     Object.assign(attribute, data);
     attribute.updatedAt = new Date();
     await attribute.save();
@@ -95,7 +106,7 @@ attributeSchema.statics.update = async function(id, data) {
 };
 
 // Static method to delete attribute (soft delete)
-attributeSchema.statics.delete = async function(id) {
+attributeSchema.statics.delete = async function (id) {
   try {
     const attribute = await this.findById(id);
     if (!attribute) {
@@ -104,7 +115,7 @@ attributeSchema.statics.delete = async function(id) {
     if (attribute.deletedAt) {
       throw new Error("Attribute has already been deleted");
     }
-    
+
     attribute.deletedAt = new Date();
     await attribute.save();
     return true;
@@ -113,6 +124,12 @@ attributeSchema.statics.delete = async function(id) {
   }
 };
 
-const Attribute = mongoose.model('Attribute', attributeSchema);
+// Static method to add new attribute
+attributeSchema.statics.add = async function (attributeData) {
+  const attribute = new this(attributeData);
+  return await attribute.save();
+};
+
+const Attribute = mongoose.model("Attribute", attributeSchema);
 
 module.exports = Attribute;

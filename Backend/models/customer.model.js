@@ -26,6 +26,12 @@ const customerSchema = new mongoose.Schema({
     type: String,
     default: null,
   },
+  wishlist: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+    },
+  ],
   status: {
     type: String,
     enum: ["active", "inactive"],

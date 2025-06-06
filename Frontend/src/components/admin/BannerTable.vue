@@ -167,23 +167,19 @@ td {
 }
 
 .bg-primary {
-  background-color: #e6f7ff;
-  color: #1890ff;
+  color: #fff;
 }
 
 .bg-info {
-  background-color: #e6f7ff;
   color: #1890ff;
 }
 
 .bg-warning {
-  background-color: #fff7e6;
   color: #fa8c16;
 }
 
 .bg-success {
-  background-color: #f6ffed;
-  color: #52c41a;
+  color: #fff;
 }
 
 .bg-secondary {

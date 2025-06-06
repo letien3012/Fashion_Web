@@ -62,12 +62,16 @@
 
                     <div class="mb-3">
                       <label class="form-label">Nội dung chi tiết</label>
-                      <textarea
-                        class="form-control"
-                        v-model="formData.content"
-                        rows="5"
+                      <div
+                        class="ckeditor-container"
                         :class="{ 'is-invalid': errors.content }"
-                      ></textarea>
+                      >
+                        <textarea
+                          id="product-content-editor"
+                          v-model="formData.content"
+                          rows="5"
+                        ></textarea>
+                      </div>
                       <div class="invalid-feedback">{{ errors.content }}</div>
                     </div>
 
@@ -456,7 +460,7 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, onBeforeUnmount } from "vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
 
@@ -497,6 +501,7 @@ export default {
     const selectedAttributeCatalogues = ref([]);
     const newAttributes = ref([]);
     const selectedAttributes = ref({});
+    let editor = null;
 
     // Helper function to get full image URL
     const getImageUrl = (imagePath) => {
@@ -504,6 +509,16 @@ export default {
       if (imagePath.startsWith("data:image")) return imagePath;
       if (imagePath.startsWith("http")) return imagePath;
       return `${backendUrl}${imagePath}`;
+    };
+
+    // Helper function to convert full URL to relative path
+    const convertToRelativePath = (imagePath) => {
+      if (!imagePath) return null;
+      if (imagePath.startsWith("data:image")) return imagePath;
+      if (imagePath.startsWith(backendUrl)) {
+        return imagePath.replace(backendUrl, "");
+      }
+      return imagePath;
     };
 
     const generateSKU = (combination) => {
@@ -581,6 +596,39 @@ export default {
         if (variant.attributeId1) {
           formData.value.variants.push(variant);
         }
+      });
+    };
+
+    const initEditor = () => {
+      editor = CKEDITOR.replace("product-content-editor", {
+        height: 300,
+        removeButtons: "",
+        toolbarGroups: [
+          { name: "document", groups: ["mode", "document", "doctools"] },
+          { name: "clipboard", groups: ["clipboard", "undo"] },
+          {
+            name: "editing",
+            groups: ["find", "selection", "spellchecker", "editing"],
+          },
+          { name: "forms", groups: ["forms"] },
+          "/",
+          { name: "basicstyles", groups: ["basicstyles", "cleanup"] },
+          {
+            name: "paragraph",
+            groups: ["list", "indent", "blocks", "align", "bidi", "paragraph"],
+          },
+          { name: "links", groups: ["links"] },
+          { name: "insert", groups: ["insert"] },
+          "/",
+          { name: "styles", groups: ["styles"] },
+          { name: "colors", groups: ["colors"] },
+          { name: "tools", groups: ["tools"] },
+          { name: "others", groups: ["others"] },
+        ],
+      });
+
+      editor.on("change", () => {
+        formData.value.content = editor.getData();
       });
     };
 
@@ -676,6 +724,13 @@ export default {
         });
       }
       await fetchAttributeCatalogues();
+      initEditor();
+    });
+
+    onBeforeUnmount(() => {
+      if (editor) {
+        editor.destroy();
+      }
     });
 
     const fetchAttributeCatalogues = async () => {
@@ -959,6 +1014,17 @@ export default {
           return;
         }
 
+        // Convert image paths to relative paths before submitting
+        const submitData = {
+          ...formData.value,
+          image: convertToRelativePath(formData.value.image),
+          album: formData.value.album.map((img) => convertToRelativePath(img)),
+          variants: formData.value.variants.map((variant) => ({
+            ...variant,
+            image: convertToRelativePath(variant.image),
+          })),
+        };
+
         const token = localStorage.getItem("token-admin");
 
         // Log data before sending
@@ -970,7 +1036,7 @@ export default {
         if (props.product) {
           const response = await axios.put(
             `${backendUrl}/api/products/update/${props.product._id}`,
-            formData.value,
+            submitData,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
@@ -980,7 +1046,7 @@ export default {
         } else {
           const response = await axios.post(
             `${backendUrl}/api/products/add`,
-            formData.value,
+            submitData,
             {
               headers: { Authorization: `Bearer ${token}` },
             }
@@ -1073,6 +1139,10 @@ export default {
               publish: variant.publish || false,
             })),
           };
+          // Update editor content when product changes
+          if (editor) {
+            editor.setData(newProduct.content || "");
+          }
         }
       },
       { immediate: true }
@@ -1356,45 +1426,10 @@ export default {
 .ckeditor-container {
   border: 1px solid #ced4da;
   border-radius: 4px;
-  display: block;
-  width: 100%;
-  box-sizing: border-box;
+  overflow: hidden;
 }
 
-.ckeditor-container :deep(.ck.ck-editor) {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  min-height: 300px;
-  box-sizing: border-box;
-}
-
-.ckeditor-container :deep(.ck.ck-editor__main) {
-  width: 100%;
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-.ckeditor-container :deep(.ck-editor__editable) {
-  min-height: 200px;
-  max-height: 400px;
-  display: block;
-  width: 100%;
-  overflow-y: auto;
-  padding: 10px;
-  box-sizing: border-box;
-}
-
-.ckeditor-container :deep(.ck-editor__editable_inline) {
-  padding: 0 10px;
-}
-
-.ckeditor-container :deep(.ck.ck-toolbar) {
-  display: flex;
-  flex-wrap: wrap;
-  width: 100%;
-  box-sizing: border-box;
+.ckeditor-container.is-invalid {
+  border-color: #dc3545;
 }
 </style>

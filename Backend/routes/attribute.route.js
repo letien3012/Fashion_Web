@@ -4,6 +4,7 @@ const attributeController = require("../controllers/attribute.controller");
 
 router.post("/add", attributeController.add);
 router.get("/", attributeController.getAll);
+router.get("/catalogue/:catalogueId", attributeController.getByCatalogueId);
 router.get("/:id", attributeController.getById);
 router.put("/update/:id", attributeController.update);
 router.delete("/delete/:id", attributeController.delete);

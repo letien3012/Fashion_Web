@@ -53,7 +53,7 @@
         <div class="form-group">
           <label for="parentId">Danh mục cha</label>
           <select id="parentId" v-model="formData.parentId">
-            <option value="">Không có</option>
+            <option :value="null">Không có</option>
             <option
               v-for="catalogue in parentCatalogues"
               :key="catalogue._id"
@@ -79,6 +79,8 @@
 
 <script>
 import AdminProductCatalogueService from "../../services/admin/productCatalogue.service";
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
 
 export default {
   name: "ProductCatalogueForm",
@@ -101,13 +103,14 @@ export default {
       formData: {
         _id: null,
         name: "",
-        slug: "",
         description: "",
-        parentId: "",
+        icon: null,
+        parentId: null,
         publish: true,
       },
       parentCatalogues: [],
       previewImage: null,
+      loading: false,
     };
   },
   methods: {
@@ -147,31 +150,51 @@ export default {
 
     async handleSubmit() {
       try {
+        if (!this.validateForm()) {
+          return;
+        }
+
         this.loading = true;
         let response;
+
+        // Ensure parentId is null if empty or undefined
+        const parentId =
+          this.formData.parentId === "" ||
+          this.formData.parentId === undefined ||
+          this.formData.parentId === null
+            ? null
+            : this.formData.parentId;
+
+        const submitData = {
+          name: this.formData.name.trim(),
+          description: this.formData.description || "",
+          icon: this.formData.icon,
+          parentId: parentId,
+          publish: this.formData.publish,
+        };
+
+        console.log("Submitting data:", submitData); // Debug log
 
         if (this.isEditing) {
           // Update existing catalogue
           response = await AdminProductCatalogueService.update(
-            this.formData.id,
-            {
-              name: this.formData.name.trim(),
-            }
+            this.formData._id,
+            submitData
           );
 
           if (response.status === 200) {
-            this.$emit("submit", this.formData);
-            this.closeModal();
+            toast.success("Cập nhật danh mục thành công");
+            this.$emit("submitCatalogue", response.data.data);
+            this.$emit("close");
           }
         } else {
           // Add new catalogue
-          response = await AdminProductCatalogueService.add({
-            name: this.formData.name.trim(),
-          });
+          response = await AdminProductCatalogueService.add(submitData);
 
           if (response.status === 201) {
-            this.$emit("submit", this.formData);
-            this.closeModal();
+            toast.success("Thêm danh mục thành công");
+            this.$emit("submitCatalogue", response.data.data);
+            this.$emit("close");
           }
         }
       } catch (error) {
@@ -205,9 +228,9 @@ export default {
           this.formData = {
             _id: newVal._id || null,
             name: newVal.name || "",
-            slug: newVal.slug || "",
             description: newVal.description || "",
-            parentId: newVal.parentId || "",
+            icon: newVal.icon || null,
+            parentId: newVal.parentId || null,
             publish: newVal.publish !== undefined ? newVal.publish : true,
           };
           if (
@@ -232,9 +255,9 @@ export default {
         this.formData = {
           _id: null,
           name: "",
-          slug: "",
           description: "",
-          parentId: "",
+          icon: null,
+          parentId: null,
           publish: true,
         };
         this.previewImage = null;

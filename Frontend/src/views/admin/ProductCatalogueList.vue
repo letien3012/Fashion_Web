@@ -20,57 +20,70 @@
     </div>
 
     <div class="table-container">
-      <ProductCatalogueTable
-        :catalogues="paginatedCatalogues"
-        @edit="editCatalogue"
-        @delete="confirmDelete"
-      />
-
-      <div class="pagination-info" v-if="totalPages > 1">
-        <span class="showing-info">
-          Hiển thị {{ startIndex + 1 }}-{{ endIndex }} /
-          {{ filteredCatalogues.length }} danh mục
-        </span>
-        <div class="pagination">
-          <button
-            class="page-btn"
-            :disabled="currentPage === 1"
-            @click="changePage(currentPage - 1)"
-          >
-            <i class="fas fa-chevron-left"></i>
-          </button>
-
-          <template v-for="page in displayedPages" :key="page">
-            <button
-              v-if="page !== '...'"
-              class="page-btn"
-              :class="{ active: currentPage === page }"
-              @click="changePage(page)"
-            >
-              {{ page }}
-            </button>
-            <span v-else class="page-dots">...</span>
-          </template>
-
-          <button
-            class="page-btn"
-            :disabled="currentPage === totalPages"
-            @click="changePage(currentPage + 1)"
-          >
-            <i class="fas fa-chevron-right"></i>
-          </button>
-        </div>
+      <div v-if="loading" class="loading-state">
+        <div class="spinner"></div>
+        <p>Đang tải dữ liệu...</p>
       </div>
+      <div v-else-if="error" class="error-state">
+        <i class="fas fa-exclamation-circle"></i>
+        <p>{{ error }}</p>
+        <button class="btn btn-primary" @click="fetchCatalogues">
+          Thử lại
+        </button>
+      </div>
+      <template v-else>
+        <ProductCatalogueTable
+          :catalogues="paginatedCatalogues"
+          @edit="editCatalogue"
+          @delete="confirmDelete"
+        />
 
-      <ProductCatalogueForm
-        :show="showAddModal"
-        :is-editing="isEditing"
-        :initial-data="formData"
-        @close="closeModal"
-        @submitCatalogue="handleSubmit"
-        @error="handleFormError"
-      />
+        <div class="pagination-info">
+          <span class="showing-info">
+            Hiển thị {{ startIndex + 1 }}-{{ endIndex }} /
+            {{ filteredCatalogues.length }} danh mục
+          </span>
+          <div class="pagination">
+            <button
+              class="page-btn"
+              :disabled="currentPage === 1"
+              @click="changePage(currentPage - 1)"
+            >
+              <i class="fas fa-chevron-left"></i>
+            </button>
+
+            <template v-for="page in displayedPages" :key="page">
+              <button
+                v-if="page !== '...'"
+                class="page-btn"
+                :class="{ active: currentPage === page }"
+                @click="changePage(page)"
+              >
+                {{ page }}
+              </button>
+              <span v-else class="page-dots">...</span>
+            </template>
+
+            <button
+              class="page-btn"
+              :disabled="currentPage === totalPages"
+              @click="changePage(currentPage + 1)"
+            >
+              <i class="fas fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </template>
     </div>
+
+    <ProductCatalogueForm
+      :show="showAddModal"
+      :is-editing="isEditing"
+      :initial-data="formData"
+      @close="closeModal"
+      @submitCatalogue="handleSubmit"
+      @error="handleFormError"
+    />
   </div>
 </template>
 
@@ -98,12 +111,15 @@ export default {
       showAddModal: false,
       isEditing: false,
       formData: {
-        id: null,
+        _id: null,
         name: "",
         description: "",
         icon: null,
         parentId: null,
+        publish: true,
       },
+      loading: false,
+      error: null,
     };
   },
   computed: {
@@ -161,34 +177,41 @@ export default {
     openAddModal() {
       this.isEditing = false;
       this.formData = {
-        id: null,
+        _id: null,
         name: "",
         description: "",
         icon: null,
         parentId: null,
+        publish: true,
       };
       this.showAddModal = true;
     },
 
     async fetchCatalogues() {
       try {
+        this.loading = true;
+        this.error = null;
         const response = await AdminProductCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.catalogues = response.data.data;
           this.filteredCatalogues = [...this.catalogues];
         } else {
-          toast.error("Dữ liệu trả về không đúng định dạng");
+          this.error = "Dữ liệu trả về không đúng định dạng";
+          toast.error(this.error);
         }
       } catch (error) {
         console.error("Fetch catalogues error:", error);
         if (error.response?.status === 401) {
-          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.error = "Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại";
+          toast.error(this.error);
           this.$router.push("/admin/login");
         } else {
-          toast.error(
-            "Không thể tải danh sách danh mục. Vui lòng thử lại sau."
-          );
+          this.error =
+            "Không thể tải danh sách danh mục. Vui lòng thử lại sau.";
+          toast.error(this.error);
         }
+      } finally {
+        this.loading = false;
       }
     },
 
@@ -206,7 +229,9 @@ export default {
     },
 
     changePage(page) {
-      this.currentPage = page;
+      if (page >= 1 && page <= this.totalPages) {
+        this.currentPage = page;
+      }
     },
 
     editCatalogue(catalogue) {
@@ -258,43 +283,12 @@ export default {
     async handleSubmit(formData) {
       try {
         this.loading = true;
-        let response;
-
-        if (this.isEditing) {
-          // Update existing catalogue
-          response = await AdminProductCatalogueService.update(formData.id, {
-            name: formData.name.trim(),
-          });
-
-          if (response.status === 200) {
-            toast.success("Cập nhật danh mục thành công");
-            this.closeModal();
-            await this.fetchCatalogues();
-            this.handleSearch(); // Re-apply search filter
-          }
-        } else {
-          // Add new catalogue
-          response = await AdminProductCatalogueService.add({
-            name: formData.name.trim(),
-          });
-
-          if (response.status === 201) {
-            toast.success("Thêm danh mục thành công");
-            this.closeModal();
-            await this.fetchCatalogues();
-            this.handleSearch(); // Re-apply search filter
-          }
-        }
+        await this.fetchCatalogues();
+        this.handleSearch(); // Re-apply search filter
+        this.closeModal();
       } catch (error) {
         console.error("Submit error:", error);
-        if (error.response?.status === 401) {
-          toast.error("Phiên đăng nhập đã hết hạn");
-          this.$router.push("/admin/login");
-        } else if (error.response?.data?.message) {
-          toast.error(error.response.data.message);
-        } else {
-          toast.error("Có lỗi xảy ra. Vui lòng thử lại sau.");
-        }
+        toast.error("Có lỗi xảy ra khi cập nhật danh sách");
       } finally {
         this.loading = false;
       }
@@ -308,11 +302,12 @@ export default {
       this.showAddModal = false;
       this.isEditing = false;
       this.formData = {
-        id: null,
+        _id: null,
         name: "",
         description: "",
         icon: null,
         parentId: null,
+        publish: true,
       };
     },
   },
@@ -398,18 +393,73 @@ export default {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.loading-state,
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+  color: #8c8c8c;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #1890ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 16px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.error-state i {
+  font-size: 24px;
+  color: #ff4d4f;
+  margin-bottom: 8px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary {
+  background: #1890ff;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #40a9ff;
+}
+
 .pagination-info {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  background: white;
+  padding: 16px 24px;
   border-top: 1px solid #f0f0f0;
 }
 
 .showing-info {
-  color: #8c8c8c;
-  font-size: 0.9em;
+  color: #666;
+  font-size: 14px;
 }
 
 .pagination {
@@ -421,34 +471,45 @@ export default {
 .page-btn {
   min-width: 32px;
   height: 32px;
-  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid #d9d9d9;
-  border-radius: 4px;
-  background: white;
-  color: #262626;
+  border-radius: 6px;
+  background-color: white;
+  color: #666;
+  font-size: 14px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .page-btn:hover:not(:disabled) {
-  border-color: #1890ff;
+  border-color: #40a9ff;
   color: #1890ff;
 }
 
 .page-btn.active {
-  background: #1890ff;
+  background-color: #1890ff;
   border-color: #1890ff;
   color: white;
 }
 
 .page-btn:disabled {
-  background: #f5f5f5;
+  background-color: #f5f5f5;
   border-color: #d9d9d9;
-  color: #bfbfbf;
+  color: #d9d9d9;
   cursor: not-allowed;
 }
 
 .page-dots {
-  color: #8c8c8c;
+  color: #666;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .pagination-info {
+    flex-direction: column;
+    gap: 16px;
+  }
 }
 </style>

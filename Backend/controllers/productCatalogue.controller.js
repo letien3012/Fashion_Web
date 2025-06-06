@@ -23,7 +23,7 @@ exports.add = async (req, res) => {
     const catalogue = new ProductCatalogue({
       name,
       description,
-      parentId,
+      parentId: parentId === "" ? null : parentId,
       icon,
     });
 
@@ -122,7 +122,8 @@ exports.update = async (req, res) => {
     // Update fields
     catalogue.name = name || catalogue.name;
     catalogue.description = description || catalogue.description;
-    catalogue.parentId = parentId || catalogue.parentId;
+    catalogue.parentId =
+      parentId === null ? null : parentId || catalogue.parentId;
 
     // Handle icon update
     if (req.body.icon) {
@@ -142,7 +143,6 @@ exports.update = async (req, res) => {
     }
 
     await catalogue.save();
-
     res.status(200).json({
       message: "Cập nhật danh mục thành công",
       data: catalogue,

@@ -17,7 +17,7 @@
       </span>
     </div>
   </div>
-  <header class="header">
+  <header class="header" :class="{ scrolled: isScrolled }">
     <div class="mobile-menu-toggle" @click="toggleMobileMenu">
       <i class="fas fa-bars"></i>
     </div>
@@ -43,21 +43,25 @@
             v-if="showProductMenu && !isMobileMenuOpen"
             class="product-mega-menu"
           >
-            <div class="mega-menu-column">
-              <div class="mega-menu-title">SOFA</div>
-              <div class="mega-menu-item">Sofa hiện đại</div>
-              <div class="mega-menu-item">Sofa tân cổ điển</div>
-              <div class="mega-menu-item">Sofa bed</div>
-              <div class="mega-menu-item">Sofa gỗ</div>
-            </div>
-            <div class="mega-menu-column">
-              <div class="mega-menu-title">BÀN SOFA</div>
-              <div class="mega-menu-item">Bàn sofa mặt đá</div>
-              <div class="mega-menu-item">Bàn sofa gỗ</div>
-            </div>
-            <div class="mega-menu-column">
-              <div class="mega-menu-title">GHẾ THƯ GIÃN</div>
-              <div class="mega-menu-item">Ghế thư giãn</div>
+            <div
+              v-for="category in categories"
+              :key="category._id"
+              class="mega-menu-column"
+            >
+              <router-link
+                :to="{ name: 'Products', query: { category: category._id } }"
+                class="mega-menu-title"
+              >
+                {{ category.name }}
+              </router-link>
+              <router-link
+                v-for="child in category.children"
+                :key="child._id"
+                :to="{ name: 'Products', query: { category: child._id } }"
+                class="mega-menu-item"
+              >
+                {{ child.name }}
+              </router-link>
             </div>
           </div>
         </transition>
@@ -101,7 +105,11 @@
         style="position: relative; cursor: pointer"
       >
         <i class="fas fa-shopping-cart icon"></i>
-        <span v-if="!userData" class="cart-badge">0</span>
+        <span
+          v-if="!userData || (userData && cartCount === 0)"
+          class="cart-badge"
+          >0</span
+        >
         <span v-else-if="cartCount > 0" class="cart-badge">{{
           cartCount
         }}</span>
@@ -128,6 +136,7 @@ import { toast } from "vue3-toastify";
 import CartPopup from "./CartPopup.vue";
 import ImageSearchModal from "./ImageSearchModal.vue";
 import { cartService } from "../services/cart.service";
+import { productCatalogueService } from "../services/productCatalogue.service";
 
 export default {
   components: { CartPopup, ImageSearchModal },
@@ -142,6 +151,19 @@ export default {
     const isMobileMenuOpen = ref(false);
     const showImageSearch = ref(false);
     const showProductMenu = ref(false);
+    const isScrolled = ref(false);
+    const categories = ref([]);
+
+    async function fetchCategories() {
+      try {
+        const response = await productCatalogueService.getTree();
+        if (response && response.data) {
+          categories.value = response.data;
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    }
 
     async function checkCartOfCurrentUser() {
       try {
@@ -228,17 +250,26 @@ export default {
         try {
           const user = JSON.parse(userStr);
           userData.value = {
-            fullname: user.fullname || user.name, // Handle both regular and Google login
+            fullname: user.fullname || user.name,
             email: user.email,
-            avatar: user.avatar || user.image, // Handle both regular and Google login
+            avatar: user.avatar || user.image,
           };
-          // Chỉ kiểm tra giỏ hàng nếu đã đăng nhập
           checkCartOfCurrentUser();
         } catch (error) {
           console.error("Error parsing user data:", error);
         }
       }
+
+      // Fetch categories
+      fetchCategories();
+
+      // Thêm event listener cho scroll
+      window.addEventListener("scroll", handleScroll);
     });
+
+    const handleScroll = () => {
+      isScrolled.value = window.scrollY > 36; // 36px là chiều cao của header-top-bar
+    };
 
     return {
       searchQuery,
@@ -257,6 +288,8 @@ export default {
       showImageSearchModal,
       closeImageSearchModal,
       showProductMenu,
+      isScrolled,
+      categories,
     };
   },
 };
@@ -273,6 +306,8 @@ export default {
   color: #666;
   width: 100%;
   box-sizing: border-box;
+  position: relative;
+  z-index: 1001;
 }
 
 .header-top-left {
@@ -304,16 +339,22 @@ export default {
   flex-direction: row;
   align-items: center;
   padding: 20px 5%;
-  margin-bottom: 10px;
   background-color: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 1000;
   box-sizing: border-box;
-  position: relative;
   max-width: 1920px;
   margin: 0 auto;
+  transition: all 0.3s ease;
+}
+
+.header.scrolled {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .logo {
@@ -712,6 +753,7 @@ export default {
   letter-spacing: 0.5px;
   transition: color 0.2s;
   cursor: pointer;
+  display: block;
 }
 .mega-menu-title:hover {
   color: #fff;
@@ -725,6 +767,8 @@ export default {
   border-radius: 4px;
   cursor: pointer;
   transition: color 0.2s, background 0.2s;
+  display: block;
+  text-decoration: none;
 }
 .mega-menu-item:hover {
   color: #ff0000;

@@ -56,7 +56,9 @@
             <div class="category-image">
               <img :src="category.image" :alt="category.name" />
               <div class="category-overlay">
-                <router-link :to="category.link" class="category-btn"
+                <router-link
+                  :to="`/products?category=${category.id}`"
+                  class="category-btn"
                   >Xem Bộ Sưu Tập</router-link
                 >
               </div>

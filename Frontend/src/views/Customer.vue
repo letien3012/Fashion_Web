@@ -184,6 +184,64 @@
             @close="closeReviewModal"
             @review-submitted="handleReviewSubmitted"
           />
+
+          <!-- Cancel Order Modal -->
+          <div v-if="showCancelModal" class="modal-overlay">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3>Hủy đơn hàng</h3>
+                <button class="close-btn" @click="closeCancelModal">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="modal-body">
+                <div class="form-group">
+                  <label for="cancelReason">Lý do hủy đơn hàng:</label>
+                  <select
+                    id="cancelReason"
+                    v-model="cancelReason"
+                    class="form-control"
+                  >
+                    <option value="">Chọn lý do hủy đơn</option>
+                    <option value="Đổi ý không muốn mua nữa">
+                      Đổi ý không muốn mua nữa
+                    </option>
+                    <option value="Đặt nhầm sản phẩm">Đặt nhầm sản phẩm</option>
+                    <option value="Tìm thấy sản phẩm rẻ hơn">
+                      Tìm thấy sản phẩm rẻ hơn
+                    </option>
+                    <option value="Không còn nhu cầu">Không còn nhu cầu</option>
+                    <option value="other">Lý do khác</option>
+                  </select>
+                </div>
+                <div v-if="cancelReason === 'other'" class="form-group">
+                  <label for="otherReason">Nhập lý do khác:</label>
+                  <textarea
+                    id="otherReason"
+                    v-model="otherReason"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Nhập lý do hủy đơn hàng của bạn"
+                  ></textarea>
+                </div>
+                <div class="modal-footer">
+                  <button class="action-btn" @click="closeCancelModal">
+                    Hủy
+                  </button>
+                  <button
+                    class="action-btn danger"
+                    @click="confirmCancelOrder"
+                    :disabled="
+                      !cancelReason ||
+                      (cancelReason === 'other' && !otherReason)
+                    "
+                  >
+                    Xác nhận hủy đơn
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -347,12 +405,105 @@ function getStatusText(status) {
   return statusMap[status] || status;
 }
 
+// Cancel modal state
+const showCancelModal = ref(false);
+const cancelReason = ref("");
+const otherReason = ref("");
+const orderToCancel = ref(null);
+
 const cancelOrder = async (orderId) => {
+  orderToCancel.value = orderId;
+  showCancelModal.value = true;
+};
+
+const closeCancelModal = () => {
+  showCancelModal.value = false;
+  cancelReason.value = "";
+  otherReason.value = "";
+  orderToCancel.value = null;
+};
+
+const confirmCancelOrder = async () => {
   try {
-    // TODO: Implement cancel order logic
-    toast.info("Chức năng hủy đơn đang được phát triển");
+    const note =
+      cancelReason.value === "other" ? otherReason.value : cancelReason.value;
+
+    await orderService.cancelOrder(orderToCancel.value, note);
+    toast.success("Hủy đơn hàng thành công!");
+
+    // Refresh orders list
+    const orderData = await orderService.getCustomerOrders();
+    orders.value = await Promise.all(
+      orderData.map(async (order) => {
+        // Process each order detail to get complete product information
+        const orderDetails = await Promise.all(
+          order.order_detail.map(async (item) => {
+            try {
+              // Get complete product information
+              const productResponse = await productService.getProductById(
+                item.productId
+              );
+              const product = productResponse.data;
+
+              return {
+                _id: item._id,
+                productId: {
+                  _id: product._id,
+                  name: product.name,
+                  image: `http://localhost:3005/${product.image}`,
+                  variant: item.variants[0]?.sku || "Default",
+                },
+                quantity: item.quantity,
+                price: item.price,
+                variants: item.variants.map((v) => ({
+                  sku: v.sku,
+                  quantity: v.quantity,
+                  price: v.price,
+                })),
+              };
+            } catch (error) {
+              console.error("Error fetching product details:", error);
+              return {
+                _id: item._id,
+                productId: {
+                  _id: item.productId,
+                  name: "Product not found",
+                  image: "",
+                  variant: item.variants[0]?.sku || "Default",
+                },
+                quantity: item.quantity,
+                price: item.price,
+                variants: item.variants.map((v) => ({
+                  sku: v.sku,
+                  quantity: v.quantity,
+                  price: v.price,
+                })),
+              };
+            }
+          })
+        );
+
+        return {
+          id: order._id,
+          date: new Date(order.createdAt).toLocaleDateString(),
+          status: order.status,
+          code: order.code,
+          statusClass: order.status,
+          statusText: getStatusText(order.status),
+          total: order.total_price,
+          total_product_price: order.total_product_price,
+          discount: order.discount,
+          total_ship_fee: order.total_ship_fee,
+          method: order.method,
+          order_detail: orderDetails,
+          canReview: order.status === "completed",
+        };
+      })
+    );
+    closeCancelModal();
   } catch (error) {
-    toast.error("Không thể hủy đơn hàng");
+    console.error("Error cancelling order:", error);
+    toast.error(error.response?.data?.message || "Không thể hủy đơn hàng");
   }
 };
 
@@ -1247,5 +1398,54 @@ const handleReviewSubmitted = async () => {
     padding: 6px 10px 6px 30px;
     font-size: 0.85rem;
   }
+}
+
+/* Cancel Modal Styles */
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.form-control:focus {
+  border-color: #ee4d2d;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(238, 77, 45, 0.1);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #eee;
+}
+
+textarea.form-control {
+  resize: vertical;
+  min-height: 80px;
+}
+
+select.form-control {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 16px;
+  padding-right: 30px;
 }
 </style>

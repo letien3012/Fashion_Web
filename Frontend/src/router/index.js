@@ -16,6 +16,7 @@ import ChangePW from "../views/ChangePW.vue";
 import Products from "../views/Products.vue";
 import FeatureUpload from "../views/FeatureUpload.vue";
 import Search from "../views/Search.vue";
+import WishList from "../views/WishList.vue";
 
 const routes = [
   {
@@ -97,6 +98,14 @@ const routes = [
     path: "/search",
     name: "Search",
     component: Search,
+  },
+  {
+    path: "/wishlist",
+    name: "WishList",
+    component: WishList,
+    meta: {
+      requiresAuth: true,
+    },
   },
   ...adminRoutes,
 ];
