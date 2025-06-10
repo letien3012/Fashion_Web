@@ -54,7 +54,22 @@
         </select>
       </div>
     </div>
-
+    <div class="filter-return" v-if="statusFilter === 'returned'">
+      <div class="return-status-filters">
+        <button
+          v-for="status in returnStatuses"
+          :key="status.value"
+          @click="returnStatusFilter = status.value"
+          :class="[
+            'status-btn',
+            { active: returnStatusFilter === status.value },
+          ]"
+        >
+          {{ status.label }}
+        </button>
+      </div>
+    </div>
+    <div class="filter-return"></div>
     <div class="table-container">
       <div v-if="isLoading" class="loading-state">
         <div class="spinner"></div>
@@ -73,6 +88,7 @@
         @view="viewOrder"
         @update-status="handleUpdateStatus"
         @delete="deleteOrder"
+        @process-return="handleProcessReturn"
       />
 
       <div class="pagination-info">
@@ -125,6 +141,7 @@ import OrderTable from "../../components/admin/OrderTable.vue";
 import OrderDetail from "../../components/admin/OrderDetail.vue";
 import OrderService from "../../services/admin/order.service";
 import { toast } from "vue3-toastify";
+import Swal from "sweetalert2";
 
 export default {
   name: "OrderList",
@@ -153,13 +170,28 @@ export default {
         { value: "shipping", label: "Đang giao hàng" },
         { value: "delivered", label: "Đã giao hàng" },
         { value: "cancelled", label: "Đã hủy" },
-        { value: "returned", label: "Đã trả hàng" },
+        { value: "returned", label: "Trả hàng" },
+      ],
+      showReturnRequests: false,
+      returnStatusFilter: "",
+      returnStatuses: [
+        { value: "", label: "Tất cả" },
+        { value: "requested", label: "Chờ xử lý" },
+        { value: "approved", label: "Đã duyệt" },
+        { value: "rejected", label: "Đã từ chối" },
       ],
     };
   },
   computed: {
     filteredOrders() {
       let filtered = this.orders;
+
+      // Filter return requests if enabled
+      if (this.statusFilter === "returned" && this.returnStatusFilter) {
+        filtered = filtered.filter(
+          (order) => order.actionDetail?.status === this.returnStatusFilter
+        );
+      }
 
       // Lọc theo từ khóa tìm kiếm
       if (this.searchQuery) {
@@ -411,12 +443,79 @@ export default {
       const statusFlow = {
         pending: ["processing", "cancelled"],
         processing: ["shipping", "cancelled"],
-        shipping: ["delivered", "returned"],
-        delivered: ["returned"],
+        shipping: ["delivered"],
+        delivered: [],
         cancelled: [],
         returned: [],
       };
       return statusFlow[currentStatus] || [];
+    },
+    async handleProcessReturn(orderId, status) {
+      try {
+        const userInfo = JSON.parse(localStorage.getItem("employee") || "{}");
+        if (!userInfo._id) {
+          toast.error(
+            "Không tìm thấy thông tin nhân viên. Vui lòng đăng nhập lại!"
+          );
+          this.$router.push("/admin/login");
+          return;
+        }
+
+        const result = await Swal.fire({
+          title: `Xác nhận ${
+            status === "approved" ? "duyệt" : "từ chối"
+          } trả hàng`,
+          text: `Bạn có chắc chắn muốn ${
+            status === "approved" ? "duyệt" : "từ chối"
+          } yêu cầu trả hàng này?`,
+          icon: status === "approved" ? "question" : "warning",
+          showCancelButton: true,
+          confirmButtonText: "Xác nhận",
+          cancelButtonText: "Hủy",
+          confirmButtonColor: status === "approved" ? "#52c41a" : "#ff4d4f",
+          cancelButtonColor: "#8c8c8c",
+        });
+
+        if (result.isConfirmed) {
+          await OrderService.processReturnRequest(
+            orderId,
+            status,
+            userInfo._id
+          );
+
+          toast.success(
+            `Yêu cầu trả hàng đã được ${
+              status === "approved" ? "duyệt" : "từ chối"
+            }`
+          );
+
+          // Refresh orders list
+          await this.loadOrders();
+        }
+      } catch (error) {
+        console.error("Error processing return request:", error);
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Không thể xử lý yêu cầu trả hàng"
+        );
+      }
+    },
+    getReturnStatusText(status) {
+      const statusMap = {
+        requested: "Chờ xử lý",
+        approved: "Đã duyệt",
+        rejected: "Đã từ chối",
+      };
+      return statusMap[status] || status;
+    },
+    getReturnStatusClass(status) {
+      const statusMap = {
+        requested: "status-pending",
+        approved: "status-success",
+        rejected: "status-cancelled",
+      };
+      return statusMap[status] || "";
     },
   },
 };
@@ -655,5 +754,18 @@ export default {
   background: #1890ff;
   border-color: #1890ff;
   color: white;
+}
+
+.filter-return {
+  margin: 16px 0;
+  padding: 8px 0;
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.return-status-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 </style>

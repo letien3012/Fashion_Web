@@ -124,6 +124,7 @@ export default {
   width: 95%;
   margin: 0 auto;
   padding: 20px;
+  margin-bottom: 50px;
 }
 
 .breadcrumb {

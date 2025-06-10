@@ -1,6 +1,6 @@
 <template>
-    <div class="form-container">
-      <h2>Quên mật khẩu</h2>
+  <div class="form-container">
+    <h2>Quên mật khẩu</h2>
 
       <form @submit.prevent="handleLogin">
         <input type="text" placeholder="Email hoặc username" v-model="email" required />

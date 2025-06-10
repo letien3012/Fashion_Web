@@ -87,4 +87,28 @@ export const orderService = {
       throw error;
     }
   },
+
+  async requestReturn(orderId, data) {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Vui lòng đăng nhập để yêu cầu trả hàng");
+      }
+
+      const response = await axios.post(
+        `${API_URL}/orders/${orderId}/return`,
+        data,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error requesting return:", error);
+      throw error;
+    }
+  },
 };

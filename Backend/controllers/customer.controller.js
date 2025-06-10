@@ -119,7 +119,16 @@ exports.getProfile = async (req, res) => {
 // Cập nhật thông tin khách hàng
 exports.updateProfile = async (req, res) => {
   try {
-    const { fullname, phone, address, image, status } = req.body;
+    const {
+      fullname,
+      phone,
+      address,
+      ward_code,
+      district_code,
+      province_code,
+      image,
+      status,
+    } = req.body;
     const customer = await Customer.findById(req.customer.id);
 
     if (!customer) {
@@ -130,6 +139,9 @@ exports.updateProfile = async (req, res) => {
     customer.fullname = fullname || customer.fullname;
     customer.phone = phone || customer.phone;
     customer.address = address || customer.address;
+    customer.ward_code = ward_code || customer.ward_code;
+    customer.district_code = district_code || customer.district_code;
+    customer.province_code = province_code || customer.province_code;
     if (status && ["active", "inactive"].includes(status)) {
       customer.status = status;
     }
@@ -173,6 +185,9 @@ exports.updateProfile = async (req, res) => {
         fullname: customer.fullname,
         phone: customer.phone,
         address: customer.address,
+        ward_code: customer.ward_code,
+        district_code: customer.district_code,
+        province_code: customer.province_code,
         image: customer.image,
         status: customer.status,
       },
@@ -458,6 +473,53 @@ exports.softDelete = async (req, res) => {
   }
 };
 
+exports.getCustomerById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Validate ID
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "ID khách hàng không hợp lệ",
+      });
+    }
+
+    // Find customer by ID
+    const customer = await Customer.getCustomerById(id);
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Không tìm thấy khách hàng",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      customer: {
+        id: customer._id,
+        email: customer.email,
+        fullname: customer.fullname,
+        phone: customer.phone,
+        address: customer.address,
+        image: customer.image,
+        province_code: customer.province_code,
+        district_code: customer.district_code,
+        ward_code: customer.ward_code,
+        status: customer.status,
+        createdAt: customer.createdAt,
+        updatedAt: customer.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Get customer by ID error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
 // Thêm sản phẩm vào wishlist
 exports.addToWishlist = async (req, res) => {
   try {
@@ -519,20 +581,53 @@ exports.removeFromWishlist = async (req, res) => {
 // Lấy danh sách wishlist
 exports.getWishlist = async (req, res) => {
   try {
-    const customer = await Customer.findById(req.customer.id).populate(
-      "wishlist",
-      "name price images"
-    );
-
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+    if (!req.customer || !req.customer.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized access",
+      });
     }
 
+    const customer = await Customer.findById(req.customer.id).populate({
+      path: "wishlist",
+      select:
+        "name price images description variants catalogueId publish view_count favorite_count",
+      model: "Product",
+    });
+
+    if (!customer) {
+      return res.status(404).json({
+        success: false,
+        message: "Customer not found",
+      });
+    }
+
+    // Format wishlist items
+    const formattedWishlist = customer.wishlist.map((item) => ({
+      _id: item._id,
+      name: item.name,
+      price: item.price,
+      images: item.images,
+      description: item.description,
+      variants: item.variants,
+      catalogueId: item.catalogueId,
+      publish: item.publish,
+      view_count: item.view_count,
+      favorite_count: item.favorite_count,
+    }));
+
     res.json({
-      wishlist: customer.wishlist,
+      success: true,
+      customerId: customer._id,
+      wishlist: formattedWishlist,
     });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error("Get wishlist error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
   }
 };
 
@@ -578,4 +673,11 @@ exports.uploadProfileImage = async (req, res) => {
       error: error.message,
     });
   }
+};
+
+const updateLocation = (location) => {
+  console.log("Location chọn:", location);
+  if (location.ward) userInfo.value.ward_code = location.ward.code;
+  if (location.district) userInfo.value.district_code = location.district.code;
+  if (location.province) userInfo.value.province_code = location.province.code;
 };

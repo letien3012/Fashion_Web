@@ -99,6 +99,9 @@
       ></i>
     </div>
     <div class="user-icons">
+      <router-link to="/wishlist" class="wishlist-icon-wrapper">
+        <i class="fas fa-heart icon"></i>
+      </router-link>
       <div
         class="cart-icon-wrapper"
         @click="handleCartClick"
@@ -507,6 +510,49 @@ export default {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(255, 0, 0, 0.2);
+}
+
+.wishlist-icon-wrapper {
+  text-decoration: none;
+  transition: transform 0.3s ease;
+}
+
+.wishlist-icon-wrapper:hover {
+  transform: scale(1.1);
+}
+
+.wishlist-icon-wrapper .icon {
+  color: #ff0000;
+  animation: heartBeat 1.5s ease-in-out infinite;
+  text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+}
+
+@keyframes heartBeat {
+  0% {
+    transform: scale(1);
+    color: #ff0000;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+  }
+  14% {
+    transform: scale(1.1);
+    color: #ff3333;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+  }
+  28% {
+    transform: scale(1);
+    color: #ff0000;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+  }
+  42% {
+    transform: scale(1.1);
+    color: #ff3333;
+    text-shadow: 0 0 10px rgba(255, 0, 0, 0.8);
+  }
+  70% {
+    transform: scale(1);
+    color: #ff0000;
+    text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+  }
 }
 
 .mobile-menu-toggle {

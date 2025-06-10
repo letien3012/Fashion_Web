@@ -1,6 +1,7 @@
 const Order = require("../models/order.model");
 const Customer = require("../models/customer.model");
 const Consignment = require("../models/consignment.model");
+const ImageModel = require("../models/image.model");
 
 // Generate unique order code
 const generateOrderCode = () => {
@@ -79,6 +80,9 @@ exports.create = async (req, res) => {
       fullname: customerInfo.name,
       phone: customerInfo.phone,
       address: customerInfo.address,
+      province_code: customerInfo.province_code || "",
+      district_code: customerInfo.district_code || "",
+      ward_code: customerInfo.ward_code || "",
       order_detail: items,
       total_product_price,
       total_price,
@@ -517,5 +521,69 @@ exports.getOrderStatus = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Lỗi server", error: error.message });
+  }
+};
+
+// Request return for an order
+exports.requestReturn = async (req, res) => {
+  try {
+    const { images, note } = req.body;
+    const customerId = req.customer.id;
+
+    // Save images to return folder
+    const savedImages = await ImageModel.saveMultipleImages(images, "return");
+
+    const order = await Order.requestReturn(
+      req.params.id,
+      customerId,
+      savedImages,
+      note
+    );
+    res.status(200).json({
+      message: "Yêu cầu trả hàng đã được gửi thành công",
+      order,
+    });
+  } catch (error) {
+    // If there's an error, try to delete any saved images
+    if (req.body.images) {
+      await ImageModel.deleteMultipleImages(req.body.images);
+    }
+    res.status(400).json({ message: error.message });
+  }
+};
+
+// Process return request (for employees)
+exports.processReturnRequest = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const { employeeId } = req.body;
+
+    // Validate status
+    if (!["approved", "rejected"].includes(status)) {
+      return res.status(400).json({
+        message:
+          "Trạng thái không hợp lệ. Chỉ chấp nhận 'approved' hoặc 'rejected'",
+      });
+    }
+
+    const order = await Order.processReturnRequest(
+      req.params.id,
+      status,
+      employeeId
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Yêu cầu trả hàng đã được ${
+        status === "approved" ? "duyệt" : "từ chối"
+      }`,
+      order,
+    });
+  } catch (error) {
+    console.error("Error processing return request:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

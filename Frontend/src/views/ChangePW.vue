@@ -90,12 +90,14 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script setup>
 import { ref } from "vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Chatbot from "../components/Chatbot.vue";
 import SidebarProfile from "../components/SidebarProfile.vue";
 
 const oldPassword = ref("");

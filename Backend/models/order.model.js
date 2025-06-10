@@ -1,4 +1,6 @@
 const mongoose = require("mongoose");
+const ImageModel = require("./image.model");
+const ProductModel = require("./product.model");
 
 const orderSchema = new mongoose.Schema({
   customerId: {
@@ -111,6 +113,47 @@ const orderSchema = new mongoose.Schema({
     code: { type: String },
     discount: { type: Number },
     max_discount: { type: Number },
+  },
+  actionDetail: {
+    employeeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Employee",
+      default: null,
+    },
+    images: [
+      {
+        type: String,
+      },
+    ],
+    note: {
+      type: String,
+      default: "",
+    },
+    status: {
+      type: String,
+      enum: ["requested", "approved", "rejected"],
+      default: null,
+    },
+    createdAt: {
+      type: Date,
+      default: null,
+    },
+    updatedAt: {
+      type: Date,
+      default: null,
+    },
+  },
+  province_code: {
+    type: String,
+    default: "",
+  },
+  district_code: {
+    type: String,
+    default: "",
+  },
+  ward_code: {
+    type: String,
+    default: "",
   },
 });
 
@@ -290,12 +333,16 @@ orderSchema.statics.cancelOrder = async function (orderId, note) {
       }
     }
 
-    // Update order status and note
+    // Update order status and add actionDetail for cancellation
     const updatedOrder = await this.findByIdAndUpdate(
       orderId,
       {
         status: "cancelled",
-        note: note || "Đơn hàng bị hủy bởi khách hàng",
+        actionDetail: {
+          note: note || "Đơn hàng bị hủy bởi khách hàng",
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
         updatedAt: new Date(),
       },
       { new: true }
@@ -304,6 +351,91 @@ orderSchema.statics.cancelOrder = async function (orderId, note) {
     return updatedOrder;
   } catch (error) {
     throw new Error(`Lỗi khi hủy đơn hàng: ${error.message}`);
+  }
+};
+
+// Add static method to handle return request
+orderSchema.statics.requestReturn = async function (
+  orderId,
+  customerId,
+  images,
+  note
+) {
+  try {
+    const order = await this.findOne({ _id: orderId, customerId });
+    if (!order) {
+      throw new Error("Không tìm thấy đơn hàng");
+    }
+
+    if (order.status !== "delivered") {
+      throw new Error("Chỉ có thể yêu cầu trả hàng cho đơn hàng đã giao");
+    }
+
+    if (order.actionDetail && order.actionDetail.status) {
+      throw new Error("Đơn hàng này đã có yêu cầu trả hàng");
+    }
+
+    order.actionDetail = {
+      images,
+      note,
+      status: "requested",
+      createdAt: new Date(),
+    };
+
+    return await order.save();
+  } catch (error) {
+    throw new Error(`Lỗi khi yêu cầu trả hàng: ${error.message}`);
+  }
+};
+
+// Add static method to process return request
+orderSchema.statics.processReturnRequest = async function (
+  orderId,
+  status,
+  employeeId
+) {
+  try {
+    const order = await this.findById(orderId);
+    if (!order) {
+      throw new Error("Không tìm thấy đơn hàng");
+    }
+
+    if (!order.actionDetail) {
+      throw new Error("Không tìm thấy yêu cầu trả hàng");
+    }
+
+    if (order.actionDetail.status !== "requested") {
+      throw new Error("Yêu cầu trả hàng đã được xử lý trước đó");
+    }
+
+    // Update return request status
+    order.actionDetail.status = status;
+    order.actionDetail.employeeId = employeeId;
+    order.actionDetail.updatedAt = new Date();
+
+    // If approved, update order status to returned and update inventory
+    if (status === "approved") {
+      order.status = "returned";
+
+      // Update inventory for each item
+      for (const item of order.order_detail) {
+        for (const variant of item.variants) {
+          // Update consignment quantities
+          for (const consignment of variant.consignments) {
+            await mongoose
+              .model("Consignment")
+              .findByIdAndUpdate(consignment.consignmentId, {
+                $inc: { current_quantity: consignment.quantity },
+              });
+          }
+        }
+      }
+    }
+
+    await order.save();
+    return order;
+  } catch (error) {
+    throw error;
   }
 };
 

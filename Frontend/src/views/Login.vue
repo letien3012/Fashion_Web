@@ -1,10 +1,10 @@
 <template>
-  
-    <Header></Header>
-    <div class="login-page">
-      <FormLogin :loading="loading" @submit-login="handleLogin" />
-    </div>
-
+  <Header></Header>
+  <div class="login-page">
+    <FormLogin :loading="loading" @submit-login="handleLogin" />
+  </div>
+  <Footer></Footer>
+  <Chatbot />
 </template>
 
 <script>
@@ -12,12 +12,15 @@ import FormLogin from "../components/FormLogin.vue";
 import Header from "../components/Header.vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
-
+import Chatbot from "../components/Chatbot.vue";
+import Footer from "../components/Footer.vue";
 export default {
   name: "Login",
   components: {
     FormLogin,
     Header,
+    Footer,
+    Chatbot,
   },
   data() {
     return {

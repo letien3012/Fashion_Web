@@ -7,7 +7,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Add static file serving for uploads directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Route imports
 const routes = {
@@ -29,6 +29,7 @@ const routes = {
   imageService: require("./routes/imageService"),
   banner: require("./routes/banner.route"),
   review: require("./routes/review.route"),
+  location: require("./routes/location.routes"),
 };
 
 // Đăng ký các route API
@@ -50,6 +51,7 @@ app.use("/api/verify", routes.verify);
 app.use("/api/imageService", routes.imageService);
 app.use("/api/banners", routes.banner);
 app.use("/api/reviews", routes.review);
+app.use("/api/location", routes.location);
 
 // Middleware xử lý lỗi
 app.use((err, req, res, next) => {

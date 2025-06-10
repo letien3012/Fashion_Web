@@ -46,11 +46,13 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script>
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
+import Chatbot from "../components/Chatbot.vue";
 import ProductItem from "../components/ProductItem.vue";
 import { productService } from "../services/product.service";
 
@@ -59,6 +61,7 @@ export default {
   components: {
     Header,
     Footer,
+    Chatbot,
     ProductItem,
   },
   data() {

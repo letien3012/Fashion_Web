@@ -15,50 +15,64 @@
           <h3>Thông Tin Cá Nhân</h3>
           <div class="profile-details">
             <div class="detail-section">
-              <div class="info-grid">
-                <div class="info-item">
-                  <label>Họ và Tên</label>
-                  <input
-                    type="text"
-                    v-model="userInfo.name"
-                    placeholder="Nhập họ và tên"
-                    disabled
-                  />
+              <form @submit.prevent="updateProfile">
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label>Họ và Tên</label>
+                    <input
+                      type="text"
+                      v-model="userInfo.name"
+                      placeholder="Nhập họ và tên"
+                      class="form-control"
+                      disabled
+                    />
+                  </div>
+                  <div class="col-md-6">
+                    <label>Số điện thoại</label>
+                    <input
+                      type="tel"
+                      v-model="userInfo.phone"
+                      placeholder="Nhập số điện thoại"
+                      class="form-control"
+                    />
+                  </div>
+                  <div class="col-12">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      v-model="userInfo.email"
+                      placeholder="Theo dõi đơn hàng sẽ được gửi qua Email và ZNS"
+                      class="form-control"
+                      disabled
+                    />
+                  </div>
+                  <div class="col-12">
+                    <label>Địa chỉ</label>
+                    <input
+                      v-model="userInfo.address"
+                      placeholder="Địa chỉ (ví dụ: 103 Vạn Phúc, phường Vạn Phúc)"
+                      class="form-control mb-2"
+                    />
+                    <div class="row g-2 mt-2">
+                      <div class="col-md-12">
+                        <LocationPicker
+                          v-model:address="userInfo.address"
+                          @update:location="updateLocation"
+                          :provinceCode="userInfo.province_code"
+                          :districtCode="userInfo.district_code"
+                          :wardCode="userInfo.ward_code"
+                          :showOnlyDropdowns="true"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <div class="info-item">
-                  <label>Email</label>
-                  <input
-                    type="email"
-                    v-model="userInfo.email"
-                    placeholder="Nhập email"
-                    disabled
-                  />
+                <div class="button-group d-flex justify-content-end mt-4">
+                  <button class="save-button" :disabled="isUpdating">
+                    {{ isUpdating ? "Đang cập nhật..." : "Cập nhật thông tin" }}
+                  </button>
                 </div>
-                <div class="info-item">
-                  <label>Số Điện Thoại</label>
-                  <input
-                    type="tel"
-                    v-model="userInfo.phone"
-                    placeholder="Nhập số điện thoại"
-                  />
-                </div>
-                <div class="info-item">
-                  <label>Địa Chỉ</label>
-                  <textarea
-                    v-model="userInfo.address"
-                    placeholder="Nhập địa chỉ"
-                  ></textarea>
-                </div>
-              </div>
-              <div class="button-group">
-                <button
-                  class="save-button"
-                  @click="updateProfile"
-                  :disabled="isUpdating"
-                >
-                  {{ isUpdating ? "Đang cập nhật..." : "Cập nhật thông tin" }}
-                </button>
-              </div>
+              </form>
             </div>
           </div>
         </div>
@@ -66,6 +80,7 @@
     </div>
   </div>
   <Footer />
+  <Chatbot />
 </template>
 
 <script setup>
@@ -74,8 +89,10 @@ import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import Header from "./Header.vue";
 import Footer from "./Footer.vue";
+import Chatbot from "./Chatbot.vue";
 import SidebarProfile from "./SidebarProfile.vue";
 import { customerService } from "../services/customer.service";
+import LocationPicker from "./LocationPicker.vue";
 
 const router = useRouter();
 const isUpdating = ref(false);
@@ -84,7 +101,16 @@ const userInfo = ref({
   email: "",
   phone: "",
   address: "",
+  ward_code: "",
+  district_code: "",
+  province_code: "",
 });
+
+const updateLocation = (location) => {
+  userInfo.value.ward_code = location.ward_code || "";
+  userInfo.value.district_code = location.district_code || "";
+  userInfo.value.province_code = location.province_code || "";
+};
 
 onMounted(async () => {
   const userStr = localStorage.getItem("user");
@@ -104,6 +130,9 @@ onMounted(async () => {
       email: user.email || "",
       phone: user.phone || "",
       address: user.address || "",
+      ward_code: user.ward_code || "",
+      district_code: user.district_code || "",
+      province_code: user.province_code || "",
     };
   } catch (error) {
     console.error("Error:", error);
@@ -125,6 +154,9 @@ const updateProfile = async () => {
       fullname: userInfo.value.name,
       phone: userInfo.value.phone,
       address: userInfo.value.address,
+      ward_code: userInfo.value.ward_code,
+      district_code: userInfo.value.district_code,
+      province_code: userInfo.value.province_code,
     });
 
     // Update local storage with new user info
@@ -134,8 +166,12 @@ const updateProfile = async () => {
       user.fullname = userInfo.value.name;
       user.phone = userInfo.value.phone;
       user.address = userInfo.value.address;
+      user.ward_code = userInfo.value.ward_code;
+      user.district_code = userInfo.value.district_code;
+      user.province_code = userInfo.value.province_code;
       localStorage.setItem("user", JSON.stringify(user));
     }
+    console.log("User Info:", userInfo.value);
 
     toast.success("Cập nhật thông tin thành công!");
   } catch (error) {
@@ -241,28 +277,22 @@ h3 {
   }
 }
 
-.info-grid {
+.info-grid-2col {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
 }
 
-@media (max-width: 991px) {
-  .info-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
+.info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .info-item {
   display: flex;
   flex-direction: column;
-}
-
-@media (max-width: 991px) {
-  .info-item {
-    margin-bottom: 10px;
-  }
+  gap: 8px;
 }
 
 label {
@@ -310,8 +340,14 @@ textarea {
   max-height: 200px;
 }
 
+.address-textarea {
+  margin-top: 8px;
+  min-height: 60px;
+  resize: vertical;
+}
+
 .button-group {
-  margin-top: 20px;
+  margin-top: 32px;
   display: flex;
   justify-content: flex-end;
 }
@@ -390,8 +426,8 @@ textarea {
     padding: 10px;
   }
 
-  .info-grid {
-    gap: 10px;
+  .info-grid-2col {
+    gap: 16px;
   }
 
   input,

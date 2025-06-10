@@ -57,6 +57,31 @@ class OrderService {
       throw error.response?.data || error.message;
     }
   }
+
+  async processReturnRequest(orderId, status, employeeId) {
+    try {
+      const token = localStorage.getItem("token-admin");
+      if (!token) {
+        throw new Error("Vui lòng đăng nhập để xử lý yêu cầu trả hàng");
+      }
+
+      const response = await axios.put(
+        `${API_URL}/orders/${orderId}/return`,
+        { status, employeeId },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("Error processing return request:", error);
+      throw error;
+    }
+  }
 }
 
 export default new OrderService();
