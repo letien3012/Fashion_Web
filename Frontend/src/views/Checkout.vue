@@ -42,9 +42,19 @@
                   <input
                     v-model="customer.address"
                     required
-                    placeholder="Nhập địa chỉ của bạn"
+                    placeholder="Nhập địa chỉ chi tiết của bạn"
                     class="form-control"
                   />
+                  <div class="row g-2 mt-2">
+                    <div class="col-md-12">
+                      <LocationPicker
+                        @update:location="updateLocation"
+                        :provinceCode="customer.province_code"
+                        :districtCode="customer.district_code"
+                        :wardCode="customer.ward_code"
+                      />
+                    </div>
+                  </div>
                 </div>
                 <div class="form-group">
                   <label>Ghi chú</label>
@@ -353,11 +363,13 @@ import { ref, computed, onMounted } from "vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
 import Chatbot from "../components/Chatbot.vue";
+import LocationPicker from "../components/LocationPicker.vue";
 import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import { orderService } from "../services/order.service";
 import { cartService } from "../services/cart.service";
 import { promotionService } from "../services/promotion.service";
+import { customerService } from "../services/customer.service";
 
 const router = useRouter();
 const checkoutItems = ref([]);
@@ -373,8 +385,17 @@ const customer = ref({
   phone: "",
   address: "",
   note: "",
+  province_code: "",
+  district_code: "",
+  ward_code: "",
 });
 const paymentMethod = ref("COD");
+
+const updateLocation = (location) => {
+  customer.value.province_code = location?.province_code || "";
+  customer.value.district_code = location?.district_code || "";
+  customer.value.ward_code = location?.ward_code || "";
+};
 
 // Validation rules
 const validatePhone = (phone) => {
@@ -393,6 +414,18 @@ const validateForm = () => {
   }
   if (!customer.value.address.trim()) {
     toast.error("Vui lòng nhập địa chỉ!");
+    return false;
+  }
+  if (!customer.value.province_code) {
+    toast.error("Vui lòng chọn Tỉnh/Thành!");
+    return false;
+  }
+  if (!customer.value.district_code) {
+    toast.error("Vui lòng chọn Quận/Huyện!");
+    return false;
+  }
+  if (!customer.value.ward_code) {
+    toast.error("Vui lòng chọn Phường/Xã!");
     return false;
   }
   return true;
@@ -522,16 +555,24 @@ onMounted(async () => {
   if (userInfo) {
     try {
       const user = JSON.parse(userInfo);
-      customer.value = {
-        name: user.fullname || user.name || "",
-        phone: user.phone || "",
-        address: user.address || "",
-        note: "",
-      };
+      const customerInfo = await customerService.getCustomerInforById(user.id);
+      console.log("Fetched customer info:", customerInfo);
+      if (customerInfo) {
+        customer.value = {
+          name: customerInfo.fullname || customerInfo.name || "",
+          phone: customerInfo.phone || "",
+          address: customerInfo.address || "",
+          note: "",
+          province_code: customerInfo.province_code || "",
+          district_code: customerInfo.district_code || "",
+          ward_code: customerInfo.ward_code || "",
+        };
+      }
     } catch (error) {
-      console.error("Error parsing user info:", error);
+      console.error("Error fetching customer info:", error);
     }
   }
+  console.log("Customer info:", customer.value);
 });
 
 const totalProductPrice = computed(() =>
@@ -616,6 +657,9 @@ const submitOrder = async () => {
         name: customer.value.name,
         phone: customer.value.phone,
         address: customer.value.address,
+        province_code: customer.value.province_code,
+        district_code: customer.value.district_code,
+        ward_code: customer.value.ward_code,
       },
       total_product_price: totalProductPrice.value,
       total_price: totalPrice.value,
@@ -937,6 +981,9 @@ const submitOrder = async () => {
 
 .form-control:valid,
 .form-control:valid:focus {
+  border-color: #10b981;
+}
+.form-select:focus {
   border-color: #10b981;
 }
 

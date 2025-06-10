@@ -22,6 +22,18 @@ const customerSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  ward_code: {
+    type: String,
+    default: "",
+  },
+  district_code: {
+    type: String,
+    default: "",
+  },
+  province_code: {
+    type: String,
+    default: "",
+  },
   image: {
     type: String,
     default: null,
@@ -77,6 +89,10 @@ customerSchema.statics.softDelete = async function (id) {
   customer.updatedAt = new Date();
   await customer.save();
   return customer;
+};
+// Static method to update customer status
+customerSchema.statics.getCustomerById = function (id) {
+  return this.findOne({ _id: id, deletedAt: null });
 };
 
 const Customer = mongoose.model("Customer", customerSchema);

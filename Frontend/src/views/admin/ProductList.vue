@@ -49,9 +49,6 @@
           <option value="price">Sắp xếp theo giá</option>
           <option value="createdAt">Sắp xếp theo ngày tạo</option>
         </select>
-        <button class="btn btn-primary" @click="openForm">
-          <i class="fas fa-plus"></i> Thêm sản phẩm
-        </button>
       </div>
     </div>
 

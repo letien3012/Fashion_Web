@@ -192,47 +192,38 @@ const productStructure = {
 };
 
 const prompt = `
-🛍️ Bạn là một **trợ lý bán hàng online** thân thiện và chuyên nghiệp của **cửa hàng thời trang ABC Fashion**. Nhiệm vụ của bạn là giới thiệu sản phẩm, tư vấn theo nhu cầu, và thông báo giá, biến thể, khuyến mãi nếu có.
+Bạn là một trợ lý bán hàng online thân thiện và chuyên nghiệp của cửa hàng thời trang ABC Fashion. Nhiệm vụ của bạn là giới thiệu sản phẩm, tư vấn theo nhu cầu, và thông báo giá, biến thể, khuyến mãi nếu có.
 
----
-
-🔹 **Cấu trúc dữ liệu sản phẩm**:
+Cấu trúc dữ liệu sản phẩm:
 - Mỗi sản phẩm có: mã sản phẩm, tên, mô tả, hình ảnh chính và album ảnh
 - Các biến thể (variants) bao gồm: mã SKU, giá, hình ảnh và 2 thuộc tính tùy chỉnh
 - Thuộc tính sản phẩm được phân loại theo danh mục thuộc tính
 
-🔹 **Chương trình khuyến mãi**:
+Chương trình khuyến mãi:
 - Khuyến mãi sản phẩm: áp dụng cho sản phẩm cụ thể
 - Khuyến mãi voucher: có điều kiện giá trị đơn hàng tối thiểu và giảm giá tối đa
 - Thời gian áp dụng: có ngày bắt đầu và kết thúc
 
----
+Cách bạn cần trả lời:
 
-📌 **Cách bạn cần trả lời**:
-
-1. **Khi người dùng hỏi về sản phẩm**:
+1. Khi người dùng hỏi về sản phẩm:
    - Kiểm tra thông tin sản phẩm từ database
    - Hiển thị giá, biến thể và khuyến mãi nếu có
    - Gợi ý sản phẩm liên quan
 
-2. **Khi người dùng hỏi về khuyến mãi**:
+2. Khi người dùng hỏi về khuyến mãi:
    - Kiểm tra các chương trình khuyến mãi đang áp dụng
    - Thông báo điều kiện và thời gian áp dụng
    - Gợi ý sản phẩm phù hợp với khuyến mãi
 
-3. **Khi người dùng tìm kiếm**:
+3. Khi người dùng tìm kiếm:
    - Sử dụng từ khóa để tìm sản phẩm phù hợp
    - Hiển thị kết quả theo danh mục
    - Gợi ý thêm các tùy chọn lọc
 
----
-
-▶️ **Ví dụ trả lời**:
-
-**Người dùng:** Mình đang tìm áo thun nam màu trắng size L có khuyến mãi gì không?
-**Bạn trả lời:** Dạ, để em kiểm tra thông tin sản phẩm và khuyến mãi cho anh/chị ạ. [Kiểm tra database và trả lời dựa trên thông tin thực tế]
-
----
+Ví dụ trả lời:
+Người dùng: Mình đang tìm áo thun nam màu trắng size L có khuyến mãi gì không?
+Bạn trả lời: Dạ, để em kiểm tra thông tin sản phẩm và khuyến mãi cho anh/chị ạ. [Kiểm tra database và trả lời dựa trên thông tin thực tế]
 
 Từ giờ, hãy trả lời như một nhân viên bán hàng thực thụ của cửa hàng ABC Fashion, sử dụng dữ liệu thực tế từ hệ thống.
 `;
@@ -317,14 +308,14 @@ export default {
             data.candidates &&
             data.candidates[0]?.content?.parts?.[0]?.text
           ) {
-            const botResponse = data.candidates[0].content.parts[0].text;
+            let botResponse = data.candidates[0].content.parts[0].text;
+            botResponse = this.cleanBotResponse(botResponse);
             this.messages.push({
               type: "bot",
               content: botResponse,
               time: this.getCurrentTime(),
             });
-
-            // Check if the response mentions a product
+            // Chỉ kiểm tra nhắc đến sản phẩm trong userMessage
             const productMentioned = this.checkProductMention(userMessage);
             if (productMentioned) {
               this.currentProduct = productMentioned;
@@ -383,42 +374,33 @@ export default {
     },
     checkProductMention(message) {
       if (!this.chatbotData?.products) {
-        console.log("No products data available");
         return null;
       }
-
       const lowerMessage = message.toLowerCase();
-      console.log("Checking message:", lowerMessage);
-
-      // Check if user is asking about products in general
-      if (
-        lowerMessage.includes("sản phẩm") ||
-        lowerMessage.includes("có gì") ||
-        lowerMessage.includes("hiện ảnh") ||
-        lowerMessage.includes("xem ảnh")
-      ) {
-        console.log("User is asking about products");
-        // Return the first product
-        const firstProduct = this.chatbotData.products[0];
-        console.log("Showing first product:", firstProduct);
-        return firstProduct;
-      }
-
-      // Check for specific product mentions
+      // So khớp gần đúng: tìm sản phẩm có tên chứa từ khóa hoặc tên gần giống
+      let bestMatch = null;
+      let bestScore = 0;
       for (const product of this.chatbotData.products) {
-        console.log("Checking product:", product.name, "Image:", product.image);
-        if (lowerMessage.includes(product.name.toLowerCase())) {
-          console.log("Found matching product:", product);
+        const name = product.name.toLowerCase();
+        const code = product.code.toLowerCase();
+        // Nếu tên hoặc mã xuất hiện trong message
+        if (lowerMessage.includes(name) || lowerMessage.includes(code)) {
           return product;
         }
-        if (lowerMessage.includes(product.code.toLowerCase())) {
-          console.log("Found matching product by code:", product);
-          return product;
+        // So khớp gần đúng: đếm số từ trùng nhau
+        const nameWords = name.split(/\s+/);
+        let matchCount = 0;
+        for (const word of nameWords) {
+          if (lowerMessage.includes(word) && word.length > 2) matchCount++;
+        }
+        const score = matchCount / nameWords.length;
+        if (score > bestScore && score > 0.4) {
+          // ngưỡng 40%
+          bestScore = score;
+          bestMatch = product;
         }
       }
-
-      console.log("No matching product found");
-      return null;
+      return bestMatch;
     },
     getImageUrl(imagePath) {
       console.log("Original image path:", imagePath);
@@ -431,7 +413,6 @@ export default {
         return imagePath;
       }
       const fullUrl = `http://localhost:3005${imagePath}`;
-      console.log("Generated full URL:", fullUrl);
       return fullUrl;
     },
     handleImageError(e) {
@@ -441,8 +422,14 @@ export default {
       e.target.src = "https://via.placeholder.com/100x100?text=No+Image";
     },
     handleImageLoad(e) {
-      console.log("Image loaded successfully:", e.target.src);
       this.imageError = false;
+    },
+    cleanBotResponse(text) {
+      // Xóa dấu *, **, và khoảng trắng đầu dòng
+      return text
+        .replace(/\*\*/g, "") // bỏ **
+        .replace(/^\s*\*\s?/gm, "") // bỏ * đầu dòng và khoảng trắng
+        .replace(/\n{2,}/g, "\n"); // bỏ dòng trống thừa
     },
   },
 };
@@ -760,46 +747,100 @@ export default {
   word-break: break-word;
 }
 
-/* Add loading animation */
-@keyframes loading {
-  0% {
-    opacity: 0.3;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0.3;
-  }
-}
-
-.message.bot .message-content p:last-child {
-  animation: loading 1.5s infinite;
+.message.bot .message-content.loading {
+  background: #f1f1f1;
 }
 
 .product-preview {
   background: #fff;
-  border-radius: 8px;
-  padding: 15px;
-  margin: 10px 0;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   display: flex;
-  gap: 15px;
+  gap: 20px;
   align-items: center;
+  animation: productFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes productFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .product-image {
-  width: 100px;
-  height: 100px;
+  width: 150px;
+  height: 150px;
   position: relative;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.13);
+  flex-shrink: 0;
+  background: #f8f8f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .product-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.product-image img:hover {
+  transform: scale(1.07);
+}
+
+.product-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+}
+
+.product-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 15px;
+  color: #333;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.price {
+  color: #e63946;
+  font-weight: 600;
+  font-size: 14px;
+  margin: 2px 0 6px 0;
+}
+
+.view-details {
+  display: inline-block;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, #e63946, #ff4d5a);
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(230, 57, 70, 0.13);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.view-details:hover {
+  background: linear-gradient(135deg, #ff4d5a, #e63946);
+  transform: translateY(-2px) scale(1.05);
 }
 
 .image-error {
@@ -812,44 +853,14 @@ export default {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
+  background: #f8f9fa;
   color: #666;
   font-size: 12px;
 }
 
 .image-error i {
-  font-size: 24px;
-  margin-bottom: 5px;
-}
-
-.product-info {
-  flex: 1;
-}
-
-.product-info h4 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  color: #333;
-}
-
-.price {
-  color: #e44d26;
-  font-weight: bold;
-  margin: 5px 0;
-}
-
-.view-details {
-  display: inline-block;
-  padding: 6px 12px;
-  background: #007bff;
-  color: white;
-  text-decoration: none;
-  border-radius: 4px;
-  font-size: 14px;
-  transition: background 0.3s;
-}
-
-.view-details:hover {
-  background: #0056b3;
+  font-size: 28px;
+  margin-bottom: 8px;
+  color: #e63946;
 }
 </style>

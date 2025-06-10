@@ -49,6 +49,16 @@
                 >
                   {{ formatStatus(nextStatus) }}
                 </button>
+                <button
+                  v-if="
+                    order.status === 'returned' &&
+                    order.actionDetail?.status === 'requested'
+                  "
+                  @click="handleProcessReturn(order._id)"
+                  class="status-btn status-return"
+                >
+                  Xử lý trả hàng
+                </button>
               </div>
               <div class="action-buttons">
                 <button class="view-btn" @click="$emit('view', order._id)">
@@ -70,6 +80,68 @@
         </tr>
       </tbody>
     </table>
+
+    <!-- Return Request Modal -->
+    <div v-if="showReturnModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Thông tin yêu cầu trả hàng</h3>
+          <button class="close-btn" @click="closeReturnModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="return-info">
+            <div class="info-item">
+              <span class="label">Trạng thái:</span>
+              <span
+                class="value status-badge"
+                :class="selectedOrder?.actionDetail?.status"
+              >
+                {{ getReturnStatusText(selectedOrder?.actionDetail?.status) }}
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="label">Ngày yêu cầu:</span>
+              <span class="value">{{
+                formatDate(selectedOrder?.actionDetail?.createdAt)
+              }}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Lý do trả hàng:</span>
+              <span class="value">{{ selectedOrder?.actionDetail?.note }}</span>
+            </div>
+            <div
+              class="info-item"
+              v-if="selectedOrder?.actionDetail?.images?.length"
+            >
+              <span class="label">Hình ảnh:</span>
+              <div class="return-images">
+                <img
+                  v-for="(image, index) in selectedOrder?.actionDetail?.images"
+                  :key="index"
+                  :src="getImageUrl(image)"
+                  :alt="'Hình ảnh trả hàng ' + (index + 1)"
+                  class="return-image"
+                  @click="openImagePreview(image)"
+                />
+              </div>
+            </div>
+          </div>
+          <div
+            class="modal-actions"
+            v-if="selectedOrder?.actionDetail?.status === 'requested'"
+          >
+            <button class="btn btn-approve" @click="handleApproveReturn">
+              <i class="fas fa-check"></i> Duyệt
+            </button>
+            <button class="btn btn-reject" @click="handleRejectReturn">
+              <i class="fas fa-times"></i> Từ chối
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -91,6 +163,12 @@ export default {
       type: Boolean,
       default: false,
     },
+  },
+  data() {
+    return {
+      showReturnModal: false,
+      selectedOrder: null,
+    };
   },
   methods: {
     formatPrice(price) {
@@ -117,7 +195,7 @@ export default {
         shipping: "Đang giao hàng",
         delivered: "Đã giao hàng",
         cancelled: "Đã hủy",
-        returned: "Đã trả hàng",
+        returned: "Trả hàng",
       };
       return statusMap[status] || status;
     },
@@ -143,8 +221,8 @@ export default {
       const statusFlow = {
         pending: ["processing", "cancelled"],
         processing: ["shipping", "cancelled"],
-        shipping: ["delivered", "returned"],
-        delivered: ["returned"],
+        shipping: ["delivered"],
+        delivered: [],
         cancelled: [],
         returned: [],
       };
@@ -168,6 +246,53 @@ export default {
 
       if (result.isConfirmed) {
         this.$emit("update-status", { orderId, newStatus });
+      }
+    },
+    getReturnStatusText(status) {
+      const statusMap = {
+        requested: "Chờ xử lý",
+        approved: "Đã duyệt",
+        rejected: "Đã từ chối",
+      };
+      return statusMap[status] || status;
+    },
+    getReturnStatusClass(status) {
+      const statusMap = {
+        requested: "status-pending",
+        approved: "status-success",
+        rejected: "status-cancelled",
+      };
+      return statusMap[status] || "";
+    },
+    openImagePreview(image) {
+      window.open(this.getImageUrl(image), "_blank");
+    },
+    getImageUrl(imagePath) {
+      if (!imagePath) return "";
+      return `http://localhost:3005${imagePath}`;
+    },
+    handleProcessReturn(orderId) {
+      this.selectedOrder = this.orders.find((order) => order._id === orderId);
+      this.showReturnModal = true;
+    },
+    closeReturnModal() {
+      this.showReturnModal = false;
+      this.selectedOrder = null;
+    },
+    async handleApproveReturn() {
+      try {
+        await this.$emit("process-return", this.selectedOrder._id, "approved");
+        this.closeReturnModal();
+      } catch (error) {
+        console.error("Error approving return:", error);
+      }
+    },
+    async handleRejectReturn() {
+      try {
+        await this.$emit("process-return", this.selectedOrder._id, "rejected");
+        this.closeReturnModal();
+      } catch (error) {
+        console.error("Error rejecting return:", error);
       }
     },
   },
@@ -278,7 +403,7 @@ td {
 }
 
 .status-returned {
-  color: #595959;
+  color: #f5222d;
 }
 
 .actions {
@@ -340,5 +465,196 @@ tr:hover {
   color: #8c8c8c;
   font-size: 14px;
   font-style: italic;
+}
+
+.status-return {
+  background-color: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.status-return:hover {
+  background-color: #fff1e6;
+  border-color: #ffa940;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #8c8c8c;
+  cursor: pointer;
+  padding: 4px;
+  transition: all 0.3s ease;
+}
+
+.close-btn:hover {
+  color: #262626;
+}
+
+.modal-body {
+  padding: 24px;
+}
+
+.return-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+  color: #666;
+}
+
+.value {
+  font-size: 16px;
+  color: #262626;
+}
+
+.return-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.image-container {
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.return-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.return-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-number {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  justify-content: flex-end;
+}
+
+.btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  border: none;
+}
+
+.btn-approve {
+  background-color: #52c41a;
+  color: white;
+}
+
+.btn-approve:hover {
+  background-color: #73d13d;
+}
+
+.btn-reject {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.btn-reject:hover {
+  background-color: #ff7875;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-badge.requested {
+  background-color: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.status-badge.approved {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.status-badge.rejected {
+  background-color: #fff1f0;
+  color: #f5222d;
+  border: 1px solid #ffa39e;
 }
 </style>

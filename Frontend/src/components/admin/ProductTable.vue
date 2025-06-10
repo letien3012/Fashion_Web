@@ -7,10 +7,6 @@
           <th>Mã sản phẩm</th>
           <th>Tên sản phẩm</th>
           <th>Danh mục</th>
-<<<<<<< HEAD
-
-=======
->>>>>>> 6a165f6c7ea91950bfbf652bab7aeccea39aa739
           <th>Trạng thái</th>
           <th>Thao tác</th>
         </tr>

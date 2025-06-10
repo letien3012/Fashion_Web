@@ -130,6 +130,18 @@
                     <i class="fas fa-star"></i>
                     Đánh giá
                   </button>
+                  <button
+                    class="action-btn warning"
+                    v-if="
+                      order.status === 'delivered' &&
+                      !order.actionDetail &&
+                      isWithinReturnPeriod(order.updatedAt)
+                    "
+                    @click="requestReturn(order.id)"
+                  >
+                    <i class="fas fa-undo"></i>
+                    Yêu cầu trả hàng
+                  </button>
                 </div>
               </div>
             </div>
@@ -242,6 +254,71 @@
               </div>
             </div>
           </div>
+
+          <!-- Return Request Modal -->
+          <div v-if="showReturnModal" class="modal-overlay">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h3>Yêu cầu trả hàng</h3>
+                <button class="close-btn" @click="closeReturnModal">
+                  <i class="fas fa-times"></i>
+                </button>
+              </div>
+              <div class="modal-body">
+                <div class="form-group">
+                  <label for="returnNote">Lý do trả hàng:</label>
+                  <textarea
+                    id="returnNote"
+                    v-model="returnNote"
+                    class="form-control"
+                    rows="3"
+                    placeholder="Nhập lý do trả hàng của bạn"
+                  ></textarea>
+                </div>
+                <div class="form-group">
+                  <label>Hình ảnh sản phẩm:</label>
+                  <div class="image-upload">
+                    <input
+                      type="file"
+                      ref="fileInput"
+                      @change="handleFileUpload"
+                      multiple
+                      accept="image/*"
+                      style="display: none"
+                    />
+                    <button class="upload-btn" @click="$refs.fileInput.click()">
+                      <i class="fas fa-camera"></i>
+                      Chọn ảnh
+                    </button>
+                  </div>
+                  <div class="image-preview" v-if="returnImages.length > 0">
+                    <div
+                      v-for="(image, index) in returnImages"
+                      :key="index"
+                      class="preview-item"
+                    >
+                      <img :src="image" alt="Preview" />
+                      <button class="remove-image" @click="removeImage(index)">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button class="action-btn" @click="closeReturnModal">
+                    Hủy
+                  </button>
+                  <button
+                    class="action-btn warning"
+                    @click="submitReturnRequest"
+                    :disabled="!returnNote || returnImages.length === 0"
+                  >
+                    Gửi yêu cầu
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -295,6 +372,15 @@ const filteredOrders = computed(() => {
   }
   return result;
 });
+
+// Add new computed property to check if order is within return period
+const isWithinReturnPeriod = (orderDate) => {
+  const orderDateTime = new Date(orderDate);
+  const currentDate = new Date();
+  const diffTime = Math.abs(currentDate - orderDateTime);
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return diffDays <= 15;
+};
 
 function formatPrice(val) {
   return val.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
@@ -402,7 +488,7 @@ function getStatusText(status) {
     shipping: "Đang giao hàng",
     delivered: "Đã giao",
     cancelled: "Đã hủy",
-    returned: "Đã trả hàng",
+    returned: "Trả hàng",
   };
   return statusMap[status] || status;
 }
@@ -680,6 +766,124 @@ const handleReviewSubmitted = async () => {
     toast.error("Không thể cập nhật danh sách đơn hàng");
   } finally {
     loading.value = false;
+  }
+};
+
+// Return request state
+const showReturnModal = ref(false);
+const returnNote = ref("");
+const returnImages = ref([]);
+const selectedOrderId = ref(null);
+
+const requestReturn = (orderId) => {
+  selectedOrderId.value = orderId;
+  showReturnModal.value = true;
+};
+
+const closeReturnModal = () => {
+  showReturnModal.value = false;
+  returnNote.value = "";
+  returnImages.value = [];
+  selectedOrderId.value = null;
+};
+
+const handleFileUpload = (event) => {
+  const files = event.target.files;
+  for (let file of files) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      returnImages.value.push(e.target.result);
+    };
+    reader.readAsDataURL(file);
+  }
+};
+
+const removeImage = (index) => {
+  returnImages.value.splice(index, 1);
+};
+
+const submitReturnRequest = async () => {
+  try {
+    await orderService.requestReturn(selectedOrderId.value, {
+      images: returnImages.value,
+      note: returnNote.value,
+    });
+    toast.success("Yêu cầu trả hàng đã được gửi thành công");
+    closeReturnModal();
+    // Refresh orders list
+    const orderData = await orderService.getCustomerOrders();
+    orders.value = await Promise.all(
+      orderData.map(async (order) => {
+        // Process each order detail to get complete product information
+        const orderDetails = await Promise.all(
+          order.order_detail.map(async (item) => {
+            try {
+              // Get complete product information
+              const productResponse = await productService.getProductById(
+                item.productId
+              );
+              const product = productResponse.data;
+
+              return {
+                _id: item._id,
+                productId: {
+                  _id: product._id,
+                  name: product.name,
+                  image: `http://localhost:3005/${product.image}`,
+                  variant: item.variants[0]?.sku || "Default",
+                },
+                quantity: item.quantity,
+                price: item.price,
+                variants: item.variants.map((v) => ({
+                  sku: v.sku,
+                  quantity: v.quantity,
+                  price: v.price,
+                })),
+              };
+            } catch (error) {
+              console.error("Error fetching product details:", error);
+              return {
+                _id: item._id,
+                productId: {
+                  _id: item.productId,
+                  name: "Product not found",
+                  image: "",
+                  variant: item.variants[0]?.sku || "Default",
+                },
+                quantity: item.quantity,
+                price: item.price,
+                variants: item.variants.map((v) => ({
+                  sku: v.sku,
+                  quantity: v.quantity,
+                  price: v.price,
+                })),
+              };
+            }
+          })
+        );
+
+        return {
+          id: order._id,
+          date: new Date(order.createdAt).toLocaleDateString(),
+          status: order.status,
+          code: order.code,
+          statusClass: order.status,
+          statusText: getStatusText(order.status),
+          total: order.total_price,
+          total_product_price: order.total_product_price,
+          discount: order.discount,
+          total_ship_fee: order.total_ship_fee,
+          method: order.method,
+          order_detail: orderDetails,
+          canReview: order.status === "completed",
+        };
+      })
+    );
+  } catch (error) {
+    console.error("Error submitting return request:", error);
+    toast.error(
+      error.response?.data?.message || "Không thể gửi yêu cầu trả hàng"
+    );
   }
 };
 </script>
@@ -1449,5 +1653,100 @@ select.form-control {
   background-position: right 10px center;
   background-size: 16px;
   padding-right: 30px;
+}
+
+.warning {
+  background: #fff7e6;
+  border-color: #ffa940;
+  color: #d46b08;
+}
+
+.warning:hover {
+  background: #fff1d6;
+  border-color: #ff9c2e;
+  color: #ad4e00;
+}
+
+.image-upload {
+  margin-top: 10px;
+}
+
+.upload-btn {
+  padding: 8px 16px;
+  background: #f5f5f5;
+  border: 1px dashed #d9d9d9;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+}
+
+.upload-btn:hover {
+  border-color: #ee4d2d;
+  color: #ee4d2d;
+}
+
+.image-preview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.preview-item {
+  position: relative;
+  width: 100px;
+  height: 100px;
+}
+
+.preview-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.remove-image {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #ff4d4f;
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+}
+
+.remove-image:hover {
+  background: #ff7875;
+}
+
+.order-cancellation-info {
+  padding: 12px 16px;
+  background-color: #fff1f0;
+  border-bottom: 1px solid #ffccc7;
+}
+
+.cancellation-note {
+  color: #ff4d4f;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.cancellation-note i {
+  margin-right: 8px;
+}
+
+.cancellation-date {
+  color: #666;
+  font-size: 0.8rem;
 }
 </style>

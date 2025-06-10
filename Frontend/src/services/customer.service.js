@@ -73,4 +73,59 @@ export const customerService = {
       throw error;
     }
   },
+  async getCustomerInforById(customerId) {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("Vui lòng đăng nhập để lấy thông tin khách hàng");
+      }
+
+      const response = await axios.get(`${API_URL}/customers/${customerId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.data || !response.data.customer) {
+        throw new Error("Không nhận được dữ liệu khách hàng từ server");
+      }
+
+      return response.data.customer;
+    } catch (error) {
+      console.error("Error fetching customer info:", error);
+      throw error;
+    }
+  },
+  async getWishlist() {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error(
+          "Vui lòng đăng nhập để lấy danh sách sản phẩm yêu thích"
+        );
+      }
+
+      const response = await axios.get(`${API_URL}/customers/wishlist`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.data || !response.data.success) {
+        throw new Error(
+          response.data?.message || "Không thể lấy danh sách yêu thích"
+        );
+      }
+
+      return {
+        customerId: response.data.customerId,
+        wishlist: response.data.wishlist,
+      };
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+      throw error;
+    }
+  },
 };

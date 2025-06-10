@@ -189,6 +189,107 @@
               </div>
             </div>
 
+            <!-- Chi tiết hủy đơn -->
+            <div
+              class="detail-section"
+              v-if="order.status === 'cancelled' && order.actionDetail"
+            >
+              <div class="section-header">
+                <h4>Chi tiết hủy đơn</h4>
+              </div>
+              <div class="return-details">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="label">Ngày hủy:</span>
+                    <span class="value">{{
+                      formatDate(order.actionDetail.createdAt)
+                    }}</span>
+                  </div>
+                  <div class="info-item full-width">
+                    <span class="label">Lý do hủy:</span>
+                    <div class="return-note">{{ order.actionDetail.note }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chi tiết trả hàng -->
+            <div
+              class="detail-section"
+              v-if="order.status === 'returned' && order.actionDetail"
+            >
+              <div class="section-header">
+                <h4>Chi tiết trả hàng</h4>
+                <div
+                  class="header-actions"
+                  v-if="order.actionDetail.status === 'requested'"
+                >
+                  <button class="btn btn-approve" @click="handleApproveReturn">
+                    <i class="fas fa-check"></i> Duyệt
+                  </button>
+                  <button class="btn btn-reject" @click="handleRejectReturn">
+                    <i class="fas fa-times"></i> Từ chối
+                  </button>
+                </div>
+              </div>
+              <div class="return-details">
+                <div class="info-grid">
+                  <div class="info-item">
+                    <span class="label">Trạng thái:</span>
+                    <span
+                      class="value status-badge"
+                      :class="getReturnStatusClass(order.actionDetail.status)"
+                    >
+                      {{ getReturnStatusText(order.actionDetail.status) }}
+                    </span>
+                  </div>
+                  <div class="info-item">
+                    <span class="label">Ngày yêu cầu:</span>
+                    <span class="value">{{
+                      formatDate(order.actionDetail.createdAt)
+                    }}</span>
+                  </div>
+                  <div class="info-item" v-if="order.actionDetail.employeeId">
+                    <span class="label">Người xử lý:</span>
+                    <span class="value">{{
+                      order.employeeId?.fullname || "N/A"
+                    }}</span>
+                  </div>
+                  <div class="info-item" v-if="order.actionDetail.updatedAt">
+                    <span class="label">Ngày xử lý:</span>
+                    <span class="value">{{
+                      formatDate(order.actionDetail.updatedAt)
+                    }}</span>
+                  </div>
+                  <div class="info-item full-width">
+                    <span class="label">Lý do trả hàng:</span>
+                    <div class="return-note">{{ order.actionDetail.note }}</div>
+                  </div>
+                  <div
+                    class="info-item full-width"
+                    v-if="order.actionDetail.images?.length"
+                  >
+                    <span class="label">Hình ảnh:</span>
+                    <div class="return-images">
+                      <div
+                        v-for="(image, index) in order.actionDetail.images"
+                        :key="index"
+                        class="image-container"
+                      >
+                        <img
+                          :src="getImageUrl(image)"
+                          :alt="'Hình ảnh trả hàng ' + (index + 1)"
+                          class="return-image"
+                          @click="openImagePreview(image)"
+                        />
+                        <span class="image-number">{{ index + 1 }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <ShippingLabel
               ref="shippingLabel"
               :order="order"
@@ -212,6 +313,7 @@ import OrderService from "../../services/admin/order.service";
 import { toast } from "vue3-toastify";
 import ShippingLabel from "./ShippingLabel.vue";
 import html2pdf from "html2pdf.js";
+import Swal from "sweetalert2";
 
 export default {
   name: "OrderDetail",
@@ -325,7 +427,7 @@ export default {
         shipping: "Đang giao hàng",
         delivered: "Đã giao hàng",
         cancelled: "Đã hủy",
-        returned: "Đã trả hàng",
+        returned: "Trả hàng",
       };
       return statusMap[status] || status;
     },
@@ -339,6 +441,105 @@ export default {
     getImageUrl(imagePath) {
       if (!imagePath) return "";
       return `http://localhost:3005${imagePath}`;
+    },
+    getReturnStatusText(status) {
+      const statusMap = {
+        requested: "Chờ xử lý",
+        approved: "Đã duyệt",
+        rejected: "Đã từ chối",
+      };
+      return statusMap[status] || status;
+    },
+    getReturnStatusClass(status) {
+      const statusMap = {
+        requested: "status-pending",
+        approved: "status-success",
+        rejected: "status-cancelled",
+      };
+      return statusMap[status] || "";
+    },
+    openImagePreview(image) {
+      window.open(this.getImageUrl(image), "_blank");
+    },
+    async handleApproveReturn() {
+      try {
+        const result = await Swal.fire({
+          title: "Xác nhận duyệt trả hàng",
+          text: "Bạn có chắc chắn muốn duyệt yêu cầu trả hàng này?",
+          icon: "question",
+          showCancelButton: true,
+          confirmButtonText: "Xác nhận",
+          cancelButtonText: "Hủy",
+          confirmButtonColor: "#52c41a",
+          cancelButtonColor: "#ff4d4f",
+        });
+
+        if (result.isConfirmed) {
+          const userInfo = JSON.parse(localStorage.getItem("employee") || "{}");
+          if (!userInfo._id) {
+            toast.error(
+              "Không tìm thấy thông tin nhân viên. Vui lòng đăng nhập lại!"
+            );
+            this.$router.push("/admin/login");
+            return;
+          }
+
+          await OrderService.processReturnRequest(
+            this.order._id,
+            "approved",
+            userInfo._id
+          );
+          toast.success("Đã duyệt yêu cầu trả hàng thành công!");
+          await this.loadOrderDetails();
+        }
+      } catch (error) {
+        console.error("Error approving return request:", error);
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Không thể duyệt yêu cầu trả hàng"
+        );
+      }
+    },
+    async handleRejectReturn() {
+      try {
+        const result = await Swal.fire({
+          title: "Xác nhận từ chối trả hàng",
+          text: "Bạn có chắc chắn muốn từ chối yêu cầu trả hàng này?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonText: "Xác nhận",
+          cancelButtonText: "Hủy",
+          confirmButtonColor: "#ff4d4f",
+          cancelButtonColor: "#8c8c8c",
+        });
+
+        if (result.isConfirmed) {
+          const userInfo = JSON.parse(localStorage.getItem("employee") || "{}");
+          if (!userInfo._id) {
+            toast.error(
+              "Không tìm thấy thông tin nhân viên. Vui lòng đăng nhập lại!"
+            );
+            this.$router.push("/admin/login");
+            return;
+          }
+
+          await OrderService.processReturnRequest(
+            this.order._id,
+            "rejected",
+            userInfo._id
+          );
+          toast.success("Đã từ chối yêu cầu trả hàng!");
+          await this.loadOrderDetails();
+        }
+      } catch (error) {
+        console.error("Error rejecting return request:", error);
+        toast.error(
+          error.response?.data?.message ||
+            error.message ||
+            "Không thể từ chối yêu cầu trả hàng"
+        );
+      }
     },
   },
   created() {
@@ -824,5 +1025,165 @@ th {
   top: 8px;
   right: 8px;
   z-index: 10;
+}
+
+.return-images {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.return-image {
+  width: 100px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.return-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.status-badge.requested {
+  background-color: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.status-badge.approved {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.status-badge.rejected {
+  background-color: #fff1f0;
+  color: #f5222d;
+  border: 1px solid #ffa39e;
+}
+
+.return-details {
+  padding: 20px;
+}
+
+.return-note {
+  padding: 12px;
+  background-color: #fafafa;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+  color: #262626;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.return-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+
+.image-container {
+  position: relative;
+  aspect-ratio: 1;
+}
+
+.return-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid #f0f0f0;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.return-image:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.image-number {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-approve {
+  background-color: #52c41a;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-approve:hover {
+  background-color: #73d13d;
+}
+
+.btn-reject {
+  background-color: #ff4d4f;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.btn-reject:hover {
+  background-color: #ff7875;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.status-badge.requested {
+  background-color: #fff7e6;
+  color: #fa8c16;
+  border: 1px solid #ffd591;
+}
+
+.status-badge.approved {
+  background-color: #f6ffed;
+  color: #52c41a;
+  border: 1px solid #b7eb8f;
+}
+
+.status-badge.rejected {
+  background-color: #fff1f0;
+  color: #f5222d;
+  border: 1px solid #ffa39e;
 }
 </style>

@@ -9,6 +9,12 @@ router.post("/login", customerController.login);
 router.post("/request-password-reset", customerController.requestPasswordReset);
 router.post("/reset-password", customerController.resetPassword);
 
+// Admin routes
+router.get("/", customerController.getAllCustomers);
+router.get("/total", customerController.getTotalCustomers);
+router.put("/update-status/:id", customerController.updateStatus);
+router.delete("/:id", customerController.softDelete);
+
 // Protected routes
 router.get("/profile", auth, customerController.getProfile);
 router.put("/profile", auth, customerController.updateProfile);
@@ -17,21 +23,16 @@ router.put("/change-password", auth, customerController.changePassword);
 router.get("/orders", auth, customerController.getCustomerOrders);
 router.post("/upload-image", auth, customerController.uploadProfileImage);
 
-// Wishlist routes
+// Wishlist routes - Phải đặt trước route /:id
+router.get("/wishlist", auth, customerController.getWishlist);
 router.post("/wishlist", auth, customerController.addToWishlist);
 router.delete(
   "/wishlist/:productId",
   auth,
   customerController.removeFromWishlist
 );
-router.get("/wishlist", auth, customerController.getWishlist);
 
-// Admin routes
-router.get("/", auth, customerController.getAllCustomers);
-router.put("/update-status/:id", auth, customerController.updateStatus);
-router.get("/total", auth, customerController.getTotalCustomers);
-router.get("/", customerController.getAllCustomers);
-router.put("/update-status/:id", customerController.updateStatus);
-router.delete("/:id", customerController.softDelete);
+// Customer by ID route - Phải đặt sau cùng
+router.get("/:id", auth, customerController.getCustomerById);
 
 module.exports = router;

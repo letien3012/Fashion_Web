@@ -65,6 +65,7 @@ import Chatbot from "../components/Chatbot.vue";
 import SidebarProfile from "../components/SidebarProfile.vue";
 import ProductItem from "../components/ProductItem.vue";
 import { productService } from "../services/product.service";
+import { customerService } from "../services/customer.service";
 import { toast } from "vue3-toastify";
 import { useRouter } from "vue-router";
 
@@ -87,7 +88,7 @@ const loadWishlist = async () => {
   wishlist.value = [];
 
   try {
-    const response = await productService.getWishlist();
+    const response = await customerService.getWishlist();
 
     if (response && response.wishlist && Array.isArray(response.wishlist)) {
       // Duyệt từng sản phẩm để lấy thông tin chi tiết
@@ -179,8 +180,8 @@ const loadWishlist = async () => {
     }
   } catch (error) {
     console.error("Error loading wishlist:", error);
-    error.value = "Không thể tải danh sách yêu thích";
-    toast.error("Không thể tải danh sách yêu thích");
+    error.value = error.message || "Không thể tải danh sách yêu thích";
+    toast.error(error.message || "Không thể tải danh sách yêu thích");
   } finally {
     loading.value = false;
   }

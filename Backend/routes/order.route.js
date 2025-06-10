@@ -24,4 +24,8 @@ router.post("/:id/process-payment", orderController.processPayment);
 router.put("/:id/cancel", orderController.cancelOrder);
 router.delete("/:id", orderController.delete);
 
+// Return request routes
+router.post("/:id/return", auth, orderController.requestReturn);
+router.put("/:id/return", orderController.processReturnRequest);
+
 module.exports = router;
