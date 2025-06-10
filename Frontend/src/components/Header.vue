@@ -204,9 +204,9 @@ export default {
     };
 
     const handleUserClick = () => {
+
       const userStr = localStorage.getItem("user");
-      console.log("USER ĐĂNG NHẬP", userStr);
-      if (!userStr) {
+       if (!userStr) {
         toast.warning("Vui lòng đăng nhập để xem thông tin cá nhân!");
         router.push("/login");
       } else {

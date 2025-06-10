@@ -7,6 +7,7 @@ const mongoose = require("mongoose");
 const imageFeatureSchema = new mongoose.Schema({
   imagePath: { type: String, required: true, unique: true },
   features: { type: [Number], required: true },
+  originalImage: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
 });
@@ -68,7 +69,7 @@ async function extractFeatures(imagePath) {
 }
 
 // Lưu đặc trưng ảnh vào MongoDB
-async function saveImageFeatures(imagePath, features) {
+async function saveImageFeatures(imagePath, features, originalImage) {
   try {
     // Kiểm tra xem ảnh đã có trong DB chưa
     const existingFeature = await ImageFeature.findOne({ imagePath });
@@ -76,6 +77,7 @@ async function saveImageFeatures(imagePath, features) {
     if (existingFeature) {
       // Cập nhật nếu đã tồn tại
       existingFeature.features = features;
+      if (originalImage) existingFeature.originalImage = originalImage;
       existingFeature.updatedAt = new Date();
       await existingFeature.save();
       return { message: "Features updated successfully", id: existingFeature._id };
@@ -83,7 +85,8 @@ async function saveImageFeatures(imagePath, features) {
       // Thêm mới nếu chưa tồn tại
       const newFeature = new ImageFeature({
         imagePath,
-        features
+        features,
+        originalImage
       });
       await newFeature.save();
       return { message: "Features saved successfully", id: newFeature._id };
@@ -95,13 +98,13 @@ async function saveImageFeatures(imagePath, features) {
 }
 
 // Hàm kết hợp trích xuất và lưu đặc trưng
-async function extractAndSaveFeatures(imagePath) {
+async function extractAndSaveFeatures(imagePath, originalImage) {
   try {
     // Trích xuất đặc trưng
     const features = await extractFeatures(imagePath);
     
     // Lưu vào MongoDB
-    const result = await saveImageFeatures(imagePath, features);
+    const result = await saveImageFeatures(imagePath, features, originalImage);
     
     return {
       success: true,
@@ -127,13 +130,22 @@ async function findSimilarImages(imagePath, limit = 5) {
     const similarities = allImages.map(img => {
       const similarity = cosineSimilarity(queryFeatures, img.features);
       return {
-        imagePath: img.imagePath,
+        imagePath: img.originalImage || img.imagePath,
         similarity
       };
     });
-    
+
+    // Lọc: chỉ giữ bản similarity cao nhất cho mỗi originalImage
+    const bestByOriginal = {};
+    similarities.forEach(sim => {
+      if (!bestByOriginal[sim.imagePath] || sim.similarity > bestByOriginal[sim.imagePath].similarity) {
+        bestByOriginal[sim.imagePath] = sim;
+      }
+    });
+    const uniqueSimilarities = Object.values(bestByOriginal);
+
     // Sắp xếp theo độ tương đồng giảm dần và lấy top k
-    return similarities
+    return uniqueSimilarities
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
   } catch (err) {

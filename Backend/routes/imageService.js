@@ -111,13 +111,46 @@ router.post("/extract-features", upload.single("image"), async (req, res) => {
 
   const filePath = req.file.path;
   try {
-    // Trích xuất và lưu đặc trưng
-    const result = await extractAndSaveFeatures(filePath);
+    // 1. Detect các vật thể trong ảnh
+    const boxes = await detectOnly(filePath);
+    if (!boxes || boxes.length === 0) {
+      return res.status(400).json({ error: "Không phát hiện vật thể nào trong ảnh" });
+    }
+    
+    // 2. Crop từng box
+    const cropBoxes = boxes.map((box, idx) => ({
+      label: box.label || `object_${idx}`,
+      box: [box.x, box.y, box.x + box.width, box.y + box.height],
+    }));
+    const croppedResults = await cropOnly(filePath, cropBoxes);
+    
+    // 3. Trích xuất đặc trưng và lưu vào DB cho từng crop
+    const features = [];
+    for (let i = 0; i < croppedResults.length; i++) {
+      const crop = croppedResults[i];
+      // Lưu base64 thành file tạm
+      const base64Data = crop.image_base64.replace(/^data:image\/\\w+;base64,/, "");
+      const tempCropPath = path.join("uploads", `crop_${Date.now()}_${i}.jpg`);
+      fs.writeFileSync(tempCropPath, Buffer.from(base64Data, "base64"));
+
+      // Trích xuất đặc trưng
+      const result = await extractAndSaveFeatures(tempCropPath, filePath);
+
+      features.push({
+        label: crop.label,
+        featureId: result.id,
+        message: result.message,
+        originalImage: filePath
+      });
+
+      // Xóa file tạm nếu muốn
+      fs.unlinkSync(tempCropPath);
+    }
+
     res.json({
       success: true,
-      message: result.message,
-      imagePath: filePath,
-      featureId: result.id
+      originalImage: filePath,
+      features
     });
   } catch (err) {
     fs.unlink(filePath, () => {}); // chỉ xóa file tạm nếu có lỗi

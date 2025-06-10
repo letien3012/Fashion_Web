@@ -1,18 +1,15 @@
 <template>
-  <div class="login-container">
+  
     <Header></Header>
     <div class="login-page">
       <FormLogin :loading="loading" @submit-login="handleLogin" />
     </div>
-    <Footer></Footer>
-  </div>
-  <Footer></Footer>
+
 </template>
 
 <script>
 import FormLogin from "../components/FormLogin.vue";
 import Header from "../components/Header.vue";
-import Footer from "../components/Footer.vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
 
@@ -21,7 +18,6 @@ export default {
   components: {
     FormLogin,
     Header,
-    Footer,
   },
   data() {
     return {
@@ -59,19 +55,15 @@ export default {
 </script>
 
 <style scoped>
-.login-container {
-  width: 100%;
-  min-height: 100vh;
-}
 
 .login-page {
-  margin: 20px auto;
+  margin: none;
   border-radius: 15px;
   display: flex;
   justify-content: center;
   align-items: center;
   height: auto;
   width: 50vw;
-  background: #f7f7f7;
+
 }
 </style>

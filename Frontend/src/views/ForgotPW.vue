@@ -1,6 +1,6 @@
 <template>
     <div><Header></Header></div>
-    <div class="register-page">
+    <div class="forgotpw-page">
       <FormForgotPW />
     </div>
   </template>
@@ -17,7 +17,7 @@
   </script>
   
   <style scoped>
-  .register-page {
+  .forgotpw-page {
     margin: none;
     border-radius: 15px;
     display: flex;
@@ -25,7 +25,7 @@
     align-items: center;
     height: 80vh;
     width: 50vw;
-    background: #f7f7f7;
+    
   }
   </style>
   

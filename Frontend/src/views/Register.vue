@@ -25,6 +25,5 @@ export default {
   align-items: center;
   height: 80vh;
   width: 50vw;
-  background: #f7f7f7;
 }
 </style>

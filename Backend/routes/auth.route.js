@@ -9,6 +9,8 @@ const { loginSuccess, logout } = require("../controllers/auth.controller");
 const Customer = require("../models/customer.model");
 const axios = require("axios");
 const jwt = require("jsonwebtoken");
+const verifyToken = require('../mailer/verifyToken');
+const mongoose = require("mongoose");
 //Kiểm tra email có tồn tại trước khi đăng ký
 router.post("/check-email", async (req, res) => {
   const { email } = req.body;
@@ -21,7 +23,6 @@ router.post("/check-email", async (req, res) => {
 //Đăng ký với email và password
 router.post("/signup", async (req, res) => {
   const { fullname, email, password, phone } = req.body;
-  console.log(fullname, email, password);
   if (!fullname || !email || !password) {
     return res
       .status(400)
@@ -46,7 +47,7 @@ router.post("/signup", async (req, res) => {
       password: hashedPassword,
       phone: phone || "",
       providers: ["local"],
-      image: "",
+      image: "https://www.svgrepo.com/show/452030/avatar-default.svg",
     });
 
     // Tạo JWT
@@ -333,5 +334,51 @@ router.get("/login/success", loginSuccess);
 
 // Route: Logout
 router.get("/logout", logout);
+
+// Endpoint xác thực token đặt lại mật khẩu
+router.post('/verify-reset-token', async (req, res) => {
+  try {
+    const { token } = req.body;
+    const result = await verifyToken(token);
+    return res.json(result);
+  } catch (error) {
+    console.error('Lỗi xác thực token:', error);
+    return res.status(500).json({ valid: false, message: 'Lỗi server' });
+  }
+});
+
+// Endpoint đặt lại mật khẩu
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    // Xác thực token
+    const verifyResult = await verifyToken(token);
+    if (!verifyResult.valid) {
+      return res.status(400).json({ success: false, message: verifyResult.message });
+    }
+
+    // Tìm user theo email
+    const user = await Customer.findOne({ email: verifyResult.email });
+    if (!user) {
+      return res.status(400).json({ success: false, message: 'Không tìm thấy tài khoản' });
+    }
+
+    // Mã hóa mật khẩu mới
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Cập nhật mật khẩu mới
+    await Customer.findByIdAndUpdate(user._id, { password: hashedPassword });
+
+    // Xóa token sau khi đặt lại mật khẩu thành công
+    const ResetPassword = mongoose.model("ResetPassword");
+    await ResetPassword.deleteOne({ token });
+
+    return res.json({ success: true, message: 'Đặt lại mật khẩu thành công' });
+  } catch (error) {
+    console.error('Lỗi đặt lại mật khẩu:', error);
+    return res.status(500).json({ success: false, message: 'Lỗi server' });
+  }
+});
 
 module.exports = router;

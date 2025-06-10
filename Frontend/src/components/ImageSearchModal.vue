@@ -87,20 +87,10 @@
                   >
                     <i class="fas fa-external-link-alt"></i>
                   </button>
-                </div>
-                <div class="result-info">
-                  <div class="similarity-badge">
-                    <span class="similarity">{{ result.similarityPercentage }}</span>
-                  </div>
-                  <div class="result-details">
-                    <button 
-                      v-if="!result.error"
-                      @click="openOriginalImage(result.originalUrl)"
-                      class="image-link-button"
-                    >
-                      {{ result.displayUrl.split('/').pop() }}
-                    </button>
-                    <span v-else class="error-filename">{{ result.displayUrl.split('/').pop() }}</span>
+                  <div class="result-info">
+                    <div class="similarity-badge">
+                      <span class="similarity">{{ result.similarityPercentage }}</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -714,6 +704,7 @@ const openOriginalImage = (url) => {
   width: 100%;
   padding-top: 100%;
   background: #f8f9fa;
+  overflow: hidden;
 }
 
 .result-image {
@@ -731,9 +722,10 @@ const openOriginalImage = (url) => {
   bottom: 0;
   left: 0;
   right: 0;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255,255,255,0.95);
   padding: 12px;
   border-top: 1px solid #eee;
+  z-index: 10;
 }
 
 .similarity-badge {

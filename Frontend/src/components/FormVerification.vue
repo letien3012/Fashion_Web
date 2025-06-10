@@ -29,6 +29,9 @@
 </template>
 
 <script>
+import { toast } from 'vue3-toastify';
+import 'vue3-toastify/dist/index.css';
+
 export default {
   data() {
     return {
@@ -36,6 +39,11 @@ export default {
       countdown: 60,
       timer: null,
     };
+  },
+  computed: {
+    email() {
+      return this.$route.query.email;
+    }
   },
   mounted() {
     this.startCountdown();
@@ -57,14 +65,12 @@ export default {
     resendOtp() {
       if (this.countdown > 0) return;
 
-      const email = localStorage.getItem("signup_email");
-
       fetch("http://localhost:3005/api/mail/send-code", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email: email }),
+        body: JSON.stringify({ email: this.email }),
       })
         .then((res) => res.json())
         .then((data) => {
@@ -180,12 +186,12 @@ export default {
       const code = this.otp.join("").trim();
 
       if (code.length !== 6 || this.otp.includes("")) {
-        alert("Vui lòng nhập đầy đủ 6 chữ số.");
+        toast.error("Vui lòng nhập đầy đủ 6 chữ số.");
         return;
       }
 
       const payload = {
-        email: localStorage.getItem("signup_email"),
+        email: this.email,
         code: code,
       };
 
@@ -196,23 +202,24 @@ export default {
       })
         .then(async (res) => {
           if (!res.ok) {
-            // Nếu status không 200-299, có thể đọc json để lấy message lỗi
             const errorData = await res.json().catch(() => ({}));
             throw new Error(errorData.message || `Lỗi server: ${res.status}`);
           }
-          return res.json(); // parse JSON từ response
+          return res.json();
         })
         .then((data) => {
           if (data.success) {
-            alert("✅ Xác thực thành công!");
-            this.$router.push({ name: "CreatePW" });
+            this.$router.push({ 
+              name: "CreatePW",
+              query: { email: this.email }
+            });
           } else {
-            alert(`❌ ${data.message}`);
+            toast.error(`❌ ${data.message}`);
           }
         })
         .catch((err) => {
           console.error("Lỗi xác thực:", err);
-          alert(`Đã xảy ra lỗi: ${err.message || "Vui lòng thử lại."}`);
+          toast.error(`${err.message || "Vui lòng thử lại."}`);
         });
     },
   },
@@ -238,6 +245,7 @@ export default {
   justify-content: center;
   gap: 10px;
   margin: 20px 0;
+  flex-wrap: wrap;
 }
 
 .otp-inputs input {
@@ -251,7 +259,7 @@ export default {
 
 .verify-btn {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   font-size: 16px;
   background-color: #2366d1;
   color: white;
@@ -259,6 +267,11 @@ export default {
   border-radius: 6px;
   cursor: pointer;
   margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.verify-btn:hover {
+  background-color: #1a4fa0;
 }
 
 .resend-text {
@@ -270,5 +283,78 @@ export default {
   color: #2366d1;
   text-decoration: none;
   font-weight: 600;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .otp-container {
+    width: 90vw;
+    margin: 20px auto;
+    padding: 20px;
+  }
+
+  .otp-inputs {
+    gap: 8px;
+  }
+
+  .otp-inputs input {
+    width: 35px;
+    height: 35px;
+    font-size: 18px;
+  }
+
+  h2 {
+    font-size: 20px;
+  }
+
+  p {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .otp-container {
+    width: 95vw;
+    padding: 15px;
+    margin: 10px auto;
+  }
+
+  .otp-inputs {
+    gap: 5px;
+  }
+
+  .otp-inputs input {
+    width: 30px;
+    height: 30px;
+    font-size: 16px;
+  }
+
+  .verify-btn {
+    padding: 10px;
+    font-size: 14px;
+  }
+
+  .resend-text {
+    font-size: 12px;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .otp-container {
+    width: 70vw;
+  }
+}
+
+/* Landscape mode for mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+  .otp-container {
+    margin: 10px auto;
+    padding: 15px;
+  }
+
+  .otp-inputs {
+    margin: 10px 0;
+  }
 }
 </style>

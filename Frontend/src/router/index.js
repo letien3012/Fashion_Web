@@ -17,6 +17,7 @@ import Products from "../views/Products.vue";
 import FeatureUpload from "../views/FeatureUpload.vue";
 import Search from "../views/Search.vue";
 import WishList from "../views/WishList.vue";
+import ResetPW from "../components/FormResetPW.vue";
 
 const routes = [
   {
@@ -81,6 +82,11 @@ const routes = [
     component: ChangePW,
   },
   {
+    path: '/reset-password',
+    name: 'ResetPassword',
+    component: ResetPW
+  },
+  {
     path: "/products",
     name: "Products",
     component: Products,
@@ -118,15 +124,28 @@ const router = createRouter({
 // Navigation guardMore actions
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem("token-admin");
-
+  const isAdminAuthenticated = localStorage.getItem("token-admin");
+  const isUserAuthenticated = localStorage.getItem("token");
   const isAdmin = localStorage.getItem("isAdmin") === "true";
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
-    next("/admin/login");
-  } else if (to.meta.requiresAdmin && !isAdmin) {
-    next("/admin/login");
-  } else {
+  // Nếu route yêu cầu xác thực admin
+  if (to.meta.requiresAdmin) {
+    if (!isAdminAuthenticated || !isAdmin) {
+      next("/admin/login");
+    } else {
+      next();
+    }
+  }
+  // Nếu route yêu cầu xác thực user thường
+  else if (to.meta.requiresAuth) {
+    if (!isUserAuthenticated) {
+      next("/login");
+    } else {
+      next();
+    }
+  }
+  // Các route không yêu cầu xác thực
+  else {
     next();
   }
 });
