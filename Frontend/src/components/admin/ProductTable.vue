@@ -118,9 +118,7 @@ export default {
       }).format(price);
     },
     confirmDelete(id) {
-      if (confirm("Bạn có chắc chắn muốn xóa sản phẩm này?")) {
-        this.$emit("delete", id);
-      }
+      this.$emit("delete", id);
     },
   },
 };

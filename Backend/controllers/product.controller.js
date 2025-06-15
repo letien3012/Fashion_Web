@@ -65,7 +65,7 @@ exports.add = async (req, res) => {
 // Lấy danh sách sản phẩm
 exports.getAll = async (req, res) => {
   try {
-    const products = await Product.getAll();
+    const products = await Product.find({ deletedAt: null });
     res.status(200).json({
       message: "Products retrieved successfully",
       data: products,
@@ -94,6 +94,35 @@ exports.getByCatalogue = async (req, res) => {
     res.status(200).json({
       message: "Products retrieved successfully",
       data: products,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Lấy sản phẩm theo danh mục và loại trừ sản phẩm hiện tại
+exports.getByCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { exclude } = req.query;
+
+    const query = {
+      catalogueId: categoryId,
+      deletedAt: null,
+      publish: true,
+    };
+
+    if (exclude) {
+      query._id = { $ne: exclude };
+    }
+
+    const products = await Product.find(query)
+      .select("_id name image price variants rating totalReviews")
+      .limit(8);
+
+    res.status(200).json({
+      message: "Products retrieved successfully",
+      data: { products },
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -245,6 +274,11 @@ exports.update = async (req, res) => {
 // Xóa sản phẩm
 exports.delete = async (req, res) => {
   try {
+    const product = await Product.getById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
     await Product.delete(req.params.id);
     res.status(200).json({ message: "Product deleted successfully" });
   } catch (error) {

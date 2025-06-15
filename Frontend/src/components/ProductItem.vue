@@ -272,7 +272,7 @@ export default {
   position: absolute;
   top: 12px;
   left: 12px;
-  background: linear-gradient(45deg, #ff6b6b, #ff8787);
+  background: linear-gradient(45deg, #ff0000, #ff0000);
   color: white;
   padding: 6px 12px;
   border-radius: 20px;
@@ -338,26 +338,26 @@ export default {
 }
 
 .overlay-btn:hover {
-  background: #ff6b6b;
+  background: #ff0000;
   color: white;
   transform: scale(1.1);
 }
 
 .product-info {
-  padding: 1.5rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.5rem;
   background: white;
-  min-height: 120px;
+  min-height: 110px;
 }
 
 .product-name {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #333;
   margin: 0;
-  line-height: 1.4;
+  line-height: 1.3;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -367,26 +367,26 @@ export default {
 }
 
 .product-card:hover .product-name {
-  color: #ff6b6b;
+  color: #ff0000;
 }
 
 .product-meta {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .product-price-container {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: 0.4rem;
   flex-wrap: wrap;
 }
 
 .product-price {
-  color: #ff6b6b !important;
-  font-size: 1.3rem;
+  color: #ff0000 !important;
+  font-size: 1.1rem;
   font-weight: 700;
   white-space: nowrap;
   letter-spacing: 0.5px;
@@ -395,16 +395,15 @@ export default {
 .product-sale-price {
   color: #999;
   text-decoration: line-through;
-  font-size: 1.05rem;
+  font-size: 0.9rem;
   white-space: nowrap;
-  margin-left: 0.5rem;
+  margin-left: 0.4rem;
 }
 
 .product-rating {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 6px;
 }
 
 .stars {
@@ -415,7 +414,7 @@ export default {
 
 .stars i {
   color: #ddd;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   transition: color 0.2s ease;
 }
 
@@ -439,7 +438,7 @@ export default {
 
 .rating-text {
   color: #666;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 576px) {
@@ -464,12 +463,12 @@ export default {
 }
 
 .wishlist-btn.in-wishlist {
-  background: #ff6b6b;
+  background: #ff0000;
   color: white;
 }
 
 .wishlist-btn:hover {
-  background: #ff6b6b;
+  background: #ff0000;
   color: white;
   transform: scale(1.1);
 }

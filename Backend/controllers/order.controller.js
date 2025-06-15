@@ -238,7 +238,16 @@ exports.getTotalRevenue = async (req, res) => {
 exports.getSalesData = async (req, res) => {
   try {
     const { timeFilter, year, month, startDate, endDate } = req.query;
-    let matchQuery = { status: "delivered", deletedAt: null };
+    let matchQuery = {
+      $or: [
+        { status: "delivered", deletedAt: null },
+        {
+          status: "returned",
+          "actionDetail.status": "rejected",
+          deletedAt: null,
+        },
+      ],
+    };
     let groupBy = {};
     let sortBy = {};
 
@@ -298,11 +307,54 @@ exports.getSalesData = async (req, res) => {
 
     const salesData = await Order.aggregate([
       { $match: matchQuery },
+      { $unwind: "$order_detail" },
+      { $unwind: "$order_detail.variants" },
+      {
+        $lookup: {
+          from: "consignments",
+          let: {
+            productId: "$order_detail.productId",
+            variantId: "$order_detail.variants._id",
+            consignmentId: "$order_detail.variants.consignments.consignmentId",
+          },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $and: [
+                    { $eq: ["$productId", "$$productId"] },
+                    { $eq: ["$variantId", "$$variantId"] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "consignmentInfo",
+        },
+      },
       {
         $group: {
           _id: groupBy,
           revenue: { $sum: "$total_price" },
           count: { $sum: 1 },
+          profit: {
+            $sum: {
+              $subtract: [
+                {
+                  $multiply: [
+                    "$order_detail.variants.price",
+                    "$order_detail.variants.quantity",
+                  ],
+                },
+                {
+                  $multiply: [
+                    { $arrayElemAt: ["$consignmentInfo.price", 0] },
+                    "$order_detail.variants.quantity",
+                  ],
+                },
+              ],
+            },
+          },
         },
       },
       { $sort: sortBy },
@@ -328,10 +380,17 @@ exports.getSalesData = async (req, res) => {
         tension: 0.4,
       },
       {
-        label: "Số đơn hàng",
-        data: salesData.map((item) => item.count),
+        label: "Lợi nhuận",
+        data: salesData.map((item) => item.profit),
         borderColor: "#198754",
         backgroundColor: "rgba(25, 135, 84, 0.1)",
+        tension: 0.4,
+      },
+      {
+        label: "Số đơn hàng",
+        data: salesData.map((item) => item.count),
+        borderColor: "#dc3545",
+        backgroundColor: "rgba(220, 53, 69, 0.1)",
         tension: 0.4,
       },
     ];
@@ -364,21 +423,18 @@ exports.getTopProducts = async (req, res) => {
     const now = new Date();
     switch (timeFilter) {
       case "week":
-        // Lấy dữ liệu từ đầu tuần đến hiện tại
         const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay()); // Đầu tuần (Chủ nhật)
+        startOfWeek.setDate(now.getDate() - now.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
         dateFilter = { $gte: startOfWeek, $lte: now };
         break;
 
       case "month":
-        // Lấy dữ liệu từ đầu tháng đến hiện tại
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
         dateFilter = { $gte: startOfMonth, $lte: now };
         break;
 
       case "year":
-        // Lấy dữ liệu từ đầu năm đến hiện tại
         const startOfYear = new Date(now.getFullYear(), 0, 1);
         dateFilter = { $gte: startOfYear, $lte: now };
         break;
@@ -395,23 +451,32 @@ exports.getTopProducts = async (req, res) => {
     const topProducts = await Order.aggregate([
       { $match: matchQuery },
       { $unwind: "$order_detail" },
+      { $unwind: "$order_detail.variants" },
+      {
+        $lookup: {
+          from: "products",
+          localField: "order_detail.productId",
+          foreignField: "_id",
+          as: "productInfo",
+        },
+      },
       {
         $group: {
           _id: {
             productId: "$order_detail.productId",
-            name: "$order_detail.name",
-            image: "$order_detail.image",
             sku: "$order_detail.variants.sku",
           },
-          totalQuantity: { $sum: { $sum: "$order_detail.variants.quantity" } },
+          totalQuantity: { $sum: "$order_detail.variants.quantity" },
           totalRevenue: {
             $sum: {
               $multiply: [
-                { $sum: "$order_detail.variants.quantity" },
+                "$order_detail.variants.quantity",
                 "$order_detail.price",
               ],
             },
           },
+          name: { $first: { $arrayElemAt: ["$productInfo.name", 0] } },
+          image: { $first: { $arrayElemAt: ["$productInfo.image", 0] } },
         },
       },
       { $sort: { totalQuantity: -1 } },
@@ -420,8 +485,8 @@ exports.getTopProducts = async (req, res) => {
         $project: {
           _id: 0,
           productId: "$_id.productId",
-          name: "$_id.name",
-          image: "$_id.image",
+          name: 1,
+          image: 1,
           sku: "$_id.sku",
           totalQuantity: 1,
           totalRevenue: 1,
@@ -433,11 +498,12 @@ exports.getTopProducts = async (req, res) => {
     const totals = await Order.aggregate([
       { $match: matchQuery },
       { $unwind: "$order_detail" },
+      { $unwind: "$order_detail.variants" },
       {
         $group: {
           _id: null,
           totalProductsSold: {
-            $sum: { $sum: "$order_detail.variants.quantity" },
+            $sum: "$order_detail.variants.quantity",
           },
           totalRevenue: { $sum: "$total_price" },
         },
@@ -446,14 +512,14 @@ exports.getTopProducts = async (req, res) => {
 
     // Tính đơn giá trung bình
     const avgPrice =
-      totals.length > 0
+      totals.length > 0 && totals[0].totalProductsSold > 0
         ? totals[0].totalRevenue / totals[0].totalProductsSold
         : 0;
 
     res.status(200).json({
       success: true,
       data: {
-        topProducts,
+        topProducts: topProducts || [],
         summary: {
           totalProductsSold:
             totals.length > 0 ? totals[0].totalProductsSold : 0,

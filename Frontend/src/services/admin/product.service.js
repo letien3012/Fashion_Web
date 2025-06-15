@@ -30,10 +30,7 @@ const AdminProductService = {
   },
 
   async delete(id) {
-    return axios.delete(
-      `${backendUrl}/api/products/delete/${id}`,
-      getAuthHeaders()
-    );
+    return axios.delete(`${backendUrl}/api/products/${id}`, getAuthHeaders());
   },
 };
 

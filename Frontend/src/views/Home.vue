@@ -6,18 +6,11 @@
       <div class="slider-container">
         <div
           class="slide"
-          v-for="(slide, index) in slides"
+          v-for="(slide, index) in banners"
           :key="index"
           :class="{ active: currentSlide === index }"
         >
-          <img :src="slide.image" :alt="slide.title" />
-          <div class="slide-content">
-            <h2>{{ slide.title }}</h2>
-            <p>{{ slide.description }}</p>
-            <router-link :to="slide.link" class="slide-btn"
-              >Shop Now</router-link
-            >
-          </div>
+          <img :src="getImageUrl(slide.image)" :alt="slide.name" />
         </div>
         <button class="slider-btn prev" @click="prevSlide">
           <i class="fas fa-chevron-left"></i>
@@ -27,7 +20,7 @@
         </button>
         <div class="slider-dots">
           <span
-            v-for="(slide, index) in slides"
+            v-for="(slide, index) in banners"
             :key="index"
             :class="{ active: currentSlide === index }"
             @click="currentSlide = index"
@@ -38,7 +31,6 @@
 
     <!-- Featured Categories -->
     <section class="categories">
-      <h2 class="section-title">Mua Theo Danh Mục</h2>
       <div class="category-container">
         <button
           class="nav-btn prev"
@@ -47,24 +39,25 @@
         >
           <i class="fas fa-chevron-left"></i>
         </button>
-        <div class="category-grid">
+        <div class="category-grid highlight">
           <div
-            class="category-card"
-            v-for="category in displayedCategories"
+            class="category-highlight-card"
+            v-for="category in displayedCategories.slice(0, 4)"
             :key="category.id"
+            :style="{ backgroundImage: 'url(' + category.image + ')' }"
           >
-            <div class="category-image">
-              <img :src="category.image" :alt="category.name" />
-              <div class="category-overlay">
-                <router-link
-                  :to="`/products?category=${category.id}`"
-                  class="category-btn"
-                  >Xem Bộ Sưu Tập</router-link
-                >
-              </div>
+            <div class="category-highlight-content">
+              <h3 class="category-highlight-title">{{ category.name }}</h3>
+              <p class="category-highlight-count">
+                {{ category.count }} Sản phẩm
+              </p>
+              <router-link
+                :to="`/products?category=${category.id}`"
+                class="category-highlight-btn"
+              >
+                <i class="fas fa-arrow-right"></i>
+              </router-link>
             </div>
-            <h3 class="category-name">{{ category.name }}</h3>
-            <p class="category-count">{{ category.count }} Sản Phẩm</p>
           </div>
         </div>
         <button
@@ -90,7 +83,7 @@
         class="product-grid"
       >
         <ProductItem
-          v-for="product in bestSellingProducts"
+          v-for="product in bestSellingProducts.slice(0, 15)"
           :key="product._id"
           :product="product"
         />
@@ -107,6 +100,13 @@
       <div class="error">{{ error }}</div>
     </div>
 
+    <!-- New Arrivals Banner -->
+    <div class="new-arrivals-banner" v-if="subBanner">
+      <img
+        :src="getImageUrl(subBanner.image)"
+        :alt="subBanner.name || 'Banner'"
+      />
+    </div>
     <!-- New Arrivals -->
     <section class="new-arrivals" v-if="!loading && !error">
       <div class="section-header">
@@ -117,7 +117,7 @@
       </div>
       <div v-if="newArrivals && newArrivals.length > 0" class="product-grid">
         <ProductItem
-          v-for="product in newArrivals"
+          v-for="product in newArrivals.slice(0, 15)"
           :key="product._id"
           :product="product"
         />
@@ -145,6 +145,7 @@ import { productService } from "../services/product.service";
 import ChatBot from "../components/ChatBot.vue";
 import ProductItem from "../components/ProductItem.vue";
 import { productCatalogueService } from "../services/productCatalogue.service";
+import { bannerService } from "../services/banner.service";
 
 export default {
   name: "Home",
@@ -153,29 +154,7 @@ export default {
     return {
       currentSlide: 0,
       baseUrl: "http://localhost:3005",
-      slides: [
-        {
-          title: "Bộ Sưu Tập Mùa Hè 2024",
-          description: "Khám phá xu hướng thời trang mùa hè mới nhất",
-          image:
-            "https://simplepage.vn/blog/wp-content/uploads/simplepage.vn_.png",
-          link: "/collections/summer",
-        },
-        {
-          title: "Sản Phẩm Mới",
-          description: "Xem ngay những sản phẩm mới nhất của chúng tôi",
-          image:
-            "https://d32q3bqti6sa3p.cloudfront.net/uploads/cach-quang-cao-quan-ao-tren-facebook-meta-1608514388.png",
-          link: "/collections/new-arrivals",
-        },
-        {
-          title: "Ưu Đãi Đặc Biệt",
-          description: "Giảm giá có hạn cho các sản phẩm được chọn",
-          image:
-            "https://uix.vn/wp-content/uploads/2020/09/Gold-Pink-and-Blue-Shapes-Wellness-Influencer-Youtube-Thumbnail-Set-4-2-1024x576.png",
-          link: "/collections/special-offers",
-        },
-      ],
+      banners: [],
       categories: [],
       newArrivals: [],
       loading: true,
@@ -185,6 +164,7 @@ export default {
       categoryStart: 0,
       categoriesPerPage: 8,
       bestSellingProducts: [],
+      subBanner: null,
     };
   },
   async created() {
@@ -192,6 +172,8 @@ export default {
       this.fetchNewArrivals(),
       this.fetchCategories(),
       this.fetchBestSellingProducts(),
+      this.fetchBanners(),
+      this.fetchSubBanner(),
     ]);
   },
   computed: {
@@ -356,12 +338,34 @@ export default {
         this.loading = false;
       }
     },
+    async fetchBanners() {
+      try {
+        const response = await bannerService.getByType("main");
+        if (response && response.data) {
+          this.banners = response.data;
+        }
+      } catch (error) {
+        console.error("Error fetching banners:", error);
+      }
+    },
+    async fetchSubBanner() {
+      try {
+        const response = await bannerService.getByType("sub");
+        if (response && response.data && response.data.length > 0) {
+          this.subBanner = response.data[0];
+        } else {
+          this.subBanner = null;
+        }
+      } catch (error) {
+        this.subBanner = null;
+      }
+    },
     nextSlide() {
-      this.currentSlide = (this.currentSlide + 1) % this.slides.length;
+      this.currentSlide = (this.currentSlide + 1) % this.banners.length;
     },
     prevSlide() {
       this.currentSlide =
-        (this.currentSlide - 1 + this.slides.length) % this.slides.length;
+        (this.currentSlide - 1 + this.banners.length) % this.banners.length;
     },
     nextFeatured() {
       this.featuredStart += this.featuredPerPage;
@@ -411,7 +415,7 @@ router-link {
 /* Banner Slider Styles */
 .banner-slider {
   position: relative;
-  height: 80vh;
+  height: 500px;
   overflow: hidden;
 }
 
@@ -438,6 +442,7 @@ router-link {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
 }
 
 .slide-content {
@@ -569,21 +574,24 @@ router-link {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: white;
-  border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: #fff;
+  border: 1.5px solid #eee;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s ease;
+  font-size: 1.3rem;
+  color: #333;
+  transition: all 0.2s;
   z-index: 2;
 }
 
 .nav-btn:hover:not(:disabled) {
   background: #ff6b6b;
-  color: white;
-  transform: scale(1.1);
+  color: #fff;
+  border-color: #ff6b6b;
+  box-shadow: 0 4px 16px rgba(255, 107, 107, 0.15);
 }
 
 .nav-btn:disabled {
@@ -592,111 +600,96 @@ router-link {
 }
 
 .nav-btn.prev {
-  margin-right: -20px;
+  margin-right: -10px;
 }
 
 .nav-btn.next {
-  margin-left: -20px;
+  margin-left: -10px;
 }
 
-.category-grid {
+.category-grid.highlight {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1.5rem;
+  gap: 2rem;
   width: 100%;
-  overflow: hidden;
+  margin: 0 auto;
+  padding: 0;
 }
 
-.category-card {
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
-  width: 100%;
-}
-
-.category-card:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
-
-.category-image {
-  height: 200px;
+.category-highlight-card {
   position: relative;
+  height: 200px;
+  border-radius: 18px;
   overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: flex-end;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s, box-shadow 0.3s;
 }
 
-.category-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.5s ease;
-}
-
-.category-card:hover .category-image img {
-  transform: scale(1.1);
-}
-
-.category-overlay {
+.category-highlight-card::before {
+  content: "";
   position: absolute;
-  top: 0;
-  left: 0;
+  inset: 0;
+  background: rgba(20, 30, 50, 0.35);
+  z-index: 1;
+}
+
+.category-highlight-content {
+  position: relative;
+  z-index: 2;
+  color: #fff;
+  padding: 1.2rem 1rem 1rem 1rem;
   width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.4);
+}
+
+.category-highlight-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.category-highlight-count {
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
+}
+
+.category-highlight-btn {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  background: #fff;
+  color: #222;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.category-card:hover .category-overlay {
-  opacity: 1;
-}
-
-.category-btn {
-  padding: 0.6rem 1.2rem;
-  background: white;
-  color: #333;
-  border-radius: 20px;
-  font-size: 0.9rem;
-  font-weight: 500;
-  transition: all 0.3s ease;
-}
-
-.category-btn:hover {
-  background: #ff6b6b;
-  color: white;
-}
-
-.category-name {
-  padding: 0.8rem;
   font-size: 1rem;
-  color: #333;
-  margin: 0;
-  text-align: center;
-  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  transition: background 0.2s, color 0.2s;
 }
 
-.category-count {
-  padding: 0 0.8rem 0.8rem;
-  color: #666;
-  font-size: 0.9rem;
-  text-align: center;
-  margin: 0;
+.category-highlight-btn:hover {
+  background: #ff6b6b;
+  color: #fff;
 }
 
 /* Product Grid Styles */
 .featured-products,
 .new-arrivals {
   padding: 4rem 2rem;
+  width: 95%;
 }
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 2rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -880,19 +873,68 @@ router-link {
     font-size: 1.3rem;
   }
   .product-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  .banner-slider {
+    height: 450px;
+  }
+  .category-grid.highlight {
     grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
   }
 }
 
 @media (max-width: 992px) {
   .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .banner-slider {
+    height: 400px;
+  }
+  .category-grid.highlight {
     grid-template-columns: repeat(2, 1fr);
+    gap: 1.2rem;
+  }
+
+  .category-highlight-card {
+    height: 180px;
+  }
+}
+
+@media (max-width: 768px) {
+  .product-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .slide-content h2 {
+    font-size: 2rem;
+  }
+  .slide-content p {
+    font-size: 1rem;
+  }
+  .banner-slider {
+    height: 350px;
+  }
+  .category-grid.highlight {
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+  }
+
+  .category-highlight-card {
+    height: 160px;
+  }
+
+  .category-highlight-title {
+    font-size: 1.1rem;
+  }
+
+  .category-highlight-count {
+    font-size: 0.85rem;
   }
 }
 
 @media (max-width: 576px) {
   .banner-slider {
-    height: 50vh;
+    height: 300px;
   }
   .slide-content h2 {
     font-size: 2rem;
@@ -981,7 +1023,7 @@ router-link {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 2rem;
   max-width: 1400px;
   margin: 0 auto;
@@ -1200,11 +1242,17 @@ router-link {
 
 @media (max-width: 1200px) {
   .product-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
 @media (max-width: 992px) {
+  .product-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
   .product-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -1257,6 +1305,56 @@ router-link {
 @media (max-width: 480px) {
   .category-grid {
     grid-template-columns: repeat(1, 1fr);
+  }
+}
+
+.new-arrivals-banner {
+  width: 95%;
+  margin: 0 auto 2rem auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.new-arrivals-banner img {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 18px;
+  object-fit: cover;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+  max-height: 400px;
+}
+@media (max-width: 1200px) {
+  .new-arrivals-banner img {
+    max-height: 350px;
+  }
+}
+
+@media (max-width: 992px) {
+  .new-arrivals-banner img {
+    max-height: 300px;
+  }
+}
+
+@media (max-width: 768px) {
+  .new-arrivals-banner {
+    width: 90%;
+  }
+
+  .new-arrivals-banner img {
+    max-height: 250px;
+    border-radius: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  .new-arrivals-banner {
+    width: 85%;
+    margin-bottom: 1.5rem;
+  }
+
+  .new-arrivals-banner img {
+    max-height: 200px;
+    border-radius: 8px;
   }
 }
 </style>

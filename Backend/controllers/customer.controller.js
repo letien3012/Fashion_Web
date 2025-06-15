@@ -681,3 +681,55 @@ const updateLocation = (location) => {
   if (location.district) userInfo.value.district_code = location.district.code;
   if (location.province) userInfo.value.province_code = location.province.code;
 };
+
+// Get new customers data for the last 7 days
+exports.getNewCustomersData = async (req, res) => {
+  try {
+    const today = new Date();
+    const last7Days = new Date(today);
+    last7Days.setDate(today.getDate() - 6); // Get last 7 days including today
+
+    // Get all customers created in the last 7 days
+    const customers = await Customer.find({
+      createdAt: { $gte: last7Days, $lte: today },
+      deletedAt: null,
+    });
+
+    // Initialize data array for the last 7 days
+    const data = Array(7).fill(0);
+    const labels = [];
+
+    // Generate labels for the last 7 days
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      labels.push(date.toLocaleDateString("vi-VN", { weekday: "short" }));
+    }
+
+    // Count customers for each day
+    customers.forEach((customer) => {
+      const customerDate = new Date(customer.createdAt);
+      const dayIndex =
+        6 - Math.floor((today - customerDate) / (1000 * 60 * 60 * 24));
+      if (dayIndex >= 0 && dayIndex < 7) {
+        data[dayIndex]++;
+      }
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        labels,
+        datasets: [
+          {
+            label: "Khách hàng mới",
+            data,
+          },
+        ],
+      },
+    });
+  } catch (error) {
+    console.error("Error getting new customers data:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};

@@ -113,6 +113,8 @@ import ProductForm from "../../components/admin/ProductForm.vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
+import AdminProductService from "../../services/admin/product.service";
+import Swal from "sweetalert2";
 
 export default {
   name: "ProductList",
@@ -356,12 +358,22 @@ export default {
 
     async handleDelete(id) {
       try {
-        const token = localStorage.getItem("token");
-        await axios.delete(`${this.backendUrl}/api/products/${id}`, {
-          headers: { Authorization: `Bearer ${token}` },
+        const result = await Swal.fire({
+          title: "Xác nhận xóa",
+          text: "Bạn có chắc chắn muốn xóa sản phẩm này? Sản phẩm sẽ được ẩn khỏi danh sách.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#3085d6",
+          confirmButtonText: "Xóa",
+          cancelButtonText: "Hủy",
         });
-        toast.success("Xóa sản phẩm thành công");
-        await this.fetchProducts();
+
+        if (result.isConfirmed) {
+          await AdminProductService.delete(id);
+          toast.success("Xóa sản phẩm thành công");
+          await this.fetchProducts();
+        }
       } catch (error) {
         console.error("Error deleting product:", error);
         if (error.response?.status === 401) {

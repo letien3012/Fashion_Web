@@ -1,148 +1,148 @@
 <template>
-  <div class="header-top-bar">
-    <div class="header-top-left">
-      <i class="fas fa-bolt"></i>
-      <span class="welcome-text">Chào mừng bạn đến với JUNO Store!</span>
-      <i class="fas fa-headset header-icon"></i>
-      <span class="header-phone">1900 6750</span>
-    </div>
-    <div class="header-top-right">
-      <i class="fas fa-user"></i>
-      <span
-        class="user-account"
-        @click="handleUserClick"
-        :style="userData ? 'color: #ff0000; font-weight: bold;' : ''"
-      >
-        {{ userData?.fullname || "Tài khoản" }}
-      </span>
-    </div>
-  </div>
-  <header class="header" :class="{ scrolled: isScrolled }">
-    <div class="mobile-menu-toggle" @click="toggleMobileMenu">
-      <i class="fas fa-bars"></i>
-    </div>
-    <router-link to="/" class="logo">JUNO</router-link>
-    <nav class="nav-menu" :class="{ 'mobile-active': isMobileMenuOpen }">
-      <div class="mobile-menu-header">
-        <span class="mobile-menu-title">Menu</span>
-        <i class="fas fa-times close-menu" @click="closeMobileMenu"></i>
-      </div>
-      <router-link to="/" class="nav-item" @click="closeMobileMenu"
-        >TRANG CHỦ</router-link
-      >
-      <div
-        class="nav-item product-menu-wrapper"
-        @mouseenter="showProductMenu = true"
-        @mouseleave="showProductMenu = false"
-      >
-        <router-link to="/products" class="nav-item" @click="closeMobileMenu">
-          SẢN PHẨM
-        </router-link>
-        <transition name="fade">
-          <div
-            v-if="showProductMenu && !isMobileMenuOpen"
-            class="product-mega-menu"
+  <div class="header-container">
+    <div class="header-top-container">
+      <div class="header-top-bar">
+        <div class="header-top-left">
+          <i class="fas fa-bolt"></i>
+          <span class="welcome-text">Chào mừng bạn đến với JUNO Store!</span>
+          <i class="fas fa-headset header-icon"></i>
+          <span class="header-phone">1900 6750</span>
+        </div>
+        <div class="header-top-right">
+          <i class="fas fa-user"></i>
+          <span
+            class="user-account"
+            @click="handleUserClick"
+            :style="userData ? 'color: #ff0000; font-weight: bold;' : ''"
           >
-            <div
-              v-for="category in categories"
-              :key="category._id"
-              class="mega-menu-column"
-            >
-              <router-link
-                :to="{ name: 'Products', query: { category: category._id } }"
-                class="mega-menu-title"
-              >
-                {{ category.name }}
-              </router-link>
-              <router-link
-                v-for="child in category.children"
-                :key="child._id"
-                :to="{ name: 'Products', query: { category: child._id } }"
-                class="mega-menu-item"
-              >
-                {{ child.name }}
-              </router-link>
-            </div>
-          </div>
-        </transition>
+            {{ userData?.fullname || "Tài khoản" }}
+          </span>
+        </div>
       </div>
-      <router-link
-        to="/bst-he-nonstop"
-        class="nav-item"
-        @click="closeMobileMenu"
-        >BST HÈ NONSTOP</router-link
-      >
-      <router-link
-        to="/sale-happy-friday"
-        class="nav-item"
-        @click="closeMobileMenu"
-        >SALE HAPPY FRIDAY</router-link
-      >
-      <router-link to="/sale-quan-ao" class="nav-item" @click="closeMobileMenu"
-        >SALE QUẦN ÁO</router-link
-      >
-      <router-link to="/showroom" class="nav-item" @click="closeMobileMenu"
-        >SHOWROOM</router-link
-      >
-    </nav>
-    <div class="search-bar">
-      <input
-        v-model="searchQuery"
-        type="text"
-        placeholder="Tìm kiếm"
-        @keyup.enter="handleSearch"
-      />
-      <i class="fas fa-search search-icon" @click="handleSearch"></i>
-      <i
-        class="fas fa-camera search-camera-icon"
-        @click="showImageSearchModal"
-      ></i>
     </div>
-    <div class="user-icons">
-      <router-link to="/wishlist" class="wishlist-icon-wrapper">
-        <i class="fas fa-heart icon"></i>
-      </router-link>
-      <div
-        class="cart-icon-wrapper"
-        @click="handleCartClick"
-        style="position: relative; cursor: pointer"
-      >
-        <i class="fas fa-shopping-cart icon"></i>
-        <span
-          v-if="!userData || (userData && cartCount === 0)"
-          class="cart-badge"
-          >0</span
+    <header class="header" :class="{ scrolled: isScrolled }">
+      <div class="mobile-menu-toggle" @click="toggleMobileMenu">
+        <i class="fas fa-bars"></i>
+      </div>
+      <router-link to="/" class="logo">JUNO</router-link>
+      <nav class="nav-menu" :class="{ 'mobile-active': isMobileMenuOpen }">
+        <div class="mobile-menu-header">
+          <span class="mobile-menu-title">Menu</span>
+          <i class="fas fa-times close-menu" @click="closeMobileMenu"></i>
+        </div>
+        <router-link to="/" class="nav-item" @click="closeMobileMenu"
+          >TRANG CHỦ</router-link
         >
-        <span v-else-if="cartCount > 0" class="cart-badge">{{
-          cartCount
-        }}</span>
+        <div
+          class="nav-item product-menu-wrapper"
+          @mouseenter="showProductMenu = true"
+          @mouseleave="showProductMenu = false"
+        >
+          <router-link to="/products" class="nav-item" @click="closeMobileMenu">
+            SẢN PHẨM
+          </router-link>
+          <transition name="fade">
+            <div
+              v-if="showProductMenu && !isMobileMenuOpen"
+              class="product-mega-menu"
+            >
+              <div
+                v-for="category in categories"
+                :key="category._id"
+                class="mega-menu-column"
+              >
+                <router-link
+                  :to="{ name: 'Products', query: { category: category._id } }"
+                  class="mega-menu-title"
+                >
+                  {{ category.name }}
+                </router-link>
+                <router-link
+                  v-for="child in category.children"
+                  :key="child._id"
+                  :to="{ name: 'Products', query: { category: child._id } }"
+                  class="mega-menu-item"
+                >
+                  {{ child.name }}
+                </router-link>
+              </div>
+            </div>
+          </transition>
+        </div>
+        <router-link to="/outlet" class="nav-item" @click="closeMobileMenu"
+          >OUTLET</router-link
+        >
+        <router-link to="/about" class="nav-item" @click="closeMobileMenu"
+          >VỀ CHÚNG TÔI</router-link
+        >
+      </nav>
+      <div class="search-bar">
+        <input
+          v-model="searchQuery"
+          type="text"
+          placeholder="Tìm kiếm"
+          @keyup="handleSearchInput"
+          @keyup.enter="handleSearch"
+        />
+        <i class="fas fa-search search-icon" @click="handleSearch"></i>
+        <i
+          class="fas fa-camera search-camera-icon"
+          @click="showImageSearchModal"
+        ></i>
+        <SearchSuggestions
+          :visible="showSuggestions"
+          :suggestions="searchSuggestions"
+          @select="handleSuggestionSelect"
+        />
       </div>
-      <CartPopup
-        :visible="showCartPopup"
-        :cart="cartItems"
-        @view-cart="goToCart"
-      />
-    </div>
-    <div
-      class="mobile-overlay"
-      v-if="isMobileMenuOpen"
-      @click="closeMobileMenu"
-    ></div>
-  </header>
+      <div class="user-icons">
+        <router-link to="/wishlist" class="wishlist-icon-wrapper">
+          <i class="fas fa-heart icon"></i>
+        </router-link>
+        <div
+          class="cart-icon-wrapper"
+          @click="handleCartClick"
+          style="position: relative; cursor: pointer"
+        >
+          <i class="fas fa-shopping-cart icon"></i>
+          <span
+            v-if="!userData || (userData && cartCount === 0)"
+            class="cart-badge"
+            >0</span
+          >
+          <span v-else-if="cartCount > 0" class="cart-badge">{{
+            cartCount
+          }}</span>
+        </div>
+        <CartPopup
+          :visible="showCartPopup"
+          :cart="cartItems"
+          @view-cart="goToCart"
+        />
+      </div>
+      <div
+        class="mobile-overlay"
+        v-if="isMobileMenuOpen"
+        @click="closeMobileMenu"
+      ></div>
+    </header>
+  </div>
   <ImageSearchModal :visible="showImageSearch" @close="closeImageSearchModal" />
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import CartPopup from "./CartPopup.vue";
 import ImageSearchModal from "./ImageSearchModal.vue";
+import SearchSuggestions from "./SearchSuggestions.vue";
 import { cartService } from "../services/cart.service";
 import { productCatalogueService } from "../services/productCatalogue.service";
+import { productService } from "../services/product.service";
 
 export default {
-  components: { CartPopup, ImageSearchModal },
+  components: { CartPopup, ImageSearchModal, SearchSuggestions },
   setup() {
     const searchQuery = ref("");
     const router = useRouter();
@@ -156,6 +156,9 @@ export default {
     const showProductMenu = ref(false);
     const isScrolled = ref(false);
     const categories = ref([]);
+    const showSuggestions = ref(false);
+    const searchSuggestions = ref([]);
+    const searchTimeout = ref(null);
 
     async function fetchCategories() {
       try {
@@ -220,6 +223,51 @@ export default {
       }
     };
 
+    const handleSearchInput = async () => {
+      if (searchTimeout.value) {
+        clearTimeout(searchTimeout.value);
+      }
+
+      if (searchQuery.value.trim().length < 2) {
+        showSuggestions.value = false;
+        searchSuggestions.value = [];
+        return;
+      }
+
+      searchTimeout.value = setTimeout(async () => {
+        try {
+          const response = await productService.searchProducts(
+            searchQuery.value.trim()
+          );
+          if (response && response.data) {
+            searchSuggestions.value = response.data;
+            showSuggestions.value = true;
+          } else {
+            searchSuggestions.value = [];
+            showSuggestions.value = false;
+          }
+        } catch (error) {
+          console.error("Error searching products:", error);
+          searchSuggestions.value = [];
+          showSuggestions.value = false;
+        }
+      }, 300);
+    };
+
+    const handleSuggestionSelect = (product) => {
+      searchQuery.value = product.name;
+      showSuggestions.value = false;
+      router.push(`/product-detail/${product._id}`);
+    };
+
+    // Close suggestions when clicking outside
+    const handleClickOutside = (event) => {
+      const searchBar = document.querySelector(".search-bar");
+      if (searchBar && !searchBar.contains(event.target)) {
+        showSuggestions.value = false;
+      }
+    };
+
     const handleSearch = () => {
       if (searchQuery.value.trim()) {
         router.push({
@@ -268,6 +316,7 @@ export default {
 
       // Thêm event listener cho scroll
       window.addEventListener("scroll", handleScroll);
+      document.addEventListener("click", handleClickOutside);
     });
 
     const handleScroll = () => {
@@ -293,24 +342,38 @@ export default {
       showProductMenu,
       isScrolled,
       categories,
+      showSuggestions,
+      searchSuggestions,
+      handleSearchInput,
+      handleSuggestionSelect,
     };
   },
 };
 </script>
 
 <style scoped>
+.header-container {
+  margin: 0 auto;
+  width: 100%;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.header-top-container {
+  background-color: #dfdee0;
+  width: 100%;
+}
+
 .header-top-bar {
-  background-color: #f8f9fa;
   padding: 8px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
   color: #666;
-  width: 100%;
+  width: 95%;
   box-sizing: border-box;
   position: relative;
   z-index: 1001;
+  margin: 0 auto;
 }
 
 .header-top-left {
@@ -338,18 +401,15 @@ export default {
 
 .header {
   display: flex;
-  width: 100%;
+  width: 95%;
   flex-direction: row;
   align-items: center;
-  padding: 20px 5%;
+  padding: 20px 0;
   background-color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   position: relative;
   z-index: 1000;
   box-sizing: border-box;
-  max-width: 1920px;
   margin: 0 auto;
-  transition: all 0.3s ease;
 }
 
 .header.scrolled {
@@ -358,6 +418,9 @@ export default {
   left: 0;
   right: 0;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  width: 100%;
+  background-color: #fff;
+  padding: 20px 40px;
 }
 
 .logo {

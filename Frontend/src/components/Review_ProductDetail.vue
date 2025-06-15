@@ -72,7 +72,11 @@
 
     <div v-else>
       <div v-if="reviews.length" class="review-list">
-        <div class="review-item" v-for="(review, idx) in reviews" :key="idx">
+        <div
+          class="review-item"
+          v-for="(review, idx) in displayedReviews"
+          :key="idx"
+        >
           <div class="review-header">
             <img
               :src="
@@ -122,6 +126,11 @@
             <b>Phản Hồi Của Người Bán:</b> {{ review.reply[0].content }}
           </div>
         </div>
+        <div v-if="hasMoreReviews" class="load-more-container">
+          <button class="load-more-btn" @click="loadMore">
+            Xem thêm đánh giá
+          </button>
+        </div>
       </div>
       <div v-else class="no-reviews">
         <i>Chưa có đánh giá nào cho sản phẩm này.</i>
@@ -149,6 +158,7 @@ export default {
       reviewsLoading: false, // Loading state
       reviewsError: null, // Error state
       currentFilter: "all", // Add this line
+      displayCount: 5, // Number of reviews to show initially
     };
   },
   computed: {
@@ -173,6 +183,12 @@ export default {
       }
 
       return filteredReviews;
+    },
+    displayedReviews() {
+      return this.reviews.slice(0, this.displayCount);
+    },
+    hasMoreReviews() {
+      return this.displayCount < this.reviews.length;
     },
     totalReviews() {
       return this.fetchedReviews.length > 0
@@ -273,6 +289,9 @@ export default {
         hour: "2-digit",
         minute: "2-digit",
       });
+    },
+    loadMore() {
+      this.displayCount += 5;
     },
   },
 };
@@ -550,6 +569,32 @@ export default {
   justify-content: center;
   min-height: 200px;
   border: 1px solid #fadbd8;
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  padding: 16px 0;
+}
+
+.load-more-btn {
+  background: #fff;
+  border: 2px solid #e74c3c;
+  color: #e74c3c;
+  padding: 12px 24px;
+  border-radius: 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.load-more-btn:hover {
+  background: #e74c3c;
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.2);
 }
 
 @media (max-width: 768px) {

@@ -26,11 +26,16 @@ const productService = {
     }
   },
 
-  async getProductsByCategory(categoryId) {
+  async getProductsByCategory(categoryId, options = {}) {
     try {
       const response = await axios.get(
         `${backendUrl}/api/products/category/${categoryId}`,
-        getAuthHeaders()
+        {
+          params: {
+            exclude: options.exclude,
+          },
+          ...getAuthHeaders(),
+        }
       );
       return response.data;
     } catch (error) {

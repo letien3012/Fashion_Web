@@ -256,6 +256,9 @@
         @submit-review="handleReviewSubmit"
       />
     </div>
+    <div class="mt-5">
+      <SameProductCatalogue :current-product="product" />
+    </div>
   </div>
   <Footer />
   <Chatbot />
@@ -266,6 +269,7 @@ import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
 import Chatbot from "../components/Chatbot.vue";
 import Review_ProductDetail from "../components/Review_ProductDetail.vue";
+import SameProductCatalogue from "../components/SameProductCatalogue.vue";
 import { productService } from "../services/product.service";
 import { cartService } from "../services/cart.service";
 import { reviewService } from "../services/review.service";
@@ -275,9 +279,10 @@ export default {
   name: "ProductDetail",
   components: {
     Header,
-    Review_ProductDetail,
     Footer,
     Chatbot,
+    Review_ProductDetail,
+    SameProductCatalogue,
   },
   data() {
     return {

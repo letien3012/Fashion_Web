@@ -410,7 +410,10 @@ Product.deleteVariant = async function (productId, variantIndex) {
 
 Product.delete = async function (id) {
   try {
-    await this.findByIdAndDelete(id);
+    await this.findByIdAndUpdate(id, {
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+    });
     return true;
   } catch (error) {
     throw new Error(`Error deleting product: ${error.message}`);

@@ -223,15 +223,28 @@
                       <div class="d-flex align-items-center">
                         <img
                           :src="
-                            product.image || 'https://via.placeholder.com/40'
+                            product.image
+                              ? `${backendUrl}${product.image}`
+                              : 'https://via.placeholder.com/50'
                           "
-                          class="rounded me-2"
+                          class="rounded me-3"
                           alt="Product"
+                          style="width: 50px; height: 50px; object-fit: cover"
                         />
                         <div>
-                          <h6 class="mb-0">{{ product.name }}</h6>
+                          <h6
+                            class="mb-0 text-truncate"
+                            style="max-width: 200px"
+                          >
+                            {{ product.name || "Chưa có tên" }}
+                          </h6>
                           <small class="text-muted"
-                            >Mã: {{ product.sku }}</small
+                            >Mã:
+                            {{
+                              Array.isArray(product.sku)
+                                ? product.sku.join(", ")
+                                : product.sku
+                            }}</small
                           >
                         </div>
                       </div>
@@ -299,17 +312,6 @@
           </div>
         </div>
       </div>
-
-      <div class="col-12">
-        <div class="card shadow-sm">
-          <div class="card-body">
-            <h5 class="card-title mb-4">Sản phẩm theo danh mục</h5>
-            <div style="height: 300px">
-              <canvas ref="categoryChart"></canvas>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -339,12 +341,9 @@ export default {
       productsChart: null,
       orderStatusChart: null,
       newCustomersChart: null,
-      categoryChart: null,
-      // (Mặc định lọc theo tháng hiện tại)
       timeFilter: "month",
       selectedYear: currentYear,
       selectedMonth: currentMonth,
-      // (Mặc định cho tùy chọn: ngày bắt đầu là hôm nay, ngày kết thúc là ngày tiếp theo (hôm nay + 1))
       startDate: currentDate,
       endDate: nextDate,
       years: [],
@@ -426,18 +425,13 @@ export default {
     },
   },
   async mounted() {
-    // (Gọi updateChart() để lấy dữ liệu doanh thu mặc định (lọc theo tháng hiện tại) khi component được tạo)
     await this.updateChart();
-    // (Gọi fetchOverviewStats() để lấy dữ liệu tổng quan)
     await this.fetchOverviewStats();
-    // (Khởi tạo biểu đồ trạng thái đơn hàng)
     await this.fetchOrderStatusData();
     this.renderOrderStatusChart();
     await this.fetchTopProducts();
-    // Khởi tạo các biểu đồ còn lại
     this.initProductsChart();
-    this.initNewCustomersChart();
-    this.initCategoryChart();
+    await this.initNewCustomersChart();
   },
   methods: {
     formatCurrency(value) {
@@ -446,7 +440,7 @@ export default {
     },
     async fetchOverviewStats() {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         if (!token) {
           // Or redirect to login
           console.error("Authentication token not found.");
@@ -482,16 +476,105 @@ export default {
       const ctx = this.$refs.salesChart.getContext("2d");
       this.salesChart = new Chart(ctx, {
         type: "line",
-        data: this.salesData, // Use actual data
+        data: {
+          labels: this.salesData.labels,
+          datasets: [
+            {
+              ...this.salesData.datasets[0], // Doanh thu
+              yAxisID: "y",
+              borderWidth: 2,
+              pointRadius: 3,
+              pointBackgroundColor: "#0d6efd",
+            },
+            {
+              ...this.salesData.datasets[1], // Lợi nhuận
+              yAxisID: "y",
+              borderWidth: 2,
+              pointRadius: 3,
+              pointBackgroundColor: "#198754",
+            },
+            {
+              ...this.salesData.datasets[2], // Số đơn hàng
+              yAxisID: "y1",
+              borderColor: "#dc3545",
+              backgroundColor: "rgba(220, 53, 69, 0.1)",
+              borderWidth: 2,
+              borderDash: [6, 4],
+              pointRadius: 4,
+              pointBackgroundColor: "#dc3545",
+            },
+          ],
+        },
         options: {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
             y: {
               beginAtZero: true,
+              title: {
+                display: true,
+                text: "Doanh thu / Lợi nhuận (₫)",
+              },
               ticks: {
                 callback: function (value) {
                   return value.toLocaleString("vi-VN") + " ₫";
+                },
+              },
+            },
+            y1: {
+              beginAtZero: true,
+              position: "right",
+              title: {
+                display: true,
+                text: "Số đơn hàng",
+              },
+              grid: {
+                drawOnChartArea: false,
+              },
+              min: 0,
+              max: 5,
+              ticks: {
+                min: 0,
+                max: 5,
+                stepSize: 1,
+                callback: function (value) {
+                  return Math.round(value) + " đơn";
+                },
+                afterBuildTicks: function (axis) {
+                  axis.ticks = [0, 1, 2, 3, 4, 5];
+                },
+              },
+            },
+          },
+          plugins: {
+            legend: {
+              display: true,
+              position: "top",
+              labels: {
+                usePointStyle: true,
+                padding: 20,
+                font: {
+                  size: 12,
+                },
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  if (context.dataset.label === "Số đơn hàng") {
+                    return (
+                      context.dataset.label +
+                      ": " +
+                      Math.round(context.raw) +
+                      " đơn"
+                    );
+                  }
+                  return (
+                    context.dataset.label +
+                    ": " +
+                    context.raw.toLocaleString("vi-VN") +
+                    " ₫"
+                  );
                 },
               },
             },
@@ -500,16 +583,98 @@ export default {
       });
     },
     renderOrderStatusChart() {
+      if (!this.$refs.orderStatusChart) return;
+
+      const ctx = this.$refs.orderStatusChart.getContext("2d");
       if (this.orderStatusChart) {
         this.orderStatusChart.destroy();
       }
-      const ctx = this.$refs.orderStatusChart.getContext("2d");
+
+      // Base colors for each status
+      const baseColors = {
+        "Đang chờ": "#ffc107",
+        "Đang xử lý": "#0dcaf0",
+        "Đang giao": "#0d6efd",
+        "Đã giao": "#198754",
+        "Đã hủy": "#dc3545",
+        "Đã trả hàng": "#6c757d",
+      };
+
+      // Get the data and calculate max value
+      const data = this.orderStatusData.datasets[0].data;
+      const maxValue = Math.max(...data);
+
+      // Generate colors based on quantity
+      const colors = this.orderStatusData.labels.map((label, index) => {
+        const value = data[index];
+        const baseColor = baseColors[label];
+
+        // Convert hex to RGB
+        const r = parseInt(baseColor.slice(1, 3), 16);
+        const g = parseInt(baseColor.slice(3, 5), 16);
+        const b = parseInt(baseColor.slice(5, 7), 16);
+
+        // Calculate opacity based on value relative to max
+        const opacity = value === 0 ? 0.2 : 0.2 + (value / maxValue) * 0.8;
+
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      });
+
+      // Create new chart data with dynamic colors
+      const chartData = {
+        ...this.orderStatusData,
+        datasets: [
+          {
+            ...this.orderStatusData.datasets[0],
+            backgroundColor: colors,
+          },
+        ],
+      };
+
       this.orderStatusChart = new Chart(ctx, {
         type: "pie",
-        data: this.orderStatusData,
+        data: chartData,
         options: {
           responsive: true,
           maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: "bottom",
+              labels: {
+                font: {
+                  size: 12,
+                },
+                boxWidth: 12,
+                padding: 15,
+                generateLabels: (chart) => {
+                  const data = chart.data;
+                  return data.labels.map((label, i) => ({
+                    text: `${label} (${data.datasets[0].data[i]})`,
+                    fillStyle: colors[i],
+                    strokeStyle: colors[i],
+                    lineWidth: 0,
+                    hidden: false,
+                    index: i,
+                  }));
+                },
+              },
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => {
+                  const label = context.label || "";
+                  const value = context.raw || 0;
+                  const total = context.dataset.data.reduce(
+                    (a, b) => (a || 0) + (b || 0),
+                    0
+                  );
+                  const percentage =
+                    total > 0 ? Math.round((value / total) * 100) : 0;
+                  return `${label}: ${value} đơn hàng (${percentage}%)`;
+                },
+              },
+            },
+          },
         },
       });
     },
@@ -524,17 +689,16 @@ export default {
       // Có thể thêm renderProductsChart nếu có biểu đồ
     },
     async fetchSalesData() {
-      // Gọi API để lấy dữ liệu doanh thu từ backend (order.controller.js)
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         if (!token) {
           console.error("Không tìm thấy token xác thực.");
           toast.error("Vui lòng đăng nhập để xem trang này.");
           return;
         }
         const headers = { Authorization: `Bearer ${token}` };
-        // Gọi API getSalesData với các tham số từ bộ lọc thời gian
         const params = { timeFilter: this.timeFilter };
+
         if (this.timeFilter === "year") {
           params.year = this.selectedYear;
         } else if (this.timeFilter === "month") {
@@ -544,69 +708,318 @@ export default {
           params.startDate = this.startDate;
           params.endDate = this.endDate;
         }
+
         const response = await axios.get(
           `${this.backendUrl}/api/orders/sales`,
           { headers, params }
         );
-        const { labels, datasets } = response.data.data; // (API trả về { data: { labels: [...], datasets: [...] } })
+
+        let { labels, datasets } = response.data.data;
+
+        // Xử lý dữ liệu theo từng loại filter
+        if (this.timeFilter === "year") {
+          // Đảm bảo có đủ 12 tháng
+          const allMonths = Array.from({ length: 12 }, (_, i) => i + 1);
+          const monthLabels = allMonths.map((month) => `Tháng ${month}`);
+          const monthData = new Array(12).fill(0);
+          const profitData = new Array(12).fill(0);
+          const countData = new Array(12).fill(0);
+
+          labels.forEach((label, index) => {
+            const monthIndex = parseInt(label.split(" ")[1]) - 1;
+            monthData[monthIndex] = datasets[0].data[index];
+            profitData[monthIndex] = datasets[1].data[index];
+            countData[monthIndex] = datasets[2].data[index];
+          });
+
+          labels = monthLabels;
+          datasets = [
+            {
+              label: "Doanh thu",
+              data: monthData,
+              borderColor: "#0d6efd",
+              backgroundColor: "rgba(13, 110, 253, 0.1)",
+              tension: 0.4,
+              yAxisID: "y",
+            },
+            {
+              label: "Lợi nhuận",
+              data: profitData,
+              borderColor: "#198754",
+              backgroundColor: "rgba(25, 135, 84, 0.1)",
+              tension: 0.4,
+              yAxisID: "y",
+            },
+            {
+              label: "Số đơn hàng",
+              data: countData,
+              borderColor: "#dc3545",
+              backgroundColor: "rgba(220, 53, 69, 0.1)",
+              tension: 0.4,
+              yAxisID: "y1",
+            },
+          ];
+        } else if (this.timeFilter === "month") {
+          // Tạo mảng chứa tất cả các ngày trong tháng
+          const daysInMonth = new Date(
+            this.selectedYear,
+            this.selectedMonth,
+            0
+          ).getDate();
+          const dayLabels = Array.from(
+            { length: daysInMonth },
+            (_, i) => `Ngày ${i + 1}`
+          );
+          const dayData = new Array(daysInMonth).fill(0);
+          const profitData = new Array(daysInMonth).fill(0);
+          const countData = new Array(daysInMonth).fill(0);
+
+          // Map dữ liệu từ API vào các ngày tương ứng
+          labels.forEach((label, index) => {
+            const day = parseInt(label.split(" ")[1]) - 1;
+            if (day >= 0 && day < daysInMonth) {
+              dayData[day] = datasets[0].data[index];
+              profitData[day] = datasets[1].data[index];
+              countData[day] = datasets[2].data[index];
+            }
+          });
+
+          labels = dayLabels;
+          datasets = [
+            {
+              label: "Doanh thu",
+              data: dayData,
+              borderColor: "#0d6efd",
+              backgroundColor: "rgba(13, 110, 253, 0.1)",
+              tension: 0.4,
+              yAxisID: "y",
+            },
+            {
+              label: "Lợi nhuận",
+              data: profitData,
+              borderColor: "#198754",
+              backgroundColor: "rgba(25, 135, 84, 0.1)",
+              tension: 0.4,
+              yAxisID: "y",
+            },
+            {
+              label: "Số đơn hàng",
+              data: countData,
+              borderColor: "#dc3545",
+              backgroundColor: "rgba(220, 53, 69, 0.1)",
+              tension: 0.4,
+              yAxisID: "y1",
+            },
+          ];
+        } else if (this.timeFilter === "custom") {
+          // Tạo mảng chứa tất cả các ngày trong khoảng thời gian
+          const start = new Date(this.startDate);
+          const end = new Date(this.endDate);
+          const allDays = [];
+          const currentDate = new Date(start);
+
+          while (currentDate <= end) {
+            allDays.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+
+          const dayLabels = allDays.map((date) => {
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            return `${day}/${month}`;
+          });
+          const dayData = new Array(allDays.length).fill(0);
+          const profitData = new Array(allDays.length).fill(0);
+          const countData = new Array(allDays.length).fill(0);
+
+          // Map dữ liệu từ API vào các ngày tương ứng
+          labels.forEach((label, index) => {
+            const [year, month, day] = label.split("-");
+            const dateStr = `${parseInt(day)}/${parseInt(month)}`;
+            const dateIndex = dayLabels.findIndex(
+              (dayLabel) => dayLabel === dateStr
+            );
+
+            if (dateIndex !== -1) {
+              dayData[dateIndex] = datasets[0].data[index];
+              profitData[dateIndex] = datasets[1].data[index];
+              countData[dateIndex] = datasets[2].data[index];
+            }
+          });
+
+          labels = dayLabels.map((label) => `Ngày ${label}`);
+          datasets = [
+            {
+              label: "Doanh thu",
+              data: dayData,
+              borderColor: "#0d6efd",
+              backgroundColor: "rgba(13, 110, 253, 0.1)",
+              tension: 0.4,
+              yAxisID: "y",
+            },
+            {
+              label: "Lợi nhuận",
+              data: profitData,
+              borderColor: "#198754",
+              backgroundColor: "rgba(25, 135, 84, 0.1)",
+              tension: 0.4,
+              yAxisID: "y",
+            },
+            {
+              label: "Số đơn hàng",
+              data: countData,
+              borderColor: "#dc3545",
+              backgroundColor: "rgba(220, 53, 69, 0.1)",
+              tension: 0.4,
+              yAxisID: "y1",
+            },
+          ];
+        }
+
         this.salesData = { labels, datasets };
       } catch (error) {
         console.error("Lỗi khi lấy dữ liệu doanh thu:", error);
         toast.error("Lỗi khi tải dữ liệu doanh thu");
-      }
-    },
-    async fetchOrderStatusData() {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        this.$toast.error("Bạn chưa đăng nhập");
-        return;
-      }
-      try {
-        console.log(
-          "Gọi API lấy dữ liệu trạng thái đơn hàng (fetchOrderStatusData) tại:",
-          this.backendUrl + "/api/orders/order-status"
-        );
-        const res = await axios.get(
-          this.backendUrl + "/api/orders/order-status",
-          { headers: { Authorization: "Bearer " + token } }
-        );
-        console.log("Kết quả API (fetchOrderStatusData):", res.data);
-        if (res.data.success && res.data.data) {
-          this.orderStatusData = res.data.data;
-        } else {
-          console.warn(
-            "API không trả về đúng định dạng (hoặc không có dữ liệu), sử dụng dữ liệu mẫu."
-          );
-          this.orderStatusData = {
-            labels: [
-              "Đang chờ",
-              "Đang xử lý",
-              "Đang giao",
-              "Đã giao",
-              "Đã hủy",
-              "Đã trả hàng",
-            ],
+
+        // Tạo dữ liệu mặc định khi có lỗi
+        if (this.timeFilter === "year") {
+          this.salesData = {
+            labels: Array.from({ length: 12 }, (_, i) => `Tháng ${i + 1}`),
             datasets: [
               {
-                data: [0, 0, 0, 0, 0, 0],
-                backgroundColor: [
-                  "#ffc107",
-                  "#0dcaf0",
-                  "#0d6efd",
-                  "#198754",
-                  "#dc3545",
-                  "#6c757d",
-                ],
+                label: "Doanh thu",
+                data: new Array(12).fill(0),
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.1)",
+                tension: 0.4,
+                yAxisID: "y",
+              },
+              {
+                label: "Lợi nhuận",
+                data: new Array(12).fill(0),
+                borderColor: "#198754",
+                backgroundColor: "rgba(25, 135, 84, 0.1)",
+                tension: 0.4,
+                yAxisID: "y",
+              },
+              {
+                label: "Số đơn hàng",
+                data: new Array(12).fill(0),
+                borderColor: "#dc3545",
+                backgroundColor: "rgba(220, 53, 69, 0.1)",
+                tension: 0.4,
+                yAxisID: "y1",
+              },
+            ],
+          };
+        } else if (this.timeFilter === "month") {
+          const daysInMonth = new Date(
+            this.selectedYear,
+            this.selectedMonth,
+            0
+          ).getDate();
+          this.salesData = {
+            labels: Array.from(
+              { length: daysInMonth },
+              (_, i) => `Ngày ${i + 1}`
+            ),
+            datasets: [
+              {
+                label: "Doanh thu",
+                data: new Array(daysInMonth).fill(0),
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.1)",
+                tension: 0.4,
+                yAxisID: "y",
+              },
+              {
+                label: "Lợi nhuận",
+                data: new Array(daysInMonth).fill(0),
+                borderColor: "#198754",
+                backgroundColor: "rgba(25, 135, 84, 0.1)",
+                tension: 0.4,
+                yAxisID: "y",
+              },
+              {
+                label: "Số đơn hàng",
+                data: new Array(daysInMonth).fill(0),
+                borderColor: "#dc3545",
+                backgroundColor: "rgba(220, 53, 69, 0.1)",
+                tension: 0.4,
+                yAxisID: "y1",
+              },
+            ],
+          };
+        } else {
+          const start = new Date(this.startDate);
+          const end = new Date(this.endDate);
+          const allDays = [];
+          const currentDate = new Date(start);
+
+          while (currentDate <= end) {
+            allDays.push(new Date(currentDate));
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+
+          this.salesData = {
+            labels: allDays.map((date) => {
+              const day = date.getDate();
+              const month = date.getMonth() + 1;
+              return `Ngày ${day}/${month}`;
+            }),
+            datasets: [
+              {
+                label: "Doanh thu",
+                data: new Array(allDays.length).fill(0),
+                borderColor: "#0d6efd",
+                backgroundColor: "rgba(13, 110, 253, 0.1)",
+                tension: 0.4,
+                yAxisID: "y",
+              },
+              {
+                label: "Lợi nhuận",
+                data: new Array(allDays.length).fill(0),
+                borderColor: "#198754",
+                backgroundColor: "rgba(25, 135, 84, 0.1)",
+                tension: 0.4,
+                yAxisID: "y",
+              },
+              {
+                label: "Số đơn hàng",
+                data: new Array(allDays.length).fill(0),
+                borderColor: "#dc3545",
+                backgroundColor: "rgba(220, 53, 69, 0.1)",
+                tension: 0.4,
+                yAxisID: "y1",
               },
             ],
           };
         }
-      } catch (err) {
-        console.error(
-          "Lỗi khi lấy dữ liệu trạng thái đơn hàng (fetchOrderStatusData):",
-          err
+      }
+    },
+    async fetchOrderStatusData() {
+      try {
+        const token = localStorage.getItem("token-admin");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          return;
+        }
+
+        const response = await axios.get(
+          `${this.backendUrl}/api/orders/order-status`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        // (Nếu có lỗi, sử dụng dữ liệu mẫu (hoặc mặc định) cho biểu đồ trạng thái đơn hàng.)
+
+        if (response.data.success && response.data.data) {
+          this.orderStatusData = response.data.data;
+          this.$nextTick(() => {
+            this.renderOrderStatusChart();
+          });
+        }
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu trạng thái đơn hàng:", error);
+        toast.error("Lỗi khi tải dữ liệu trạng thái đơn hàng");
+        // Set default data
         this.orderStatusData = {
           labels: [
             "Đang chờ",
@@ -630,11 +1043,14 @@ export default {
             },
           ],
         };
+        this.$nextTick(() => {
+          this.renderOrderStatusChart();
+        });
       }
     },
     async fetchTopProducts() {
       try {
-        const token = localStorage.getItem("token");
+        const token = localStorage.getItem("token-admin");
         if (!token) {
           toast.error("Vui lòng đăng nhập để xem trang này.");
           return;
@@ -646,28 +1062,64 @@ export default {
           { headers, params }
         );
         const { topProducts, summary } = response.data.data;
-        this.topProducts = topProducts;
-        this.topProductsSummary = summary;
+        this.topProducts = topProducts || [];
+        this.topProductsSummary = summary || {
+          totalProductsSold: 0,
+          totalRevenue: 0,
+          averagePrice: 0,
+        };
+
+        // Update the products chart with new data
+        this.$nextTick(() => {
+          this.initProductsChart();
+        });
       } catch (error) {
         console.error("Lỗi khi lấy top sản phẩm bán chạy:", error);
         toast.error("Lỗi khi tải top sản phẩm bán chạy");
+        // Reset data to prevent undefined errors
+        this.topProducts = [];
+        this.topProductsSummary = {
+          totalProductsSold: 0,
+          totalRevenue: 0,
+          averagePrice: 0,
+        };
+        this.$nextTick(() => {
+          this.initProductsChart();
+        });
       }
     },
     initProductsChart() {
+      if (!this.$refs.productsChart) return;
+
       const ctx = this.$refs.productsChart.getContext("2d");
+      if (this.productsChart) {
+        this.productsChart.destroy();
+      }
+
+      // Ensure we have valid data
+      const labels =
+        this.topProducts?.map((product) => product.name || "Chưa có tên") || [];
+      const data =
+        this.topProducts?.map((product) => product.totalQuantity || 0) || [];
+
       this.productsChart = new Chart(ctx, {
         type: "doughnut",
         data: {
-          labels: ["Áo thun", "Quần jean", "Váy", "Giày", "Phụ kiện"],
+          labels: labels,
           datasets: [
             {
-              data: [30, 25, 20, 15, 10],
+              data: data,
               backgroundColor: [
                 "#0d6efd",
                 "#198754",
                 "#dc3545",
                 "#ffc107",
                 "#6f42c1",
+                "#0dcaf0",
+                "#fd7e14",
+                "#20c997",
+                "#6610f2",
+                "#e83e8c",
               ],
             },
           ],
@@ -682,16 +1134,33 @@ export default {
                 font: {
                   size: 12,
                 },
+                boxWidth: 12,
+                padding: 15,
               },
             },
             tooltip: {
               callbacks: {
                 label: (context) => {
+                  if (!context.raw && context.raw !== 0) return [];
+
                   const label = context.label || "";
                   const value = context.raw || 0;
-                  const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                  const percentage = Math.round((value / total) * 100);
-                  return `${label}: ${value} sản phẩm (${percentage}%)`;
+                  const total = context.dataset.data.reduce(
+                    (a, b) => (a || 0) + (b || 0),
+                    0
+                  );
+                  const percentage =
+                    total > 0 ? Math.round((value / total) * 100) : 0;
+                  const product = this.topProducts?.[context.dataIndex];
+
+                  return [
+                    `${label}`,
+                    `Số lượng: ${value} sản phẩm`,
+                    `Doanh thu: ${this.formatCurrency(
+                      product?.totalRevenue || 0
+                    )}`,
+                    `Tỷ lệ: ${percentage}%`,
+                  ];
                 },
               },
             },
@@ -699,111 +1168,139 @@ export default {
         },
       });
     },
-    initNewCustomersChart() {
-      const ctx = this.$refs.newCustomersChart.getContext("2d");
-      this.newCustomersChart = new Chart(ctx, {
-        type: "line",
-        data: {
-          labels: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
-          datasets: [
-            {
-              label: "Khách hàng mới",
-              data: [12, 19, 15, 25, 22, 30, 18],
-              borderColor: "#6f42c1",
-              backgroundColor: "rgba(111, 66, 193, 0.1)",
-              tension: 0.4,
-              fill: true,
+    async initNewCustomersChart() {
+      try {
+        const token = localStorage.getItem("token-admin");
+        if (!token) {
+          toast.error("Vui lòng đăng nhập để xem trang này.");
+          return;
+        }
+
+        const response = await axios.get(
+          `${this.backendUrl}/api/customers/new-customers`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        if (!response.data.success) {
+          throw new Error(
+            response.data.message || "Lỗi khi lấy dữ liệu khách hàng mới"
+          );
+        }
+
+        const { labels, datasets } = response.data.data;
+
+        const ctx = this.$refs.newCustomersChart.getContext("2d");
+        if (this.newCustomersChart) {
+          this.newCustomersChart.destroy();
+        }
+
+        this.newCustomersChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: "Khách hàng mới",
+                data: datasets[0].data,
+                borderColor: "#6f42c1",
+                backgroundColor: "rgba(111, 66, 193, 0.1)",
+                tension: 0.4,
+                fill: true,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    return `${context.raw} khách hàng mới`;
+                  },
+                },
+              },
             },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  return `${context.raw} khách hàng mới`;
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: "#f0f0f0",
+                },
+                ticks: {
+                  stepSize: 1,
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
                 },
               },
             },
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
+        });
+      } catch (error) {
+        console.error("Lỗi khi lấy dữ liệu khách hàng mới:", error);
+        toast.error("Lỗi khi tải dữ liệu khách hàng mới");
+
+        // Fallback to empty chart
+        const ctx = this.$refs.newCustomersChart.getContext("2d");
+        if (this.newCustomersChart) {
+          this.newCustomersChart.destroy();
+        }
+
+        this.newCustomersChart = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: ["T2", "T3", "T4", "T5", "T6", "T7", "CN"],
+            datasets: [
+              {
+                label: "Khách hàng mới",
+                data: [0, 0, 0, 0, 0, 0, 0],
+                borderColor: "#6f42c1",
+                backgroundColor: "rgba(111, 66, 193, 0.1)",
+                tension: 0.4,
+                fill: true,
               },
-              ticks: {
-                stepSize: 1,
-              },
-            },
-            x: {
-              grid: {
+            ],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
                 display: false,
               },
+              tooltip: {
+                callbacks: {
+                  label: (context) => {
+                    return `${context.raw} khách hàng mới`;
+                  },
+                },
+              },
             },
-          },
-        },
-      });
-    },
-    initCategoryChart() {
-      const ctx = this.$refs.categoryChart.getContext("2d");
-      this.categoryChart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: ["Áo", "Quần", "Váy", "Giày", "Phụ kiện", "Túi xách"],
-          datasets: [
-            {
-              label: "Số lượng sản phẩm",
-              data: [120, 80, 60, 40, 30, 25],
-              backgroundColor: [
-                "#0d6efd",
-                "#198754",
-                "#dc3545",
-                "#ffc107",
-                "#6f42c1",
-                "#0dcaf0",
-              ],
-            },
-          ],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              display: false,
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => {
-                  return `${context.raw} sản phẩm`;
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: "#f0f0f0",
+                },
+                ticks: {
+                  stepSize: 1,
+                },
+              },
+              x: {
+                grid: {
+                  display: false,
                 },
               },
             },
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              grid: {
-                color: "#f0f0f0",
-              },
-              ticks: {
-                stepSize: 1,
-              },
-            },
-            x: {
-              grid: {
-                display: false,
-              },
-            },
-          },
-        },
-      });
+        });
+      }
     },
   },
 };

@@ -221,6 +221,7 @@ export default {
 </script>
 
 <style scoped>
+/* Modal Styles */
 .modal {
   position: fixed;
   top: 0;
@@ -229,6 +230,7 @@ export default {
   height: 100%;
   z-index: 1050;
   display: none;
+  overflow-y: auto;
 }
 
 .modal.show {
@@ -240,6 +242,12 @@ export default {
   width: auto;
   margin: 1.75rem auto;
   max-width: 800px;
+  transform: translateY(-20px);
+  transition: transform 0.3s ease-out;
+}
+
+.modal.show .modal-dialog {
+  transform: translateY(0);
 }
 
 .modal-content {
@@ -248,22 +256,30 @@ export default {
   flex-direction: column;
   width: 100%;
   background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
-  border-bottom: 1px solid #dee2e6;
+  padding: 1.25rem;
+  border-bottom: 1px solid #e9ecef;
+  background-color: #f8f9fa;
+  border-radius: 12px 12px 0 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .modal-title {
   margin: 0;
   font-size: 1.25rem;
-  font-weight: 500;
+  font-weight: 600;
+  color: #2c3e50;
 }
 
 .btn-close {
@@ -273,110 +289,169 @@ export default {
   cursor: pointer;
   font-size: 1.5rem;
   line-height: 1;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+}
+
+.btn-close:hover {
+  opacity: 1;
 }
 
 .modal-body {
   position: relative;
   flex: 1 1 auto;
-  padding: 1rem;
+  padding: 1.5rem;
+  overflow-y: auto;
 }
 
+/* Form Styles */
 .form-label {
   margin-bottom: 0.5rem;
   font-weight: 500;
+  color: #495057;
 }
 
 .form-control,
 .form-select {
   display: block;
   width: 100%;
-  padding: 0.375rem 0.75rem;
+  padding: 0.625rem 0.875rem;
   font-size: 1rem;
   line-height: 1.5;
-  color: #212529;
+  color: #495057;
   background-color: #fff;
   border: 1px solid #ced4da;
-  border-radius: 0.25rem;
-  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
 }
 
 .form-control:focus,
 .form-select:focus {
-  border-color: #86b7fe;
+  border-color: #80bdff;
   outline: 0;
-  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.15);
 }
 
 .form-check {
   display: flex;
   align-items: center;
-  padding-left: 0;
+  padding-left: 40px;
 }
 
 .form-check-input {
   margin-right: 0.5rem;
+  cursor: pointer;
 }
 
+/* Image Upload Styles */
 .image-upload-container {
   position: relative;
+  border: 2px dashed #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  max-width: 100%;
+}
+
+.image-upload-container:hover {
+  border-color: #80bdff;
 }
 
 .image-preview {
   position: relative;
   margin-top: 1rem;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 100%;
+  aspect-ratio: 16/9;
 }
 
 .image-preview img {
-  max-width: 100%;
-  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  transition: transform 0.2s ease;
+  background-color: #f8f9fa;
+}
+
+.image-preview img:hover {
+  transform: scale(1.02);
 }
 
 .remove-image {
   position: absolute;
-  top: 0.5rem;
-  right: 0.5rem;
-  padding: 0.25rem 0.5rem;
+  top: 0.75rem;
+  right: 0.75rem;
+  padding: 0.375rem 0.75rem;
   font-size: 0.875rem;
   line-height: 1.5;
-  border-radius: 0.2rem;
+  border-radius: 4px;
   color: #fff;
-  background-color: #dc3545;
+  background-color: rgba(220, 53, 69, 0.9);
   border: none;
   cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 2;
 }
 
+.remove-image:hover {
+  background-color: #dc3545;
+  transform: scale(1.05);
+}
+
+/* Button Styles */
 .btn {
-  display: inline-block;
-  font-weight: 400;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
   text-align: center;
   vertical-align: middle;
   user-select: none;
-  padding: 0.375rem 0.75rem;
+  padding: 0.625rem 1.25rem;
   font-size: 1rem;
   line-height: 1.5;
-  border-radius: 0.25rem;
-  transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out,
-    border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+  gap: 0.5rem;
 }
 
 .btn-light {
-  color: #212529;
+  color: #495057;
   background-color: #f8f9fa;
-  border-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+}
+
+.btn-light:hover {
+  background-color: #e9ecef;
+  border-color: #ced4da;
 }
 
 .btn-primary {
   color: #fff;
   background-color: #0d6efd;
-  border-color: #0d6efd;
+  border: 1px solid #0d6efd;
+}
+
+.btn-primary:hover {
+  background-color: #0b5ed7;
+  border-color: #0a58ca;
+  transform: translateY(-1px);
 }
 
 .btn-danger {
   color: #fff;
   background-color: #dc3545;
-  border-color: #dc3545;
+  border: 1px solid #dc3545;
 }
 
+.btn-danger:hover {
+  background-color: #bb2d3b;
+  border-color: #b02a37;
+}
+
+/* Modal Backdrop */
 .modal-backdrop {
   position: fixed;
   top: 0;
@@ -386,12 +461,14 @@ export default {
   background-color: rgba(0, 0, 0, 0.5);
   z-index: 1040;
   display: none;
+  backdrop-filter: blur(2px);
 }
 
 .modal-backdrop.show {
   display: block;
 }
 
+/* Utility Classes */
 .text-danger {
   color: #dc3545;
 }
@@ -414,5 +491,25 @@ export default {
 
 .text-end {
   text-align: end;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .modal-dialog {
+    margin: 1rem;
+    max-width: calc(100% - 2rem);
+  }
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .btn {
+    padding: 0.5rem 1rem;
+  }
+
+  .image-preview {
+    aspect-ratio: 4/3;
+  }
 }
 </style>

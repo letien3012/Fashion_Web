@@ -1,5 +1,5 @@
 <template>
-  <Header></Header>
+  <Header />
   <div class="about-container">
     <!-- Breadcrumb -->
     <div class="breadcrumb">
@@ -7,114 +7,117 @@
       <span class="separator">/</span>
       <span class="current">Về chúng tôi</span>
     </div>
-    <h1 class="page-title">Về JUNO</h1>
 
-    <!-- Giới thiệu ngắn -->
-    <div class="intro-section">
-      <p>
-        JUNO - Thương hiệu thời trang trẻ trung, năng động với phong cách thiết
-        kế độc đáo và chất lượng vượt trội.
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <h1 class="hero-title">JUNO - Thương hiệu thời trang trẻ trung</h1>
+      <p class="hero-subtitle">
+        Nơi phong cách gặp gỡ sự sáng tạo, nơi chất lượng hòa quyện với xu hướng
       </p>
     </div>
 
-    <!-- Container chính cho danh sách cửa hàng và bản đồ -->
-    <div class="store-container">
-      <!-- Danh sách cửa hàng bên trái -->
-      <div class="store-list">
-        <h2>Hệ thống cửa hàng</h2>
-        <div
-          class="store-item"
-          v-for="store in stores"
-          :key="store.id"
-          @click="selectStore(store)"
-        >
-          <h3>{{ store.name }}</h3>
-          <p><i class="fas fa-map-marker-alt"></i> {{ store.address }}</p>
-          <p><i class="fas fa-phone"></i> {{ store.phone }}</p>
-          <p><i class="fas fa-clock"></i> {{ store.hours }}</p>
+    <!-- Story Section -->
+    <div class="story-section">
+      <div class="story-content">
+        <h2>Câu chuyện của chúng tôi</h2>
+        <p>
+          JUNO được thành lập với tình yêu và đam mê dành cho thời trang. Chúng
+          tôi tin rằng mỗi người đều xứng đáng được thể hiện cá tính riêng thông
+          qua phong cách thời trang của mình.
+        </p>
+        <p>
+          Từ những ngày đầu tiên, chúng tôi đã cam kết mang đến những sản phẩm
+          chất lượng cao với thiết kế độc đáo, phù hợp với xu hướng thời trang
+          hiện đại.
+        </p>
+      </div>
+      <div class="story-image">
+        <img src="../assets/images/about-story.jpg" alt="JUNO Story" />
+      </div>
+    </div>
+
+    <!-- Values Section -->
+    <div class="values-section">
+      <h2>Giá trị cốt lõi</h2>
+      <div class="values-grid">
+        <div class="value-card">
+          <i class="fas fa-star"></i>
+          <h3>Chất lượng</h3>
+          <p>
+            Cam kết mang đến những sản phẩm chất lượng cao, bền bỉ với thời gian
+          </p>
+        </div>
+        <div class="value-card">
+          <i class="fas fa-heart"></i>
+          <h3>Sáng tạo</h3>
+          <p>Không ngừng đổi mới và sáng tạo trong thiết kế và phong cách</p>
+        </div>
+        <div class="value-card">
+          <i class="fas fa-handshake"></i>
+          <h3>Uy tín</h3>
+          <p>
+            Xây dựng niềm tin với khách hàng thông qua sự minh bạch và chuyên
+            nghiệp
+          </p>
+        </div>
+        <div class="value-card">
+          <i class="fas fa-leaf"></i>
+          <h3>Bền vững</h3>
+          <p>Hướng đến phát triển bền vững và thân thiện với môi trường</p>
         </div>
       </div>
+    </div>
 
-      <!-- Bản đồ bên phải -->
-      <div class="map-container">
-        <div id="map" ref="map"></div>
+    <!-- Milestones Section -->
+    <div class="milestones-section">
+      <h2>Những cột mốc phát triển</h2>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="year">2015</div>
+          <div class="content">
+            <h3>Thành lập JUNO</h3>
+            <p>Ra mắt thương hiệu với bộ sưu tập đầu tiên</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="year">2017</div>
+          <div class="content">
+            <h3>Mở rộng thị trường</h3>
+            <p>Phát triển hệ thống cửa hàng trên toàn quốc</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="year">2019</div>
+          <div class="content">
+            <h3>Đổi mới công nghệ</h3>
+            <p>Ứng dụng công nghệ số trong sản xuất và kinh doanh</p>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="year">2023</div>
+          <div class="content">
+            <h3>Phát triển bền vững</h3>
+            <p>Triển khai chiến lược phát triển bền vững</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-  <Footer></Footer>
+  <Footer />
+  <Chatbot />
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import Chatbot from "../components/Chatbot.vue";
 
 export default {
   name: "About",
   components: {
     Header,
     Footer,
-  },
-  setup() {
-    const map = ref(null);
-    const mapInstance = ref(null);
-    const markers = ref([]);
-    const stores = ref([
-      {
-        id: 1,
-        name: "JUNO Hà Nội",
-        address: "123 Nguyễn Huệ, Quận 1, Hà Nội",
-        phone: "024 1234 5678",
-        hours: "9:00 - 22:00",
-        lat: 21.0285,
-        lng: 105.8542,
-      },
-      {
-        id: 2,
-        name: "JUNO Hồ Chí Minh",
-        address: "456 Lê Lợi, Quận 1, TP.HCM",
-        phone: "028 8765 4321",
-        hours: "9:00 - 22:00",
-        lat: 10.7757,
-        lng: 106.7004,
-      },
-      {
-        id: 3,
-        name: "JUNO Đà Nẵng",
-        address: "789 Nguyễn Văn Linh, Quận Hải Châu, Đà Nẵng",
-        phone: "0236 9876 5432",
-        hours: "9:00 - 22:00",
-        lat: 16.0544,
-        lng: 108.2022,
-      },
-    ]);
-
-    const selectStore = (store) => {
-      if (mapInstance.value) {
-        mapInstance.value.setView([store.lat, store.lng], 15);
-      }
-    };
-
-    onMounted(() => {
-      mapInstance.value = L.map("map").setView([10.029, 105.7689], 15);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap contributors",
-      }).addTo(mapInstance.value);
-      // Thêm marker cho từng cửa hàng
-      stores.value.forEach((store) => {
-        const marker = L.marker([store.lat, store.lng])
-          .addTo(mapInstance.value)
-          .bindPopup(`<b>${store.name}</b><br>${store.address}`);
-        markers.value.push(marker);
-      });
-    });
-
-    return {
-      stores,
-      selectStore,
-    };
+    Chatbot,
   },
 };
 </script>
@@ -124,7 +127,6 @@ export default {
   width: 95%;
   margin: 0 auto;
   padding: 20px;
-  margin-bottom: 50px;
 }
 
 .breadcrumb {
@@ -146,86 +148,187 @@ export default {
   color: #e63946;
 }
 
-.page-title {
+/* Hero Section */
+.hero-section {
   text-align: center;
-  color: #333;
-  margin-bottom: 30px;
+  padding: 60px 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5));
+  background-size: cover;
+  background-position: center;
+  color: white;
+  border-radius: 8px;
+  margin-bottom: 40px;
 }
 
-.intro-section {
+.hero-title {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+}
+
+.hero-subtitle {
+  font-size: 1.2rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+/* Story Section */
+.story-section {
+  display: flex;
+  gap: 40px;
+  margin-bottom: 60px;
+  align-items: center;
+}
+
+.story-content {
+  flex: 1;
+}
+
+.story-content h2 {
+  color: #333;
+  margin-bottom: 20px;
+}
+
+.story-content p {
+  color: #666;
+  line-height: 1.6;
+  margin-bottom: 15px;
+}
+
+.story-image {
+  flex: 1;
+}
+
+.story-image img {
+  width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Values Section */
+.values-section {
+  margin-bottom: 60px;
+}
+
+.values-section h2 {
   text-align: center;
   margin-bottom: 40px;
-  font-size: 1.1em;
-  color: #666;
 }
 
-.store-container {
-  display: flex;
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 30px;
-  min-height: 600px;
 }
 
-.store-list {
-  flex: 1;
-  padding: 20px;
-  background: #f8f8f8;
+.value-card {
+  text-align: center;
+  padding: 30px;
+  background: #fff;
   border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s;
 }
 
-.store-list h2 {
+.value-card:hover {
+  transform: translateY(-5px);
+}
+
+.value-card i {
+  font-size: 2rem;
+  color: #e63946;
   margin-bottom: 20px;
+}
+
+.value-card h3 {
+  margin-bottom: 15px;
   color: #333;
 }
 
-.store-item {
-  padding: 15px;
-  margin-bottom: 15px;
-  background: white;
-  border-radius: 6px;
+.value-card p {
+  color: #666;
+  line-height: 1.6;
+}
+
+/* Milestones Section */
+.milestones-section {
+  margin-bottom: 60px;
+}
+
+.milestones-section h2 {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.timeline {
+  position: relative;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.timeline::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 2px;
+  height: 100%;
+  background: #e63946;
+}
+
+.timeline-item {
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+  position: relative;
+}
+
+.year {
+  background: #e63946;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 20px;
+  margin: 0 20px;
+}
+
+.content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: transform 0.2s;
+  max-width: 300px;
 }
 
-.store-item:hover {
-  transform: translateY(-2px);
-}
-
-.store-item h3 {
-  color: #ff0000;
+.content h3 {
+  color: #333;
   margin-bottom: 10px;
 }
 
-.store-item p {
-  margin: 5px 0;
+.content p {
   color: #666;
 }
 
-.store-item i {
-  margin-right: 8px;
-  color: #ff0000;
-}
-
-.map-container {
-  flex: 2;
-  border-radius: 8px;
-  overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-#map {
-  width: 100%;
-  height: 100%;
-  min-height: 600px;
-}
-
+/* Responsive Design */
 @media (max-width: 768px) {
-  .store-container {
+  .hero-title {
+    font-size: 2rem;
+  }
+
+  .story-section {
     flex-direction: column;
   }
 
-  .map-container {
-    height: 400px;
+  .timeline::before {
+    left: 0;
+  }
+
+  .timeline-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding-left: 20px;
+  }
+
+  .year {
+    margin-bottom: 10px;
   }
 }
 </style>

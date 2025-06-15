@@ -1024,6 +1024,7 @@ export default {
             image: convertToRelativePath(variant.image),
           })),
         };
+        console.log("Submit data:", submitData);
 
         const token = localStorage.getItem("token-admin");
 

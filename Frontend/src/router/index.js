@@ -17,6 +17,11 @@ import Products from "../views/Products.vue";
 import FeatureUpload from "../views/FeatureUpload.vue";
 import Search from "../views/Search.vue";
 import WishList from "../views/WishList.vue";
+import Outlet from "../views/Outlet.vue";
+
+import StoreSystem from "../views/StoreSystem.vue";
+import ReturnPolicy from "../views/ReturnPolicy.vue";
+import PrivacyPolicy from "../views/PrivacyPolicy.vue";
 
 const routes = [
   {
@@ -106,6 +111,26 @@ const routes = [
     meta: {
       requiresAuth: true,
     },
+  },
+  {
+    path: "/outlet",
+    name: "Outlet",
+    component: Outlet,
+  },
+  {
+    path: "/store-system",
+    name: "store-system",
+    component: StoreSystem,
+  },
+  {
+    path: "/return-policy",
+    name: "return-policy",
+    component: ReturnPolicy,
+  },
+  {
+    path: "/privacy-policy",
+    name: "privacy-policy",
+    component: PrivacyPolicy,
   },
   ...adminRoutes,
 ];

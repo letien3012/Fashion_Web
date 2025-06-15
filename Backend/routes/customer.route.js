@@ -12,6 +12,7 @@ router.post("/reset-password", customerController.resetPassword);
 // Admin routes
 router.get("/", customerController.getAllCustomers);
 router.get("/total", customerController.getTotalCustomers);
+router.get("/new-customers", customerController.getNewCustomersData);
 router.put("/update-status/:id", customerController.updateStatus);
 router.delete("/:id", customerController.softDelete);
 

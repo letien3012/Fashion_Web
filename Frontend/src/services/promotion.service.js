@@ -27,6 +27,20 @@ const promotionService = {
     }
   },
 
+  // Lấy danh sách sản phẩm đang được giảm giá
+  async getDiscountedProducts() {
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/promotions/discounted-products`,
+        getAuthHeaders()
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching discounted products:", error);
+      throw error;
+    }
+  },
+
   // Lấy promotion theo code
   async getByCode(code) {
     try {
