@@ -44,10 +44,9 @@ class ImageModel {
   static async deleteImage(imagePath) {
     try {
       // Chỉ xóa ảnh nếu đường dẫn là base64 (ảnh mới)
-      if (!imagePath || !imagePath.startsWith("data:image")) {
-        return;
-      }
-
+      // if (!imagePath || !imagePath.startsWith("data:image")) {
+      //   return;
+      // }
       const fullPath = path.join(__dirname, "../public", imagePath);
       if (fs.existsSync(fullPath)) {
         fs.unlinkSync(fullPath);

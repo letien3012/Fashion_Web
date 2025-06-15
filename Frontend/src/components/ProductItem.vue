@@ -74,6 +74,7 @@ export default {
       required: true,
     },
   },
+  emits: ['product-click'],
   data() {
     return {
       isInWishlist: false,
@@ -86,6 +87,7 @@ export default {
   },
   methods: {
     getProductDetailLink(product) {
+      this.$emit('product-click');
       return `/product-detail/${product._id || ""}`;
     },
     formatVND(value) {

@@ -1,5 +1,7 @@
 const mongoose = require("mongoose");
 const ImageModel = require("./image.model");
+const { extractAndSaveFeatures } = require("../imageService/imageService");
+const axios = require("axios");
 
 const productSchema = new mongoose.Schema({
   code: { type: String, required: true },
@@ -224,6 +226,11 @@ Product.prototype.save = async function () {
     // Handle main image
     if (this.image && this.image.startsWith("data:image")) {
       this.image = await ImageModel.saveImage(this.image, "product");
+      // Trích xuất đặc trưng cho ảnh chính
+      await axios.post("http://localhost:3005/api/imageService/extract-features", {
+        imagePath: `http://localhost:3005${this.image}`,
+        productId: this._id
+      });
     }
 
     // Handle album images
@@ -237,20 +244,32 @@ Product.prototype.save = async function () {
           "product"
         );
         this.album = albumPaths;
+        // Trích xuất đặc trưng cho từng ảnh trong album
+        for (let i = 0; i < albumPaths.length; i++) {
+          await axios.post("http://localhost:3005/api/imageService/extract-features", {
+            imagePath: `http://localhost:3005${albumPaths[i]}`,
+            productId: this._id
+          });
+        }
       }
     }
 
     // Handle variant images
     if (this.variants && this.variants.length > 0) {
-      for (let variant of this.variants) {
+      for (let i = 0; i < this.variants.length; i++) {
+        const variant = this.variants[i];
         if (variant.image && variant.image.startsWith("data:image")) {
           variant.image = await ImageModel.saveImage(variant.image, "product");
+          // Trích xuất đặc trưng cho ảnh variant
+          await axios.post("http://localhost:3005/api/imageService/extract-features", {
+            imagePath: `http://localhost:3005${variant.image}`,
+            productId: this._id
+          });
         }
       }
     }
     const productData = this.toObject();
     const savedProduct = await Product.create(productData);
-    console.log("Product saved:", savedProduct);
     return savedProduct._id;
   } catch (error) {
     throw new Error(`Error saving product: ${error.message}`);
