@@ -26,7 +26,7 @@ const routes = {
   promotion: require("./routes/promotion.route"),
   mail: require("./routes/mail.route"),
   verify: require("./routes/verify.route"),
-  imageService: require("./routes/imageService"),
+  imageService: require("./routes/imageService.route"),
   banner: require("./routes/banner.route"),
   review: require("./routes/review.route"),
   location: require("./routes/location.routes"),

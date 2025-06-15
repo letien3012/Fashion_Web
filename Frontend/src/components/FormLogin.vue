@@ -93,15 +93,35 @@ export default {
     };
   },
   methods: {
-    handleSubmit() {
-      this.$emit("submit-login", {
-        email: this.email,
-        password: this.password,
-      });
+    async handleSubmit() {
+      try {
+        const response = await fetch("http://localhost:3005/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: this.email,
+            password: this.password,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          localStorage.setItem("token", data.token);
+          localStorage.setItem("user", JSON.stringify(data.user));
+          
+          toast.success("Đăng nhập thành công!");
+          this.router.push("/");
+        } else {
+          toast.error(data.message || "Đăng nhập thất bại!");
+        }
+      } catch (error) {
+        console.error("Lỗi đăng nhập:", error);
+        toast.error("Đăng nhập thất bại. Vui lòng thử lại!");
+      }
     },
-    // loginWithGoogle() {
-    //   window.location.href = "http://localhost:3005/api/auth/google";
-    // },
     loginWithGoogle() {
       const googleAuthURL = "http://localhost:3005/api/auth/google";
 
@@ -121,8 +141,7 @@ export default {
         if (token) {
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(user));
-          console.log("Stored token:", token);
-          console.log("Stored user:", user);
+          
 
           toast.success("Đăng nhập thành công!");
           this.router.push("/");
@@ -162,13 +181,102 @@ export default {
 
 <style scoped>
 .form-container {
-  margin: none;
-  padding: 24px;
-  background: #fff;
-  border-radius: 8px;
+ 
+  margin-bottom: 100px;
+  padding: 32px 28px;
+  border-radius: 16px;
   font-family: "Open Sans", sans-serif;
   width: 50vw;
+  min-width: 320px;
+  max-width: 95vw;
   height: auto;
+  border: 1.5px solid #e0e0e0;
+  position: relative;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+  background: white;
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    width: 95vw;
+    max-width: 95vw;
+    margin-top: 20px;
+    margin-bottom: 40px;
+    padding: 24px 20px;
+    border-radius: 10px;
+  }
+
+  .social-login .btn {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .divider {
+    margin: 15px 0;
+  }
+
+  input {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .btn.login, .btn.signup {
+    padding: 8px;
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 480px) {
+  .form-container {
+    padding: 20px 16px;
+    margin-top: 15px;
+    margin-bottom: 30px;
+  }
+
+  h2 {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+
+  .social-login .btn {
+    padding: 6px;
+    font-size: 13px;
+  }
+
+  .divider span {
+    font-size: 12px;
+  }
+
+  input {
+    padding: 6px;
+    font-size: 13px;
+  }
+
+  .remember-forgot {
+    font-size: 12px;
+  }
+
+  .btn.login, .btn.signup {
+    padding: 6px;
+    font-size: 13px;
+  }
+
+  .signup-section p {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .form-container {
+    width: 70vw;
+    margin-top: 40px;
+  }
+}
+
+@media (min-width: 1025px) {
+  .form-container {
+    margin-top: 40px;
+  }
 }
 
 a {
@@ -244,12 +352,14 @@ input {
 
 .btn.login {
   width: 100%;
+  margin-top: 20px;
   padding: 10px;
   border-radius: 30px;
   background-color: #999;
   color: white;
   border: none;
-  cursor: pointer;
+  cursor: not-allowed;
+  transition: background-color 0.3s ease;
 }
 
 .btn.login:disabled {
@@ -268,6 +378,5 @@ input {
   padding: 10px;
   width: 100%;
   background: white;
-  cursor: pointer;
 }
 </style>

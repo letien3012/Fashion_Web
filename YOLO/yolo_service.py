@@ -1,12 +1,24 @@
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from ultralytics import YOLO
 import numpy as np
 import cv2
 import base64
-import json  # cần import json để parse chuỗi JSON
+import json
 import torch
+import requests
+import logging
+import os
 from torchvision import transforms
 from efficientnet_pytorch import EfficientNet
+from typing import List, Dict, Any
+from urllib.parse import urlparse
+
+# Cấu hình logging
+logging.basicConfig(
+    filename='yolo_service.log',
+    level=logging.ERROR,  # Chỉ log lỗi
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 
 app = FastAPI()
 model = YOLO("best.pt")
@@ -22,18 +34,36 @@ preprocess = transforms.Compose([
     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 ])
 
-def decode_image(contents: bytes):
-    np_img = np.frombuffer(contents, np.uint8)
-    img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
-    if img is None:
-        raise ValueError("Could not decode image")
-    return img
+def download_image(image_path: str):
+    try:
+        # Check if it's a URL
+        if image_path.startswith(('http://', 'https://')):
+            response = requests.get(image_path)
+            response.raise_for_status()
+            np_img = np.frombuffer(response.content, np.uint8)
+            img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+        else:
+            # Handle local file path
+            if not os.path.exists(image_path):
+                raise FileNotFoundError(f"Image file not found: {image_path}")
+            img = cv2.imread(image_path)
+            
+        if img is None:
+            raise ValueError("Could not decode image")
+            
+        return img
+    except Exception as e:
+        logging.error(f"Error processing image: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
 
 @app.post("/detect")
-async def detect(file: UploadFile = File(...)):
+async def detect(data: Dict[str, str] = Body(...)):
     try:
-        contents = await file.read()
-        img = decode_image(contents)
+        image_url = data.get("image_url")
+        if not image_url:
+            raise HTTPException(status_code=400, detail="image_url is required")
+            
+        img = download_image(image_url)
         results = model(img)
         boxes = []
         names = model.names
@@ -51,18 +81,27 @@ async def detect(file: UploadFile = File(...)):
                 })
         return {"boxes": boxes}
     except Exception as e:
+        logging.error(f"Error in detect endpoint: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
 @app.post("/crop")
-async def crop(file: UploadFile = File(...), boxes: str = Form(...)):
+async def crop(data: Dict[str, Any] = Body(...)):
     try:
-        contents = await file.read()
-        img = decode_image(contents)
-
-        boxes_data = json.loads(boxes)  # parse chuỗi JSON thành list/dict
+        image_url = data.get("image_url")
+        boxes = data.get("boxes")
+        
+        if not image_url:
+            raise HTTPException(status_code=400, detail="image_url is required")
+        if not boxes or not isinstance(boxes, list):
+            raise HTTPException(status_code=400, detail="boxes must be a list")
+            
+        img = download_image(image_url)
         crops = []
 
-        for item in boxes_data:
+        for item in boxes:
+            if not isinstance(item, dict) or "box" not in item:
+                continue
+                
             x1, y1, x2, y2 = item["box"]
             label = item.get("label", "object")
             crop_img = img[y1:y2, x1:x2]
@@ -75,16 +114,51 @@ async def crop(file: UploadFile = File(...), boxes: str = Form(...)):
                 "box": [x1, y1, x2, y2],
                 "image_base64": crop_base64
             })
-
+        
         return {"crops": crops}
     except Exception as e:
+        logging.error(f"Error in crop endpoint: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.post("/extract-features")
-async def extract_features(file: UploadFile = File(...)):
+def is_valid_url(url: str) -> bool:
     try:
-        contents = await file.read()
-        img = decode_image(contents)
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
+
+def decode_base64_image(base64_string: str):
+    try:
+        # Remove data URL prefix if present
+        if ',' in base64_string:
+            base64_string = base64_string.split(',')[1]
+        
+        # Decode base64 to bytes
+        image_bytes = base64.b64decode(base64_string)
+        np_img = np.frombuffer(image_bytes, np.uint8)
+        img = cv2.imdecode(np_img, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise ValueError("Could not decode base64 image")
+            
+        return img
+    except Exception as e:
+        logging.error(f"Error decoding base64 image: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error decoding base64 image: {str(e)}")
+
+@app.post("/extract-features")
+async def extract_features(data: Dict[str, str] = Body(...)):
+    try:
+        image_data = data.get("image_url")
+        if not image_data:
+            raise HTTPException(status_code=400, detail="image_url is required")
+            
+        # Xử lý base64
+        if image_data.startswith('data:image') or ',' in image_data:
+            img = decode_base64_image(image_data)
+        else:
+            # Xử lý URL hoặc file local
+            img = download_image(image_data)
         
         # Convert BGR to RGB (EfficientNet expects RGB)
         img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -101,5 +175,12 @@ async def extract_features(file: UploadFile = File(...)):
             features = features.squeeze().numpy()  # Convert to numpy array
             
         return {"features": features.tolist()}
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
+        logging.error(f"Network error in extract-features endpoint: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error downloading image: {str(e)}")
+    except FileNotFoundError as e:
+        logging.error(f"File not found error: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logging.error(f"Error in extract-features endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

@@ -302,12 +302,21 @@ const productService = {
 
   async getWishlist() {
     try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        return { wishlist: [] };
+      }
       const response = await axios.get(
         `${backendUrl}/api/customers/wishlist`,
         getAuthHeaders()
       );
       return response.data;
     } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        return { wishlist: [] };
+      }
       console.error("Error getting wishlist:", error);
       throw error;
     }

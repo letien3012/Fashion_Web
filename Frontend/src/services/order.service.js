@@ -7,8 +7,7 @@ export const orderService = {
     try {
       const token = localStorage.getItem("token");
       if (!token) {
-        console.log("No token found in getCustomerOrders");
-        throw new Error("Vui lòng đăng nhập để xem đơn hàng");
+        return [];
       }
 
       const response = await axios.get(`${API_URL}/orders/customer`, {
@@ -19,6 +18,11 @@ export const orderService = {
       });
       return response.data;
     } catch (error) {
+      if (error.response?.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        return [];
+      }
       console.error("Error fetching customer orders:", error);
       throw error;
     }

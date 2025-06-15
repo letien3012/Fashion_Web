@@ -59,54 +59,37 @@
             </div>
           </div>
           <div v-if="showResults" class="search-results-section">
-            <h3 class="results-title">Sản phẩm tương tự</h3>
-            <div v-if="searchResults.length > 0" class="results-grid">
-              <div v-for="(result, idx) in searchResults" :key="idx" class="result-item">
-                <div class="result-image-wrapper">
-                  <div v-if="!result.loaded && !result.error" class="image-loading">
-                    <div class="loading-spinner"></div>
-                  </div>
-                  <img 
-                    v-show="!result.error"
-                    :src="result.displayUrl" 
-                    :alt="'Kết quả ' + (idx + 1)" 
-                    class="result-image"
-                    @error="handleImageError($event, result, idx)"
-                    @load="handleImageLoad($event, result, idx)"
-                  />
-                  <div v-if="result.error" class="image-error-state">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span>Không thể tải ảnh</span>
-                  </div>
-                  <div class="result-rank">{{ idx + 1 }}</div>
-                  <button 
-                    v-if="result.loaded && !result.error"
-                    @click="openOriginalImage(result.originalUrl)"
-                    class="view-original-button"
-                    title="Xem ảnh gốc"
-                  >
-                    <i class="fas fa-external-link-alt"></i>
-                  </button>
-                </div>
-                <div class="result-info">
-                  <div class="similarity-badge">
-                    <span class="similarity">{{ result.similarityPercentage }}</span>
-                  </div>
-                  <div class="result-details">
-                    <button 
-                      v-if="!result.error"
-                      @click="openOriginalImage(result.originalUrl)"
-                      class="image-link-button"
-                    >
-                      {{ result.displayUrl.split('/').pop() }}
-                    </button>
-                    <span v-else class="error-filename">{{ result.displayUrl.split('/').pop() }}</span>
-                  </div>
-                </div>
+            <div v-if="!isSearching && !searchError" class="search-results">
+              <div class="results-header">
+                <p>
+                  Tìm thấy {{ similarProducts.length }} sản phẩm tương tự
+                </p>
+              </div>
+              <div v-if="similarProducts && similarProducts.length > 0" class="products-grid">
+                <ProductItem
+                  v-for="product in similarProducts"
+                  :key="product._id"
+                  :product="product"
+                />
+              </div>
+              <div v-else class="no-results">
+                <i class="fas fa-search"></i>
+                <p>Không tìm thấy sản phẩm tương tự</p>
+                <p class="suggestion">Gợi ý:</p>
+                <ul>
+                  <li>Thử chọn vùng ảnh khác</li>
+                  <li>Thử ảnh khác</li>
+                  <li>Đảm bảo ảnh rõ nét</li>
+                </ul>
               </div>
             </div>
-            <div v-else class="no-results">
-              <p>Không tìm thấy sản phẩm tương tự</p>
+            <div v-else-if="isSearching" class="loading">
+              <i class="fas fa-spinner fa-spin"></i>
+              Đang tìm kiếm sản phẩm tương tự...
+            </div>
+            <div v-else-if="searchError" class="error">
+              <i class="fas fa-exclamation-circle"></i>
+              {{ searchError }}
             </div>
           </div>
         </div>
@@ -120,9 +103,10 @@
 </template>
 
 <script setup>
-import { ref, nextTick, defineProps, defineEmits } from "vue";
-import axios from "axios";
-import { computed } from "vue";
+import { ref, nextTick, defineProps, defineEmits, onMounted, onBeforeUnmount } from "vue";
+import { imageSearchService } from "../services/imageSearch.service";
+import { productService } from "../services/product.service";
+import ProductItem from './ProductItem.vue';
 
 const props = defineProps({
   visible: {
@@ -137,9 +121,10 @@ const boxes = ref([]);
 const imageUrl = ref(null);
 const imagePath = ref("");
 const croppedImage = ref(null);
-const searchResults = ref([]);
+const similarProducts = ref([]);
 const isSearching = ref(false);
 const showResults = ref(false);
+const searchError = ref(null);
 const imgRef = ref(null);
 const scaleX = ref(1);
 const scaleY = ref(1);
@@ -152,7 +137,7 @@ const onClose = async () => {
   emit("close");
   if (imagePath.value) {
     try {
-      await axios.post("/api/imageService/delete", { imagePath: imagePath.value });
+      await imageSearchService.deleteImage(imagePath.value);
     } catch (err) {
       console.error("Không thể xóa file ảnh trên server:", err);
     }
@@ -161,7 +146,7 @@ const onClose = async () => {
   boxes.value = [];
   imagePath.value = "";
   selectedBoxIndex.value = null;
-  searchResults.value = [];
+  similarProducts.value = [];
   showResults.value = false;
 };
 
@@ -180,41 +165,150 @@ const onFileChange = async (e) => {
 
   const imgTest = new window.Image();
   imgTest.onload = () => {
-    console.log(
-      "[DEBUG] Ảnh gốc:",
-      imgTest.naturalWidth,
-      imgTest.naturalHeight
-    );
+   
   };
   imgTest.src = URL.createObjectURL(file);
 
-  const formData = new FormData();
-  formData.append("image", file);
-
   try {
-    const res = await axios.post(
-      "/api/imageService/detect",
-      formData,
-      {
-        headers: { "Content-Type": "multipart/form-data" },
-      }
-    );
-    console.log("[DEBUG] Box backend trả về:", res.data.boxes);
-    const tempBoxes = res.data.boxes;
-    imageUrl.value = URL.createObjectURL(file);
-    imagePath.value = res.data.imagePath;
+    // Convert file to base64
+    const base64Image = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
+
+    // Step 1: Upload image
+    const uploadRes = await imageSearchService.uploadImage(base64Image);
+    const uploadedImagePath = uploadRes.imagePath;
+  
+    // Step 2: Detect objects in uploaded image
+    const detectRes = await imageSearchService.detectObjects(uploadedImagePath);
+
+    const tempBoxes = detectRes.boxes;
+    imageUrl.value = `http://localhost:3005${uploadedImagePath}`;
+    imagePath.value = uploadedImagePath;
 
     await nextTick();
     await new Promise((resolve) => {
       imgRef.value.onload = () => {
         onImageLoad();
-        boxes.value = tempBoxes;
+        if (!tempBoxes || tempBoxes.length === 0) {
+          showResults.value = true;
+          similarProducts.value = [];
+          searchError.value = null;
+          isSearching.value = false;
+        } else {
+          boxes.value = tempBoxes;
+          // Sắp xếp boxes theo diện tích từ lớn đến nhỏ
+          const sortedBoxes = [...tempBoxes].sort((a, b) => {
+            const areaA = a.width * a.height;
+            const areaB = b.width * b.height;
+            return areaB - areaA;
+          });
+          
+          // Tìm sản phẩm tương tự từ box lớn nhất
+          searchFromBox(sortedBoxes[0], 0);
+        }
         resolve();
       };
     });
   } catch (error) {
     console.error("Error in onFileChange:", error);
     alert("Không thể tải ảnh hoặc xử lý detection.");
+  }
+};
+
+const searchFromBox = async (box, index) => {
+  isSearching.value = true;
+  similarProducts.value = [];
+  showResults.value = false;
+  searchError.value = null;
+  selectedBoxIndex.value = index;
+  
+  try {
+    // Step 1: Crop the image
+    const cropPayload = {
+      x: Math.round(box.x),
+      y: Math.round(box.y),
+      width: Math.round(box.width),
+      height: Math.round(box.height),
+      imagePath: imagePath.value,
+    };
+
+    const cropRes = await imageSearchService.cropImage(cropPayload);
+    
+    // Step 2: Find similar images using base64 directly
+    const searchRes = await imageSearchService.findSimilarImages(cropRes.image_base64, 8);
+
+    if (searchRes.success && searchRes.products && searchRes.products.length > 0) {
+      // Xử lý thông tin sản phẩm và khuyến mãi
+      const processedProducts = await Promise.all(
+        searchRes.products.map(async (product) => {
+          const defaultVariant = product.variants?.[0] || {};
+          let salePrice = null;
+          let discountPercentage = null;
+
+          if (defaultVariant._id) {
+            const promotions = await productService.getProductPromotions(
+              product._id,
+              defaultVariant._id
+            );
+            if (promotions && promotions.length > 0) {
+              const bestPromotion = promotions.reduce((max, p) =>
+                p.discount > max.discount ? p : max
+              );
+              discountPercentage = bestPromotion.discount;
+              salePrice = Math.round(
+                (defaultVariant.price -
+                  (defaultVariant.price * bestPromotion.discount) / 100) *
+                  100
+              ) / 100;
+            }
+          }
+
+          return {
+            _id: product._id || "",
+            name: product.name || "",
+            image: `http://localhost:3005${product.similarImagePath}`,
+            album: (product.album || []).map((img) => getImageUrl(img)),
+            price: defaultVariant.price || 0,
+            salePrice,
+            discountPercentage,
+            favorite_count: product.favorite_count || 0,
+            variants: product.variants || [],
+            catalogueId: product.catalogueId || null,
+            publish: product.publish || false,
+            description: product.description || "",
+            content: product.content || "",
+            view_count: product.view_count || 0,
+            similarity: product.similarity || 0,
+            similarityPercentage: product.similarityPercentage || "0%"
+          };
+        })
+      );
+
+      similarProducts.value = processedProducts;
+      showResults.value = true;
+    } else {
+      // Nếu không tìm thấy sản phẩm tương tự, thử với box tiếp theo
+      const nextIndex = index + 1;
+      if (nextIndex < boxes.value.length) {
+        searchFromBox(boxes.value[nextIndex], nextIndex);
+      } else {
+        showResults.value = true;
+        similarProducts.value = [];
+        searchError.value = null;
+        isSearching.value = false;
+      }
+    }
+  } catch (err) {
+    console.error("Error in searchFromBox:", err);
+    showResults.value = true;
+    similarProducts.value = [];
+    searchError.value = null;
+    isSearching.value = false;
+  } finally {
+    isSearching.value = false;
   }
 };
 
@@ -290,11 +384,73 @@ const dotStyle = (box) => {
   };
 };
 
+const getImageUrl = (image) => {
+  if (!image) return "/images/placeholder.jpg";
+  if (image.startsWith("http")) return image;
+  return `http://localhost:3005/${image}`;
+};
+
+const processProducts = async (products) => {
+  try {
+    // Lọc sản phẩm chưa publish
+    const publishedProducts = products.filter(product => product.publish === true);
+    
+    // Duyệt từng sản phẩm để lấy promotion
+    const productsWithPromotions = await Promise.all(
+      publishedProducts.map(async (product) => {
+        const defaultVariant = product.variants?.[0] || {};
+        let salePrice = null;
+        let discountPercentage = null;
+        if (defaultVariant._id) {
+          const promotions = await productService.getProductPromotions(
+            product._id,
+            defaultVariant._id
+          );
+          if (promotions && promotions.length > 0) {
+            const bestPromotion = promotions.reduce((max, p) =>
+              p.discount > max.discount ? p : max
+            );
+            discountPercentage = bestPromotion.discount;
+            salePrice = Math.round(
+              (defaultVariant.price -
+                (defaultVariant.price * bestPromotion.discount) / 100) *
+                100
+            ) / 100;
+          }
+        }
+        return {
+          _id: product._id || "",
+          name: product.name || "",
+          image: product.similarImagePath ? `http://localhost:3005${product.similarImagePath}` : getImageUrl(product.image),
+          album: (product.album || []).map((img) => getImageUrl(img)),
+          price: defaultVariant.price || 0,
+          salePrice,
+          discountPercentage,
+          favorite_count: product.favorite_count || 0,
+          variants: product.variants || [],
+          catalogueId: product.catalogueId || null,
+          publish: product.publish || false,
+          description: product.description || "",
+          content: product.content || "",
+          view_count: product.view_count || 0,
+          similarity: product.similarity || 0,
+          similarityPercentage: product.similarityPercentage || "0%"
+        };
+      })
+    );
+    return productsWithPromotions;
+  } catch (error) {
+    console.error("Error processing products:", error);
+    throw error;
+  }
+};
+
 const onDotClick = async (box, index) => {
   selectedBoxIndex.value = index;
   isSearching.value = true;
-  searchResults.value = [];
+  similarProducts.value = [];
   showResults.value = false;
+  searchError.value = null;
   
   try {
     // Step 1: Crop the image
@@ -306,56 +462,67 @@ const onDotClick = async (box, index) => {
       imagePath: imagePath.value,
     };
 
-    const cropRes = await axios.post(
-      "/api/imageService/crop",
-      cropPayload
-    );
-    croppedImage.value = cropRes.data.image_base64;
-
-    // Step 2: Convert base64 to file for upload
-    const base64Data = cropRes.data.image_base64.replace(/^data:image\/\w+;base64,/, '');
-    const blob = await fetch(`data:image/jpeg;base64,${base64Data}`).then(res => res.blob());
-    const file = new File([blob], 'cropped.jpg', { type: 'image/jpeg' });
-
-    // Step 3: Create form data for upload
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('limit', '10'); // Get top 10 similar images
-
-    // Step 4: Find similar images without saving features
-    const searchRes = await axios.post(
-      "/api/imageService/find-similar",
-      formData,
-      {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      }
-    );
+    const cropRes = await imageSearchService.cropImage(cropPayload);
+    croppedImage.value = cropRes.image_base64;
     
-    // Transform results to include both display and original URLs
-    searchResults.value = searchRes.data.similarImages.map(img => {
-      const filename = img.imagePath.split(/[\\/]/).pop();
-      const displayUrl = `/uploads/${filename}`;
-      const originalUrl = `http://localhost:3005/uploads/${filename}`;
+    // Step 2: Find similar images using base64 directly
+    const searchRes = await imageSearchService.findSimilarImages(cropRes.image_base64, 8);
 
-      const imgPreload = new Image();
-      imgPreload.src = displayUrl;
+    if (searchRes.success) {
+      // Xử lý thông tin sản phẩm và khuyến mãi
+      const processedProducts = await Promise.all(
+        searchRes.products.map(async (product) => {
+          const defaultVariant = product.variants?.[0] || {};
+          let salePrice = null;
+          let discountPercentage = null;
 
-      return {
-        displayUrl,
-        originalUrl,
-        similarity: img.similarity,
-        similarityPercentage: img.similarityPercentage,
-        originalPath: img.imagePath,
-        loaded: false,
-        error: false
-      };
-    });
+          if (defaultVariant._id) {
+            const promotions = await productService.getProductPromotions(
+              product._id,
+              defaultVariant._id
+            );
+            if (promotions && promotions.length > 0) {
+              const bestPromotion = promotions.reduce((max, p) =>
+                p.discount > max.discount ? p : max
+              );
+              discountPercentage = bestPromotion.discount;
+              salePrice = Math.round(
+                (defaultVariant.price -
+                  (defaultVariant.price * bestPromotion.discount) / 100) *
+                  100
+              ) / 100;
+            }
+          }
 
-    // Show results in the same modal
-    showResults.value = true;
+          return {
+            _id: product._id || "",
+            name: product.name || "",
+            image: `http://localhost:3005${product.similarImagePath}`,
+            album: (product.album || []).map((img) => getImageUrl(img)),
+            price: defaultVariant.price || 0,
+            salePrice,
+            discountPercentage,
+            favorite_count: product.favorite_count || 0,
+            variants: product.variants || [],
+            catalogueId: product.catalogueId || null,
+            publish: product.publish || false,
+            description: product.description || "",
+            content: product.content || "",
+            view_count: product.view_count || 0,
+            similarity: product.similarity || 0,
+            similarityPercentage: product.similarityPercentage || "0%"
+          };
+        })
+      );
+
+      similarProducts.value = processedProducts;
+      showResults.value = true;
+    } else {
+      searchError.value = "Không tìm thấy sản phẩm tương tự";
+    }
   } catch (err) {
     console.error("Error in onDotClick:", err);
-    alert("Không thể xử lý ảnh hoặc tìm kiếm. Hãy thử lại.");
+    searchError.value = "Không thể xử lý ảnh hoặc tìm kiếm. Hãy thử lại.";
   } finally {
     isSearching.value = false;
   }
@@ -384,7 +551,6 @@ const handleImageError = (event, result, index) => {
 
 // Update the openOriginalImage method
 const openOriginalImage = (url) => {
-  console.log('Opening original image:', url);
   
   // Create a temporary link element
   const link = document.createElement('a');
@@ -402,7 +568,6 @@ const openOriginalImage = (url) => {
         if (!response.ok) throw new Error('Network response was not ok');
         // Get content type from response
         const contentType = response.headers.get('content-type');
-        console.log('Image content type:', contentType);
         return response.blob();
       })
       .then(blob => {
@@ -429,6 +594,24 @@ const openOriginalImage = (url) => {
   // Trigger the click
   link.click();
 };
+
+const handleBeforeUnload = async (e) => {
+  if (imagePath.value) {
+    try {
+      await imageSearchService.deleteImage(imagePath.value);
+    } catch (err) {
+      console.error("Không thể xóa file ảnh trên server:", err);
+    }
+  }
+};
+
+onMounted(() => {
+  window.addEventListener('beforeunload', handleBeforeUnload);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload);
+});
 </script>
 
 <style scoped>
@@ -489,6 +672,7 @@ const openOriginalImage = (url) => {
   color: #666;
   transition: color 0.2s;
 }
+
 .close-button:hover {
   color: #ff0000;
 }
@@ -521,10 +705,12 @@ const openOriginalImage = (url) => {
   position: relative;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
+
 .drop-area:hover {
   border-color: #ff0000;
   background: #e9ecef;
 }
+
 .drop-icon {
   width: 56px;
   margin-bottom: 10px;
@@ -533,19 +719,21 @@ const openOriginalImage = (url) => {
   margin-right: auto;
   opacity: 0.85;
 }
+
 .upload-link {
   color: #4ea1ff;
   text-decoration: underline;
   cursor: pointer;
   font-weight: 500;
 }
+
 .upload-link:hover {
   color: #ff0000;
 }
 
 .image-container {
   width: 100%;
-  height: 400px; /* Fixed height for image container */
+  height: 400px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 4px 32px rgba(0,0,0,0.18);
@@ -588,256 +776,82 @@ const openOriginalImage = (url) => {
   cursor: pointer;
   transition: transform 0.2s;
 }
+
 .dot:hover {
   transform: scale(1.3);
   box-shadow: 0 0 0 8px #4ea1ff99, 0 2px 12px rgba(0,0,0,0.18);
 }
 
-.mt-4 {
-  margin-top: 1.5rem;
-}
-.mb-2 {
-  margin-bottom: 0.5rem;
-}
-.font-bold {
-  font-weight: bold;
-}
-.border {
-  border: 1.5px solid #e0e0e0;
-}
-.rounded {
-  border-radius: 8px;
-}
-.shadow {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.search-results {
+  margin-top: 20px;
 }
 
-.modal-header h2 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: #ff0000;
-  margin: 0;
-  letter-spacing: 1.5px;
-  flex: 1;
-  text-align: left;
-  background: linear-gradient(90deg, #ff0000 60%, #ff7e5f 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  text-transform: uppercase;
-}
-
-.cropped-title {
-  margin-bottom: 0.5rem;
-  font-weight: 700;
-  color: #ff0000;
-  text-align: center;
-  text-transform: uppercase;
-  font-size: 1.05rem;
-  letter-spacing: 1px;
-}
-
-.cropped-result {
-  margin-bottom: 2rem;
-  text-align: center;
-}
-.cropped-img {
-  display: inline-block;
-  margin: 0 auto;
-  max-width: 100%;
-  max-height: 260px;
-  margin-bottom: 40px;
-}
-
-.search-similar-btn {
-  display: inline-block;
-  margin: 0 auto 24px auto;
-  padding: 10px 28px;
-  background: linear-gradient(90deg, #ff7e5f 0%, #ff0000 100%);
-  color: #fff;
-  font-weight: 700;
-  font-size: 1rem;
-  border: none;
-  border-radius: 24px;
-  box-shadow: 0 2px 8px rgba(255, 0, 0, 0.08);
-  cursor: pointer;
-  transition: background 0.2s, transform 0.15s;
-  letter-spacing: 1px;
-}
-.search-similar-btn:hover {
-  background: linear-gradient(90deg, #ff0000 0%, #ff7e5f 100%);
-  transform: translateY(-2px) scale(1.04);
-}
-
-.search-results-section {
-  width: 100%;
-  background: #fff;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-}
-
-.results-title {
-  color: #ff0000;
-  font-size: 1.2rem;
-  font-weight: 600;
+.results-header {
   margin-bottom: 20px;
-  text-align: center;
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  padding: 15px;
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.results-grid {
+.results-header p {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.products-grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
-  width: 100%;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 25px;
+  padding: 20px 0;
 }
 
-.result-item {
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-  transition: transform 0.2s, box-shadow 0.2s;
-  width: 100%;
-  aspect-ratio: 1;
+.loading,
+.error,
+.no-results {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 18px;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.result-item:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-}
-
-.result-image-wrapper {
-  position: relative;
-  width: 100%;
-  padding-top: 100%;
-  background: #f8f9fa;
-}
-
-.result-image {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: opacity 0.3s ease;
-}
-
-.result-info {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(255, 255, 255, 0.95);
-  padding: 12px;
-  border-top: 1px solid #eee;
-}
-
-.similarity-badge {
-  display: inline-block;
-  background: linear-gradient(90deg, #ff7e5f 0%, #ff0000 100%);
-  color: white;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-weight: 600;
-  font-size: 0.85rem;
-  margin-bottom: 6px;
-}
-
-.result-details {
-  font-size: 0.75rem;
+.loading i,
+.error i,
+.no-results i {
+  font-size: 48px;
+  margin-bottom: 20px;
   color: #666;
-  word-break: break-all;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.image-link-button {
-  background: none;
-  border: none;
-  color: #666;
-  text-decoration: none;
-  font-family: monospace;
-  font-size: 0.7rem;
-  width: 100%;
-  text-align: left;
-  padding: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.error {
+  color: #dc3545;
 }
 
-.view-original-button {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(255, 255, 255, 0.9);
-  color: #666;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: none;
-  cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  padding: 0;
-  z-index: 2;
+.no-results {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 40px;
+  margin: 20px 0;
 }
 
-.result-rank {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  background: rgba(255, 0, 0, 0.9);
-  color: white;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.no-results .suggestion {
+  margin-top: 20px;
   font-weight: bold;
-  font-size: 0.8rem;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  z-index: 2;
+  color: #333;
 }
 
-/* Responsive adjustments */
-@media (max-width: 1200px) {
-  .results-grid {
-    grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
-  }
+.no-results ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
 }
 
-@media (max-width: 992px) {
-  .results-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
-  }
-  
-  .image-container {
-    height: 350px;
-  }
-}
-
-@media (max-width: 576px) {
-  .results-grid {
-    grid-template-columns: 1fr;
-    gap: 15px;
-  }
-  
-  .image-container {
-    height: 300px;
-  }
+.no-results li {
+  margin: 5px 0;
+  color: #666;
 }
 
 .searching-overlay {
@@ -870,92 +884,87 @@ const openOriginalImage = (url) => {
   100% { transform: rotate(360deg); }
 }
 
-.result-image.image-error {
-  opacity: 0.5;
-  background-color: #f8f9fa;
+@media (max-width: 768px) {
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+  }
+
+  .no-results {
+    padding: 20px;
+  }
+
+  .products-grid :deep(.product-item) {
+    .product-image {
+      height: 220px;
+    }
+
+    .product-name {
+      font-size: 13px;
+      line-height: 1.2;
+      margin: 6px 0;
+    }
+
+    .product-price {
+      font-size: 13px;
+    }
+
+    .product-sale-price {
+      font-size: 12px;
+    }
+
+    .product-discount {
+      font-size: 11px;
+      padding: 2px 6px;
+    }
+
+    .product-rating {
+      font-size: 12px;
+    }
+
+    .product-rating i {
+      font-size: 11px;
+    }
+  }
 }
 
-.result-image.image-loaded {
-  opacity: 1;
-}
+@media (max-width: 480px) {
+  .products-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
 
-.image-error::after {
-  content: '⚠️';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 24px;
-  color: #ff0000;
-}
+  .products-grid :deep(.product-item) {
+    .product-image {
+      height: 180px;
+    }
 
-.image-error-message {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  background: rgba(255, 0, 0, 0.1);
-  color: #ff0000;
-  padding: 8px;
-  font-size: 0.8rem;
-  text-align: center;
-}
+    .product-name {
+      font-size: 12px;
+      line-height: 1.1;
+      margin: 5px 0;
+    }
 
-.error-filename {
-  font-family: monospace;
-  font-size: 0.7rem;
-  margin-top: 4px;
-  word-break: break-all;
-}
+    .product-price {
+      font-size: 12px;
+    }
 
-.image-loading {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: #f8f9fa;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
+    .product-sale-price {
+      font-size: 11px;
+    }
 
-.loading-spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #ff0000;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
+    .product-discount {
+      font-size: 10px;
+      padding: 2px 5px;
+    }
 
-.image-error-state {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: #fff5f5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  color: #ff0000;
-  padding: 16px;
-  text-align: center;
-}
+    .product-rating {
+      font-size: 11px;
+    }
 
-.image-error-state i {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.result-image {
-  opacity: 0;
-  transition: opacity 0.3s ease;
-}
-
-.result-image.image-loaded {
-  opacity: 1;
+    .product-rating i {
+      font-size: 10px;
+    }
+  }
 }
 </style>

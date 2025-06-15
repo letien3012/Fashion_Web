@@ -31,6 +31,5 @@ export default {
   align-items: center;
   height: auto;
   width: 50vw;
-  background: #f7f7f7;
 }
 </style>

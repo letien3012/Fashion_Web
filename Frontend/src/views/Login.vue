@@ -10,11 +10,10 @@
 <script>
 import FormLogin from "../components/FormLogin.vue";
 import Header from "../components/Header.vue";
-import Footer from "../components/Footer.vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
 import Chatbot from "../components/Chatbot.vue";
-
+import Footer from "../components/Footer.vue";
 export default {
   name: "Login",
   components: {
@@ -59,19 +58,15 @@ export default {
 </script>
 
 <style scoped>
-.login-container {
-  width: 100%;
-  min-height: 100vh;
-}
 
 .login-page {
-  margin: 20px auto;
+  margin: none;
   border-radius: 15px;
   display: flex;
   justify-content: center;
   align-items: center;
   height: auto;
   width: 50vw;
-  background: #f7f7f7;
+
 }
 </style>

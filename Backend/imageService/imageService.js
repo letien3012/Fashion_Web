@@ -5,24 +5,26 @@ const mongoose = require("mongoose");
 
 // Define Image Feature Schema
 const imageFeatureSchema = new mongoose.Schema({
-  imagePath: { type: String, required: true, unique: true },
   features: { type: [Number], required: true },
+  originalImage: { type: String, required: true },
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+  label: { type: String },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
-});
+}, { _id: true });
 
 const ImageFeature = mongoose.model("ImageFeature", imageFeatureSchema);
 
-// Gọi FastAPI detect, trả về boxes
-async function detectOnly(imagePath) {
-  try {
-    const form = new FormData();
-    form.append("file", fs.createReadStream(imagePath));
+// ImageFeature.collection.dropIndexes();
 
-    const response = await axios.post("http://localhost:9000/detect", form, {
-      headers: form.getHeaders(),
-      maxBodyLength: Infinity,
+// Gọi FastAPI detect, trả về boxes
+async function detectOnly(imageUrl) {
+  try {
+   
+    const response = await axios.post("http://localhost:9000/detect", {
+      image_url: imageUrl
     });
+    
     return response.data.boxes;
   } catch (err) {
     console.error("[detectOnly] error calling FastAPI detect:", err.message);
@@ -31,18 +33,13 @@ async function detectOnly(imagePath) {
 }
 
 // Gọi FastAPI crop, trả về crops
-async function cropOnly(imagePath, boxes) {
+async function cropOnly(imageUrl, boxes) {
   try {
-    const form = new FormData();
-    form.append("file", fs.createReadStream(imagePath));
-    // Giả sử FastAPI crop nhận image + boxes dưới dạng JSON trong 1 field tên "boxes"
-    form.append("boxes", JSON.stringify(boxes));
-
-    const response = await axios.post("http://localhost:9000/crop", form, {
-      headers: form.getHeaders(),
-      maxBodyLength: Infinity,
+    const response = await axios.post("http://localhost:9000/crop", {
+      image_url: imageUrl,
+      boxes: boxes
     });
-    return response.data.crops; // giả sử FastAPI trả { crops: [...] }
+    return response.data.crops;
   } catch (err) {
     console.error("[cropOnly] error calling FastAPI crop:", err.message);
     throw err;
@@ -50,17 +47,21 @@ async function cropOnly(imagePath, boxes) {
 }
 
 // Gọi FastAPI để trích xuất đặc trưng từ ảnh
-async function extractFeatures(imagePath) {
+async function extractFeatures(imageData) {
   try {
-    const form = new FormData();
-    form.append("file", fs.createReadStream(imagePath));
-
-    const response = await axios.post("http://localhost:9000/extract-features", form, {
-      headers: form.getHeaders(),
-      maxBodyLength: Infinity,
-    });
-
-    return response.data.features; // giả sử FastAPI trả về { features: [...] }
+    // Kiểm tra nếu là base64
+    if (imageData.startsWith('data:image') || imageData.includes(',')) {
+      const response = await axios.post("http://localhost:9000/extract-features", {
+        image_url: imageData
+      });
+      return response.data.features;
+    } else {
+      // Xử lý URL hoặc file path
+      const response = await axios.post("http://localhost:9000/extract-features", {
+        image_url: imageData
+      });
+      return response.data.features;
+    }
   } catch (err) {
     console.error("[extractFeatures] error calling FastAPI extract-features:", err.message);
     throw err;
@@ -68,26 +69,19 @@ async function extractFeatures(imagePath) {
 }
 
 // Lưu đặc trưng ảnh vào MongoDB
-async function saveImageFeatures(imagePath, features) {
+async function saveImageFeatures(features, originalImage, productId, label) {
   try {
-    // Kiểm tra xem ảnh đã có trong DB chưa
-    const existingFeature = await ImageFeature.findOne({ imagePath });
+    // Bỏ localhost:3005 nếu có trong originalImage
+    const cleanOriginalImage = originalImage.replace('http://localhost:3005', '');
     
-    if (existingFeature) {
-      // Cập nhật nếu đã tồn tại
-      existingFeature.features = features;
-      existingFeature.updatedAt = new Date();
-      await existingFeature.save();
-      return { message: "Features updated successfully", id: existingFeature._id };
-    } else {
-      // Thêm mới nếu chưa tồn tại
-      const newFeature = new ImageFeature({
-        imagePath,
-        features
-      });
-      await newFeature.save();
-      return { message: "Features saved successfully", id: newFeature._id };
-    }
+    const newFeature = new ImageFeature({
+      features,
+      originalImage: cleanOriginalImage,
+      productId,
+      label
+    });
+    await newFeature.save();
+    return { message: "Features saved successfully", id: newFeature._id };
   } catch (err) {
     console.error("[saveImageFeatures] error saving to MongoDB:", err.message);
     throw err;
@@ -95,13 +89,13 @@ async function saveImageFeatures(imagePath, features) {
 }
 
 // Hàm kết hợp trích xuất và lưu đặc trưng
-async function extractAndSaveFeatures(imagePath) {
+async function extractAndSaveFeatures(imageData, originalImage, productId, label) {
   try {
     // Trích xuất đặc trưng
-    const features = await extractFeatures(imagePath);
+    const features = await extractFeatures(imageData);
     
     // Lưu vào MongoDB
-    const result = await saveImageFeatures(imagePath, features);
+    const result = await saveImageFeatures(features, originalImage, productId, label);
     
     return {
       success: true,
@@ -115,25 +109,44 @@ async function extractAndSaveFeatures(imagePath) {
 }
 
 // Hàm tìm kiếm ảnh tương tự dựa trên đặc trưng
-async function findSimilarImages(imagePath, limit = 5) {
+async function findSimilarImages(base64Image, limit = 5) {
   try {
     // Trích xuất đặc trưng của ảnh đầu vào
-    const queryFeatures = await extractFeatures(imagePath);
+    const queryFeatures = await extractFeatures(base64Image);
     
     // Lấy tất cả ảnh từ DB
-    const allImages = await ImageFeature.find({});
+    const allImages = await ImageFeature.find({}).populate('productId');
     
     // Tính toán độ tương đồng cosine
     const similarities = allImages.map(img => {
+      // Kiểm tra nếu img hoặc img.productId là undefined
+      if (!img || !img.productId) {
+        console.log("Skipping image with missing productId:", img);
+        return null;
+      }
+
       const similarity = cosineSimilarity(queryFeatures, img.features);
       return {
-        imagePath: img.imagePath,
-        similarity
+        imagePath: img.originalImage || img.imagePath,
+        similarity,
+        productId: img.productId._id || img.productId // Handle both populated and unpopulated cases
       };
+    }).filter(item => item !== null); // Lọc bỏ các item null
+
+    // Lọc: chỉ giữ bản similarity cao nhất cho mỗi productId và có similarity > 0.6
+    const bestByProduct = {};
+    similarities.forEach(sim => {
+      if (sim.similarity > 0.6) {
+        const productId = sim.productId.toString(); // Convert ObjectId to string for consistent comparison
+        if (!bestByProduct[productId] || sim.similarity > bestByProduct[productId].similarity) {
+          bestByProduct[productId] = sim;
+        }
+      }
     });
-    
+    const uniqueSimilarities = Object.values(bestByProduct);
+
     // Sắp xếp theo độ tương đồng giảm dần và lấy top k
-    return similarities
+    return uniqueSimilarities
       .sort((a, b) => b.similarity - a.similarity)
       .slice(0, limit);
   } catch (err) {

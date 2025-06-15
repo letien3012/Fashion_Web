@@ -14,6 +14,7 @@
             <i class="fas fa-eye"></i>
           </router-link>
           <button
+            v-if="isLoggedIn"
             class="overlay-btn wishlist-btn"
             @click.prevent="toggleWishlist"
             :class="{ 'in-wishlist': isInWishlist }"
@@ -74,18 +75,25 @@ export default {
       required: true,
     },
   },
+  emits: ["product-click"],
   data() {
     return {
       isInWishlist: false,
       averageRating: 0,
       totalReviews: 0,
+      isLoggedIn: false,
     };
   },
   async created() {
-    await Promise.all([this.checkWishlistStatus(), this.loadProductReviews()]);
+    this.isLoggedIn = !!localStorage.getItem("token");
+    if (this.isLoggedIn) {
+      await this.checkWishlistStatus();
+    }
+    await this.loadProductReviews();
   },
   methods: {
     getProductDetailLink(product) {
+      this.$emit("product-click");
       return `/product-detail/${product._id || ""}`;
     },
     formatVND(value) {
@@ -108,8 +116,8 @@ export default {
           (item) => item._id === this.product._id
         );
       } catch (error) {
-        // Only log error if user is authenticated
-        if (localStorage.getItem("token")) {
+        // Only log error if user is authenticated and it's not an unauthorized error
+        if (localStorage.getItem("token") && error.response?.status !== 401) {
           console.error("Error checking wishlist status:", error);
         }
         this.isInWishlist = false;

@@ -3,7 +3,7 @@
     <h2>Đăng ký</h2>
 
     <div class="social-login">
-      <button class="btn social">
+      <button class="btn social" @click="loginWithGoogle">
         <img
           src="../assets/images/google.png"
           height="16px"
@@ -12,7 +12,7 @@
         />
         Tiếp tục với Google
       </button>
-      <button class="btn social">
+      <button class="btn social" @click="loginWithFacebook">
         <img
           src="../assets/images/facebook.png"
           height="16px"
@@ -45,11 +45,16 @@
 
 <script>
 import { toast } from "vue3-toastify";
+import { useRouter } from "vue-router";
 
 export default {
+  setup() {
+    const router = useRouter();
+    return { router };
+  },
   data() {
     return {
-      email: "" || localStorage.getItem("signup_email"),
+      email: "",
       password: "",
       showPassword: false,
       rememberMe: false,
@@ -99,9 +104,12 @@ export default {
 
           const data = await response.json();
           if (response.ok) {
-            localStorage.setItem("signup_email", this.email);
+            // Chuyển hướng đến trang xác thực với email trong query params
+            this.$router.push({ 
+              name: "VerificationOtp",
+              query: { email: this.email }
+            });
             toast.success("Mã xác thực đã được gửi đến email của bạn.");
-            this.$router.push({ name: "VerificationOtp" });
           } else {
             toast.error(data.message || "Gửi mã xác thực thất bại.");
           }
@@ -113,19 +121,94 @@ export default {
         toast.error("Lỗi kết nối đến server.");
       }
     },
+
+    loginWithGoogle() {
+      const googleAuthURL = "http://localhost:3005/api/auth/google";
+
+      const popup = window.open(
+        googleAuthURL,
+        "_blank",
+        "width=500,height=600"
+      );
+
+      // Nghe kết quả từ popup gửi về
+      window.addEventListener("message", (event) => {
+        if (event.origin !== "http://localhost:3005") return;
+
+        const { token, user } = event.data;
+        console.log("Received data from Google login:", { token, user });
+
+        if (token) {
+          localStorage.setItem("token", token);
+          localStorage.setItem("user", JSON.stringify(user));
+          
+          toast.success("Đăng nhập thành công!");
+          this.router.push("/");
+        } else {
+          console.error("No token received from Google login");
+          toast.error("Đăng nhập thất bại. Vui lòng thử lại!");
+        }
+      });
+    },
+
+    loginWithFacebook() {
+      const facebookAuthURL = "http://localhost:3005/api/auth/facebook";
+
+      const popup = window.open(
+        facebookAuthURL,
+        "_blank",
+        "width=500,height=600"
+      );
+
+      // Nghe kết quả từ popup gửi về
+      window.addEventListener("message", (event) => {
+        if (event.origin !== "http://localhost:3005") return;
+
+        const { token, user } = event.data;
+
+        if (token) {
+          localStorage.setItem("token", token);
+          localStorage.setItem("user", JSON.stringify(user));
+
+          toast.success("Đăng nhập bằng Facebook thành công!");
+          this.router.push("/");
+        }
+      });
+    },
   },
 };
 </script>
 
 <style scoped>
 .form-container {
-  margin: none;
-  padding: 24px;
-  background: #fff;
-  border-radius: 8px;
+  margin-top: 80px;
+  margin-bottom: 100px;
+  padding: 32px 28px;
+  border-radius: 16px;
   font-family: "Open Sans", sans-serif;
   width: 50vw;
+  min-width: 320px;
+  max-width: 95vw;
   height: auto;
+  border: 1.5px solid #e0e0e0;
+  position: relative;
+}
+
+@media (max-width: 768px) {
+  .form-container {
+    width: 95vw;
+    max-width: 95vw;
+    margin-top: 20px;
+  
+    border-radius: 10px;
+  }
+}
+
+@media (min-width: 769px) {
+  .form-container {
+    margin-top: 150px;
+   
+  }
 }
 
 a {

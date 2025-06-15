@@ -136,7 +136,6 @@ const fetchCustomerProfile = async () => {
         ...customer.value,
         ...response.data,
       };
-      // Cập nhật lại localStorage với thông tin mới
       localStorage.setItem(
         "user",
         JSON.stringify({
@@ -146,13 +145,13 @@ const fetchCustomerProfile = async () => {
       );
     }
   } catch (error) {
-    console.error("Error fetching customer profile:", error);
     if (error.response?.status === 401) {
       localStorage.removeItem("user");
       localStorage.removeItem("token");
       router.push("/login");
       toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
     } else {
+      console.error("Error fetching customer profile:", error);
       toast.error("Không thể tải thông tin người dùng. Vui lòng thử lại sau.");
     }
   }
@@ -162,19 +161,14 @@ const fetchOrderCount = async () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
-      router.push("/login");
+      orderCount.value = 0;
       return;
     }
     const orders = await orderService.getCustomerOrders();
     orderCount.value = orders.length;
   } catch (error) {
     console.error("Error fetching order count:", error);
-    if (error.response?.status === 401) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      router.push("/login");
-      toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-    }
+    orderCount.value = 0;
   }
 };
 
@@ -182,7 +176,7 @@ const fetchWishlistCount = async () => {
   try {
     const token = localStorage.getItem("token");
     if (!token) {
-      router.push("/login");
+      wishlistCount.value = 0;
       return;
     }
 
@@ -190,12 +184,7 @@ const fetchWishlistCount = async () => {
     wishlistCount.value = response.wishlist.length;
   } catch (error) {
     console.error("Error fetching wishlist count:", error);
-    if (error.response?.status === 401) {
-      localStorage.removeItem("user");
-      localStorage.removeItem("token");
-      router.push("/login");
-      toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
-    }
+    wishlistCount.value = 0;
   }
 };
 
@@ -270,6 +259,9 @@ onMounted(async () => {
       ]);
     } catch (error) {
       console.error("Error loading data:", error);
+      if (error.response?.status === 401) {
+        router.push("/login");
+      }
     } finally {
       loading.value = false;
     }
