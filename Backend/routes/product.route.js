@@ -1,6 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const productController = require("../controllers/product.controller");
+const multer = require("multer");
+const upload = multer({ dest: "public/temp/" });
+
+// Import Excel routes - phải đặt trước các routes có parameter
+router.post(
+  "/import-excel",
+  upload.single("file"),
+  productController.importFromExcel
+);
+router.get("/download-template", productController.downloadTemplate);
 
 router.post("/add", productController.add);
 router.get("/", productController.getAll);

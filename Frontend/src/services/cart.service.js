@@ -153,4 +153,28 @@ export const cartService = {
   async removeCartItem(cartId, productId, variantId) {
     return this.removeFromCart(cartId, productId, variantId);
   },
+
+  // Clean cart - remove deleted/unpublished items
+  async cleanCart() {
+    try {
+      const currentUser = authService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error("Vui lòng đăng nhập để thực hiện thao tác này");
+      }
+
+      const response = await axios.post(
+        `${API_URL}/customer/${currentUser.id}/clean`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${currentUser.token}`,
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error cleaning cart:", error);
+      throw error;
+    }
+  },
 };

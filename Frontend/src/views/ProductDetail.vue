@@ -101,7 +101,10 @@
           <!-- Thuộc tính và Số lượng -->
           <div v-if="attributesLoaded" class="mb-4">
             <!-- Thuộc tính 1 -->
-            <div class="product-options mb-3">
+            <div
+              v-if="product.attributes1 && product.attributes1.length > 0"
+              class="product-options mb-3"
+            >
               <label class="form-label">
                 {{
                   attributes.attribute1[product.attributes1?.[0]]
@@ -110,7 +113,7 @@
               </label>
               <div class="option-list">
                 <button
-                  v-for="attributeId in product.attributes1"
+                  v-for="attributeId in publishedAttributes1"
                   :key="attributeId"
                   :class="{ active: selectedAttribute1 === attributeId }"
                   @click="selectedAttribute1 = attributeId"
@@ -122,7 +125,10 @@
             </div>
 
             <!-- Thuộc tính 2 -->
-            <div class="product-options mb-3">
+            <div
+              v-if="product.attributes2 && product.attributes2.length > 0"
+              class="product-options mb-3"
+            >
               <label class="form-label">
                 {{
                   attributes.attribute2[product.attributes2?.[0]]
@@ -131,7 +137,7 @@
               </label>
               <div class="option-list">
                 <button
-                  v-for="attributeId in product.attributes2"
+                  v-for="attributeId in publishedAttributes2"
                   :key="attributeId"
                   :class="{ active: selectedAttribute2 === attributeId }"
                   @click="selectedAttribute2 = attributeId"
@@ -355,9 +361,12 @@ export default {
         // Lấy danh sách attribute IDs từ variants
         const attribute1Ids = new Set();
         const attribute2Ids = new Set();
-        productData.variants.forEach((variant) => {
-          if (variant.attributeId1) attribute1Ids.add(variant.attributeId1);
-          if (variant.attributeId2) attribute2Ids.add(variant.attributeId2);
+        // Chỉ lấy từ các variant publish
+        (productData.variants || []).forEach((variant) => {
+          if (variant.publish !== false) {
+            if (variant.attributeId1) attribute1Ids.add(variant.attributeId1);
+            if (variant.attributeId2) attribute2Ids.add(variant.attributeId2);
+          }
         });
 
         // Fetch attribute details
@@ -384,10 +393,13 @@ export default {
         };
 
         // Set initial attributes if available
-        if (this.product.variants.length > 0) {
-          const firstVariant = this.product.variants[0];
-          this.selectedAttribute1 = firstVariant.attributeId1;
-          this.selectedAttribute2 = firstVariant.attributeId2;
+        // Chỉ chọn variant publish làm mặc định
+        const firstPublishedVariant = this.product.variants.find(
+          (v) => v.publish !== false
+        );
+        if (firstPublishedVariant) {
+          this.selectedAttribute1 = firstPublishedVariant.attributeId1;
+          this.selectedAttribute2 = firstPublishedVariant.attributeId2;
         }
 
         // Load initial variant data
@@ -435,6 +447,16 @@ export default {
   },
   computed: {
     canBuy() {
+      // Nếu chỉ có một thuộc tính, chỉ cần kiểm tra selectedAttribute1
+      if (!this.product.attributes2 || this.product.attributes2.length === 0) {
+        return (
+          this.quantity > 0 &&
+          this.quantity <= this.currentVariant.stock &&
+          this.selectedAttribute1
+        );
+      }
+
+      // Nếu có hai thuộc tính, kiểm tra cả hai
       return (
         this.quantity > 0 &&
         this.quantity <= this.currentVariant.stock &&
@@ -465,6 +487,25 @@ export default {
       return this.displayImages.slice(
         this.thumbnailStartIndex,
         this.thumbnailStartIndex + 5
+      );
+    },
+    publishedAttributes1() {
+      // Chỉ lấy attributeId1 từ variant publish
+      return Array.from(
+        new Set(
+          (this.product.variants || [])
+            .filter((v) => v.publish !== false && v.attributeId1)
+            .map((v) => v.attributeId1)
+        )
+      );
+    },
+    publishedAttributes2() {
+      return Array.from(
+        new Set(
+          (this.product.variants || [])
+            .filter((v) => v.publish !== false && v.attributeId2)
+            .map((v) => v.attributeId2)
+        )
       );
     },
   },
@@ -693,15 +734,33 @@ export default {
 
     findVariant(attribute1Id, attribute2Id) {
       if (!this.product.variants) return null;
+      // If there's only one attribute, only check attribute1Id
+      if (!this.product.attributes2 || this.product.attributes2.length === 0) {
+        return this.product.variants.find(
+          (variant) =>
+            variant.attributeId1 === attribute1Id && variant.publish !== false
+        );
+      }
+      // If there are two attributes, check both
       return this.product.variants.find(
         (variant) =>
           variant.attributeId1 === attribute1Id &&
-          variant.attributeId2 === attribute2Id
+          variant.attributeId2 === attribute2Id &&
+          variant.publish !== false
       );
     },
 
     async loadVariantData() {
-      if (!this.selectedAttribute1 || !this.selectedAttribute2) return;
+      if (!this.selectedAttribute1) return;
+
+      // Nếu có thuộc tính thứ 2 thì yêu cầu chọn
+      if (
+        this.product.attributes2 &&
+        this.product.attributes2.length > 0 &&
+        !this.selectedAttribute2
+      ) {
+        return;
+      }
 
       try {
         const variant = this.findVariant(
@@ -808,8 +867,18 @@ export default {
           return;
         }
 
-        if (!this.selectedAttribute1 || !this.selectedAttribute2) {
-          toast.error("Vui lòng chọn kích thước và màu sắc");
+        if (!this.selectedAttribute1) {
+          toast.error("Vui lòng chọn thuộc tính sản phẩm");
+          return;
+        }
+
+        // Nếu có thuộc tính thứ 2 thì yêu cầu chọn
+        if (
+          this.product.attributes2 &&
+          this.product.attributes2.length > 0 &&
+          !this.selectedAttribute2
+        ) {
+          toast.error("Vui lòng chọn đầy đủ thuộc tính sản phẩm");
           return;
         }
 
@@ -821,7 +890,9 @@ export default {
           attributeName1:
             this.attributes.attribute1[this.selectedAttribute1]?.name || "",
           attributeName2:
-            this.attributes.attribute2[this.selectedAttribute2]?.name || "",
+            this.product.attributes2 && this.product.attributes2.length > 0
+              ? this.attributes.attribute2[this.selectedAttribute2]?.name || ""
+              : "",
         };
 
         await cartService.addToCart(cartItem);
@@ -840,8 +911,18 @@ export default {
           return;
         }
 
-        if (!this.selectedAttribute1 || !this.selectedAttribute2) {
-          toast.error("Vui lòng chọn kích thước và màu sắc");
+        if (!this.selectedAttribute1) {
+          toast.error("Vui lòng chọn thuộc tính sản phẩm");
+          return;
+        }
+
+        // Nếu có thuộc tính thứ 2 thì yêu cầu chọn
+        if (
+          this.product.attributes2 &&
+          this.product.attributes2.length > 0 &&
+          !this.selectedAttribute2
+        ) {
+          toast.error("Vui lòng chọn đầy đủ thuộc tính sản phẩm");
           return;
         }
 
@@ -853,11 +934,19 @@ export default {
           },
           variant: {
             _id: this.currentVariant._id,
-            sku: `${
-              this.attributes.attribute1[this.selectedAttribute1]?.name || ""
-            } - ${
-              this.attributes.attribute2[this.selectedAttribute2]?.name || ""
-            }`,
+            sku:
+              this.product.attributes2 && this.product.attributes2.length > 0
+                ? `${
+                    this.attributes.attribute1[this.selectedAttribute1]?.name ||
+                    ""
+                  } - ${
+                    this.attributes.attribute2[this.selectedAttribute2]?.name ||
+                    ""
+                  }`
+                : `${
+                    this.attributes.attribute1[this.selectedAttribute1]?.name ||
+                    ""
+                  }`,
             quantity: this.quantity,
             price: this.salePrice || this.displayPrice,
             originPrice: this.displayPrice,

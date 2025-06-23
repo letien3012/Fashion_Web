@@ -2,9 +2,17 @@
   <div class="product-list">
     <div class="d-flex justify-content-between align-items-center mb-4">
       <h2>Quản lý sản phẩm</h2>
-      <button class="btn btn-primary" @click="openForm">
-        <i class="fas fa-plus"></i> Thêm sản phẩm
-      </button>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" @click="downloadTemplate">
+          <i class="fas fa-download"></i> Tải template Excel
+        </button>
+        <button class="btn btn-outline-success" @click="openImportModal">
+          <i class="fas fa-file-excel"></i> Import Excel
+        </button>
+        <button class="btn btn-primary" @click="openForm">
+          <i class="fas fa-plus"></i> Thêm sản phẩm
+        </button>
+      </div>
     </div>
 
     <div class="filters-section">
@@ -105,6 +113,137 @@
     @close="closeForm"
     @submit="handleSubmit"
   />
+
+  <!-- Import Excel Modal -->
+  <div v-if="showImportModal" class="modal fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Import sản phẩm từ Excel</h5>
+          <button
+            type="button"
+            class="btn-close"
+            @click="closeImportModal"
+          ></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-info">
+            <h6><i class="fas fa-info-circle"></i> Hướng dẫn sử dụng:</h6>
+            <ol>
+              <li>Tải template Excel để xem cấu trúc file</li>
+              <li>
+                Điền thông tin sản phẩm và biến thể vào sheet "Sản phẩm và Biến
+                thể"
+              </li>
+              <li>Upload file Excel để import</li>
+            </ol>
+            <p><strong>Cấu trúc file Excel:</strong></p>
+            <ul>
+              <li>
+                <strong>Thông tin sản phẩm:</strong> Mã SP, Tên SP, Mô tả, Danh
+                mục ID, Giá SP, Hình SP
+              </li>
+              <li>
+                <strong>Thông tin biến thể:</strong> Mã BT, Tên BT, Màu, Size,
+                Thương hiệu, Giá BT, Tồn kho, Hình BT
+              </li>
+            </ul>
+            <p><strong>Lưu ý quan trọng:</strong></p>
+            <ul>
+              <li>Mỗi sản phẩm có thể có nhiều biến thể</li>
+              <li>
+                Các dòng có cùng Mã sản phẩm sẽ được nhóm thành một sản phẩm
+              </li>
+              <li>
+                <strong>Tên thuộc tính:</strong> Hệ thống sẽ tự động tạo danh
+                mục thuộc tính dựa trên tên thuộc tính
+              </li>
+              <li>
+                <strong>Ví dụ:</strong> "Size S" → Danh mục "Size", Thuộc tính
+                "S"
+              </li>
+              <li>
+                <strong>Ví dụ:</strong> "Thương hiệu Nike" → Danh mục "Thương
+                hiệu", Thuộc tính "Nike"
+              </li>
+              <li>
+                <strong>Ví dụ:</strong> "gsdeiugdieuhgu" → Danh mục
+                "gsdeiugdieuhgu", Thuộc tính "gsdeiugdieuhgu"
+              </li>
+              <li>Mã sản phẩm và Mã biến thể phải là duy nhất</li>
+              <li>Danh mục ID phải tồn tại trong hệ thống</li>
+              <li>File Excel phải có định dạng .xlsx</li>
+            </ul>
+          </div>
+
+          <div class="file-upload-section">
+            <label class="form-label">Chọn file Excel (.xlsx)</label>
+            <input
+              type="file"
+              class="form-control"
+              @change="handleFileSelect"
+              accept=".xlsx,.xls"
+              ref="fileInput"
+            />
+            <div class="form-text">Chỉ hỗ trợ file Excel (.xlsx, .xls)</div>
+          </div>
+
+          <div v-if="importResults" class="import-results mt-4">
+            <h6>Kết quả import:</h6>
+            <div class="alert alert-info">
+              <strong>Tổng số dòng:</strong> {{ importResults.total }}
+            </div>
+
+            <div
+              v-if="importResults.success.length > 0"
+              class="alert alert-success"
+            >
+              <strong>Thành công:</strong>
+              {{ importResults.success.length }} sản phẩm
+              <ul class="mt-2 mb-0">
+                <li v-for="item in importResults.success" :key="item.row">
+                  Dòng {{ item.row }}: {{ item.code }} - {{ item.name }}
+                </li>
+              </ul>
+            </div>
+
+            <div
+              v-if="importResults.errors.length > 0"
+              class="alert alert-danger"
+            >
+              <strong>Lỗi:</strong> {{ importResults.errors.length }} dòng
+              <ul class="mt-2 mb-0">
+                <li v-for="item in importResults.errors" :key="item.row">
+                  Dòng {{ item.row }}: {{ item.error }}
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="closeImportModal"
+          >
+            Đóng
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="importExcel"
+            :disabled="!selectedFile || importing"
+          >
+            <span
+              v-if="importing"
+              class="spinner-border spinner-border-sm me-2"
+            ></span>
+            {{ importing ? "Đang import..." : "Import" }}
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script>
@@ -138,6 +277,10 @@ export default {
       sortOrder: "asc",
       currentPage: 1,
       itemsPerPage: 10,
+      showImportModal: false,
+      selectedFile: null,
+      importing: false,
+      importResults: null,
     };
   },
   computed: {
@@ -394,6 +537,97 @@ export default {
       await this.fetchProducts();
       this.closeForm();
     },
+
+    openImportModal() {
+      this.showImportModal = true;
+    },
+
+    closeImportModal() {
+      this.showImportModal = false;
+      this.selectedFile = null;
+      this.importing = false;
+      this.importResults = null;
+    },
+
+    handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (file) {
+        this.selectedFile = file;
+      }
+    },
+
+    async importExcel() {
+      this.importing = true;
+      try {
+        const formData = new FormData();
+        formData.append("file", this.selectedFile);
+
+        const token = localStorage.getItem("token-admin");
+        const response = await axios.post(
+          `${this.backendUrl}/api/products/import-excel`,
+          formData,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "multipart/form-data",
+            },
+          }
+        );
+
+        if (response.data && response.data.results) {
+          this.importResults = response.data.results;
+          toast.success("Import thành công");
+          await this.fetchProducts();
+        } else {
+          toast.error("Dữ liệu trả về không đúng định dạng");
+        }
+      } catch (error) {
+        console.error("Error importing Excel:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else {
+          toast.error("Không thể import Excel. Vui lòng thử lại sau.");
+        }
+      } finally {
+        this.importing = false;
+      }
+    },
+
+    async downloadTemplate() {
+      try {
+        const token = localStorage.getItem("token-admin");
+        const response = await axios.get(
+          `${this.backendUrl}/api/products/download-template`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            responseType: "blob",
+          }
+        );
+
+        // Tạo link download
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", "product_template.xlsx");
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+
+        toast.success("Tải template thành công");
+      } catch (error) {
+        console.error("Error downloading template:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else {
+          toast.error("Không thể tải template. Vui lòng thử lại sau.");
+        }
+      }
+    },
   },
   created() {
     this.fetchProducts();
@@ -522,5 +756,70 @@ export default {
 
 .page-dots {
   color: #666;
+}
+
+/* Import Modal Styles */
+.modal {
+  display: block;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.import-instructions {
+  background-color: #f8f9fa;
+  padding: 16px;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.import-instructions h6 {
+  color: #007bff;
+  margin-bottom: 12px;
+}
+
+.import-instructions ol {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.import-instructions li {
+  margin-bottom: 8px;
+  color: #495057;
+  line-height: 1.5;
+}
+
+.file-upload-section {
+  border: 2px dashed #dee2e6;
+  padding: 24px;
+  border-radius: 8px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.file-upload-section:hover {
+  border-color: #007bff;
+  background-color: #f8f9fa;
+}
+
+.import-results {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.import-results .alert {
+  margin-bottom: 12px;
+}
+
+.import-results ul {
+  margin-bottom: 0;
+  padding-left: 20px;
+}
+
+.import-results li {
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.gap-2 {
+  gap: 0.5rem;
 }
 </style>

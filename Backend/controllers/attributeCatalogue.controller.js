@@ -48,17 +48,9 @@ exports.addCatalogue = async (req, res) => {
       });
     }
 
-    // Check if name already exists
-    const existingCatalogue = await AttributeCatalogue.findOne({ name });
-    if (existingCatalogue) {
-      return res.status(400).json({
-        message: "Tên danh mục đã tồn tại",
-      });
-    }
-
     // Create new catalogue
     const catalogue = new AttributeCatalogue({
-      name
+      name,
     });
 
     await catalogue.save();
@@ -89,18 +81,18 @@ exports.updateCatalogue = async (req, res) => {
       });
     }
 
-    // Check if new name already exists (excluding current catalogue)
-    if (name && name !== catalogue.name) {
-      const existingCatalogue = await AttributeCatalogue.findOne({
-        name,
-        _id: { $ne: id }
-      });
-      if (existingCatalogue) {
-        return res.status(400).json({
-          message: "Tên danh mục đã tồn tại",
-        });
-      }
-    }
+    // // Check if new name already exists (excluding current catalogue)
+    // if (name && name !== catalogue.name) {
+    //   const existingCatalogue = await AttributeCatalogue.findOne({
+    //     name,
+    //     _id: { $ne: id },
+    //   });
+    //   if (existingCatalogue) {
+    //     return res.status(400).json({
+    //       message: "Tên danh mục đã tồn tại",
+    //     });
+    //   }
+    // }
 
     // Update name
     catalogue.name = name || catalogue.name;
@@ -123,7 +115,7 @@ exports.updateCatalogue = async (req, res) => {
 exports.deleteCatalogue = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // Validate ID
     if (!id) {
       return res.status(400).json({
@@ -151,5 +143,19 @@ exports.deleteCatalogue = async (req, res) => {
       message: "Lỗi server",
       error: error.message,
     });
+  }
+};
+
+// DEBUG FUNCTION - Add this new function
+exports.debugGetAllCatalogues = async (req, res) => {
+  try {
+    console.log("--- DEBUG: Bắt đầu truy vấn tất cả AttributeCatalogues ---");
+    // Dùng find({}) để lấy tất cả, bỏ qua soft delete
+    const catalogues = await AttributeCatalogue.find({});
+    console.log(`--- DEBUG: Đã tìm thấy ${catalogues.length} bản ghi ---`);
+    res.status(200).json(catalogues);
+  } catch (error) {
+    console.error("--- DEBUG: Lỗi khi truy vấn ---", error);
+    res.status(500).json({ error: error.message });
   }
 };

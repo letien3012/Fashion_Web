@@ -77,7 +77,27 @@
                 >
                   <img :src="item.productId.image" class="item-image" />
                   <div class="item-info">
-                    <div class="item-title">{{ item.productId.name }}</div>
+                    <template v-if="!item.productId.isUnavailable">
+                      <router-link
+                        :to="`/product-detail/${item.productId._id}`"
+                        class="item-title product-link"
+                      >
+                        {{ item.productId.name }}
+                      </router-link>
+                    </template>
+                    <template v-else>
+                      <span
+                        class="item-title unavailable-link"
+                        @click="
+                          toast.warning(
+                            'Rất tiếc, sản phẩm này hiện đã ngừng kinh doanh hoặc tạm thời không còn bán. Vui lòng tham khảo các sản phẩm khác nhé!'
+                          )
+                        "
+                        style="cursor: not-allowed; color: #aaa"
+                      >
+                        {{ item.productId.name }}
+                      </span>
+                    </template>
                     <div class="item-variant">
                       Phân loại: {{ item.productId.variant }}
                     </div>
@@ -410,7 +430,9 @@ onMounted(async () => {
                 item.productId
               );
               const product = productResponse.data;
-
+              // Kiểm tra trạng thái sản phẩm
+              const isUnavailable =
+                !!product.deletedAt || product.publish === false;
               return {
                 _id: item._id,
                 productId: {
@@ -418,6 +440,7 @@ onMounted(async () => {
                   name: product.name,
                   image: `http://localhost:3005/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -436,6 +459,7 @@ onMounted(async () => {
                   name: "Product not found",
                   image: "",
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable: true,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -540,6 +564,8 @@ const confirmCancelOrder = async () => {
                   name: product.name,
                   image: `http://localhost:3005/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable:
+                    !!product.deletedAt || product.publish === false,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -558,6 +584,7 @@ const confirmCancelOrder = async () => {
                   name: "Product not found",
                   image: "",
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable: true,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -713,6 +740,8 @@ const handleReviewSubmitted = async () => {
                   name: product.name,
                   image: `http://localhost:3005/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable:
+                    !!product.deletedAt || product.publish === false,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -731,6 +760,7 @@ const handleReviewSubmitted = async () => {
                   name: "Product not found",
                   image: "",
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable: true,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -831,6 +861,8 @@ const submitReturnRequest = async () => {
                   name: product.name,
                   image: `http://localhost:3005/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable:
+                    !!product.deletedAt || product.publish === false,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -849,6 +881,7 @@ const submitReturnRequest = async () => {
                   name: "Product not found",
                   image: "",
                   variant: item.variants[0]?.sku || "Default",
+                  isUnavailable: true,
                 },
                 quantity: item.quantity,
                 price: item.price,
@@ -1748,5 +1781,27 @@ select.form-control {
 .cancellation-date {
   color: #666;
   font-size: 0.8rem;
+}
+
+.product-link {
+  color: #333;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+.product-link:hover {
+  color: #e63946;
+  text-decoration: none;
+}
+
+.unavailable-link {
+  color: #aaa;
+  cursor: not-allowed;
+  pointer-events: auto;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.unavailable-link:hover {
+  color: #aaa;
 }
 </style>

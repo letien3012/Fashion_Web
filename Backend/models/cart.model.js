@@ -62,10 +62,67 @@ cartSchema.statics.validateCartItem = function (item) {
 // Get cart by customer ID
 cartSchema.statics.getByCustomerId = async function (customerId) {
   try {
-    const cart = await this.findOne({ customerId }).populate(
-      "items.productId",
-      "name image price"
-    );
+    const cart = await this.findOne({ customerId }).populate({
+      path: "items.productId",
+      select: "name image price publish deletedAt",
+      match: {
+        deletedAt: null,
+      },
+    });
+
+    if (!cart) {
+      return null;
+    }
+
+    const originalItemsCount = cart.items.length;
+
+    // Filter out items with deleted/unpublished products
+    cart.items = cart.items.filter((item) => item.productId !== null);
+
+    // For each remaining item, validate variants exist in the product
+    for (let i = cart.items.length - 1; i >= 0; i--) {
+      const item = cart.items[i];
+      const product = item.productId;
+
+      // Get current product variants to check if cart variants still exist
+      const currentProduct = await mongoose
+        .model("Product")
+        .findById(product._id);
+      if (!currentProduct) {
+        // Product was deleted, remove this item
+        cart.items.splice(i, 1);
+        continue;
+      }
+
+      // Filter out variants that no longer exist in the product
+      const validVariants = item.variants.filter((cartVariant) => {
+        const variantExists = currentProduct.variants.some(
+          (productVariant) =>
+            productVariant._id.toString() === cartVariant._id.toString() &&
+            productVariant.publish !== false
+        );
+        return variantExists;
+      });
+
+      if (validVariants.length === 0) {
+        // No valid variants left, remove the entire item
+        cart.items.splice(i, 1);
+      } else {
+        // Update item with only valid variants
+        item.variants = validVariants;
+        item.quantity = validVariants.reduce(
+          (total, variant) => total + variant.quantity,
+          0
+        );
+      }
+    }
+
+    // Save the cleaned cart if items were removed
+    if (cart.items.length !== originalItemsCount) {
+      cart.updatedAt = new Date();
+      await cart.save();
+    }
+
     return cart;
   } catch (error) {
     throw new Error(`Error getting cart: ${error.message}`);
@@ -215,6 +272,66 @@ cartSchema.statics.removeFromCart = async function (
     return cart;
   } catch (error) {
     throw new Error(`Error removing from cart: ${error.message}`);
+  }
+};
+
+// Clean cart items for deleted/unpublished products
+cartSchema.statics.cleanInvalidItems = async function (customerId) {
+  try {
+    const cart = await this.findOne({ customerId });
+    if (!cart) {
+      return null;
+    }
+
+    const originalItemsCount = cart.items.length;
+    let hasChanges = false;
+
+    // Filter out items with deleted/unpublished products
+    for (let i = cart.items.length - 1; i >= 0; i--) {
+      const item = cart.items[i];
+
+      // Check if product exists and is published
+      const product = await mongoose.model("Product").findById(item.productId);
+      if (!product || product.deletedAt || !product.publish) {
+        cart.items.splice(i, 1);
+        hasChanges = true;
+        continue;
+      }
+
+      // Filter out invalid variants
+      const validVariants = item.variants.filter((cartVariant) => {
+        const variantExists = product.variants.some(
+          (productVariant) =>
+            productVariant._id.toString() === cartVariant._id.toString() &&
+            productVariant.publish !== false
+        );
+        return variantExists;
+      });
+
+      if (validVariants.length === 0) {
+        // No valid variants left, remove the entire item
+        cart.items.splice(i, 1);
+        hasChanges = true;
+      } else if (validVariants.length !== item.variants.length) {
+        // Some variants were removed
+        item.variants = validVariants;
+        item.quantity = validVariants.reduce(
+          (total, variant) => total + variant.quantity,
+          0
+        );
+        hasChanges = true;
+      }
+    }
+
+    // Save the cleaned cart if there were changes
+    if (hasChanges) {
+      cart.updatedAt = new Date();
+      await cart.save();
+    }
+
+    return cart;
+  } catch (error) {
+    throw new Error(`Error cleaning cart: ${error.message}`);
   }
 };
 

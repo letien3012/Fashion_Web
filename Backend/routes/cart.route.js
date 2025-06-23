@@ -20,6 +20,9 @@ router.delete(
   cartController.removeFromCart
 );
 
+// Clean cart - remove deleted/unpublished items
+router.post("/customer/:customerId/clean", cartController.cleanCart);
+
 // Delete cart
 router.delete("/:cartId", cartController.deleteCart);
 

@@ -257,8 +257,15 @@ exports.updateStatus = async (req, res) => {
             );
           }
 
+          // Sinh code consignment ngắn gọn: <importReceipt.code>-<detail.sku>
+          const importReceiptCode = importReceipt.code;
+          const sku = detail.sku || "";
+          const consignmentCode = sku
+            ? `${importReceiptCode}-${sku}`
+            : `${importReceiptCode}`;
+
           const consignmentData = {
-            code: `${importReceipt.code}`,
+            code: consignmentCode,
             productId: detail.productId,
             variantId: variantId,
             quantity: detail.quantity,

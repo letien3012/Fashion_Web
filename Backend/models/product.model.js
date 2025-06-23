@@ -17,6 +17,18 @@ const productSchema = new mongoose.Schema({
     ref: "ProductCatalogue",
     required: true,
   },
+  attributeCatalogueIds: [
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "AttributeCatalogue",
+      validate: {
+        validator: function (v) {
+          return this.attributeCatalogueIds.length <= 2;
+        },
+        message: "Cannot have more than 2 attribute catalogues",
+      },
+    },
+  ],
   variants: [
     {
       sku: { type: String, required: true },
@@ -118,19 +130,19 @@ Product.validateVariant = async function (variant) {
   try {
     // Validate required fields
     if (!variant.sku) {
-      throw new Error("SKU is required");
+      throw new Error("Mã SKU là bắt buộc");
     }
     if (!variant.price) {
-      throw new Error("Price is required");
+      throw new Error("Giá sản phẩm là bắt buộc");
     }
     if (!variant.attributeId1) {
-      throw new Error("First attribute is required");
+      throw new Error("Thuộc tính đầu tiên là bắt buộc");
     }
 
     // Validate price
     const price = Number(variant.price);
     if (isNaN(price) || price < 0) {
-      throw new Error("Price must be a positive number");
+      throw new Error("Giá sản phẩm phải là số dương");
     }
     variant.price = price;
 
@@ -227,10 +239,13 @@ Product.prototype.save = async function () {
     if (this.image && this.image.startsWith("data:image")) {
       this.image = await ImageModel.saveImage(this.image, "product");
       // Trích xuất đặc trưng cho ảnh chính
-      await axios.post("http://localhost:3005/api/imageService/extract-features", {
-        imagePath: `http://localhost:3005${this.image}`,
-        productId: this._id
-      });
+      await axios.post(
+        "http://localhost:3005/api/imageService/extract-features",
+        {
+          imagePath: `http://localhost:3005${this.image}`,
+          productId: this._id,
+        }
+      );
     }
 
     // Handle album images
@@ -246,10 +261,13 @@ Product.prototype.save = async function () {
         this.album = albumPaths;
         // Trích xuất đặc trưng cho từng ảnh trong album
         for (let i = 0; i < albumPaths.length; i++) {
-          await axios.post("http://localhost:3005/api/imageService/extract-features", {
-            imagePath: `http://localhost:3005${albumPaths[i]}`,
-            productId: this._id
-          });
+          await axios.post(
+            "http://localhost:3005/api/imageService/extract-features",
+            {
+              imagePath: `http://localhost:3005${albumPaths[i]}`,
+              productId: this._id,
+            }
+          );
         }
       }
     }
@@ -261,10 +279,13 @@ Product.prototype.save = async function () {
         if (variant.image && variant.image.startsWith("data:image")) {
           variant.image = await ImageModel.saveImage(variant.image, "product");
           // Trích xuất đặc trưng cho ảnh variant
-          await axios.post("http://localhost:3005/api/imageService/extract-features", {
-            imagePath: `http://localhost:3005${variant.image}`,
-            productId: this._id
-          });
+          await axios.post(
+            "http://localhost:3005/api/imageService/extract-features",
+            {
+              imagePath: `http://localhost:3005${variant.image}`,
+              productId: this._id,
+            }
+          );
         }
       }
     }
@@ -503,6 +524,25 @@ Product.getVariantPrice = async function (productId, variantId) {
     price: variant.price,
     priceSale: product.priceSale || null,
   };
+};
+
+// Kiểm tra variant có tồn tại và được publish hay không
+Product.isVariantValid = async function (productId, variantId) {
+  try {
+    const product = await this.findById(productId);
+    if (!product || product.deletedAt || !product.publish) {
+      return false;
+    }
+
+    const variant = product.variants.find(
+      (v) => v._id.toString() === variantId.toString()
+    );
+
+    return variant && variant.publish !== false;
+  } catch (error) {
+    console.error("Error checking variant validity:", error);
+    return false;
+  }
 };
 
 // Static method to get best selling products

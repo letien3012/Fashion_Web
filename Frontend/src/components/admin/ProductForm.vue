@@ -23,18 +23,19 @@
                   </div>
                   <div class="card-body">
                     <div class="row mb-3">
-                      <div class="col-md-6">
+                      <div class="col-md-4">
                         <label class="form-label required">Mã sản phẩm</label>
                         <input
                           type="text"
                           class="form-control"
                           v-model="formData.code"
                           :class="{ 'is-invalid': errors.code }"
+                          readonly
                           required
                         />
                         <div class="invalid-feedback">{{ errors.code }}</div>
                       </div>
-                      <div class="col-md-6">
+                      <div class="col-md-8">
                         <label class="form-label required">Tên sản phẩm</label>
                         <input
                           type="text"
@@ -226,108 +227,107 @@
                     class="card-header d-flex justify-content-between align-items-center"
                   >
                     <h6 class="mb-0">Biến thể sản phẩm</h6>
-                    <div class="d-flex gap-2">
-                      <select
-                        class="form-select"
-                        v-model="selectedAttributeCatalogue"
-                        @change="
-                          handleAttributeCatalogueSelect($event.target.value)
-                        "
-                      >
-                        <option value="">Chọn danh mục thuộc tính</option>
-                        <option
-                          v-for="catalogue in attributeCatalogues"
-                          :key="catalogue._id"
-                          :value="catalogue._id"
-                          :disabled="
-                            selectedAttributeCatalogues.includes(catalogue._id)
-                          "
-                        >
-                          {{ catalogue.name }}
-                        </option>
-                      </select>
-                    </div>
+                    <button
+                      type="button"
+                      class="btn btn-primary btn-sm"
+                      @click="showAddAttributeTypeModal = true"
+                    >
+                      <i class="fas fa-plus"></i> Thêm loại thuộc tính
+                    </button>
                   </div>
                   <div class="card-body">
-                    <!-- Selected Attribute Catalogues -->
-                    <div class="selected-catalogues mb-3">
+                    <!-- Attribute Types List -->
+                    <div class="attribute-types-list">
                       <div
-                        v-for="catalogueId in selectedAttributeCatalogues"
-                        :key="catalogueId"
-                        class="selected-catalogue-item"
+                        v-for="(type, typeIndex) in attributeTypes"
+                        :key="typeIndex"
+                        class="attribute-type-item"
                       >
-                        <span>{{
-                          attributeCatalogues.find((c) => c._id === catalogueId)
-                            ?.name
-                        }}</span>
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-outline-danger"
-                          @click="removeAttributeCatalogue(catalogueId)"
-                        >
-                          <i class="fas fa-times"></i>
-                        </button>
-                      </div>
-                    </div>
-
-                    <!-- Attribute Selection -->
-                    <div
-                      v-if="selectedAttributeCatalogues.length > 0"
-                      class="mb-4"
-                    >
-                      <div class="row">
                         <div
-                          v-for="catalogueId in selectedAttributeCatalogues"
-                          :key="catalogueId"
-                          class="col-md-6 mb-3"
+                          class="d-flex justify-content-between align-items-center mb-2"
                         >
-                          <div
-                            class="d-flex justify-content-between align-items-center mb-2"
-                          >
-                            <label class="form-label required mb-0">
-                              {{
-                                attributeCatalogues.find(
-                                  (c) => c._id === catalogueId
-                                )?.name
-                              }}
-                            </label>
+                          <div class="d-flex align-items-center gap-2">
+                            <input
+                              type="text"
+                              class="form-control form-control-sm"
+                              v-model="type.name"
+                              placeholder="Tên loại thuộc tính"
+                              style="width: 200px"
+                            />
+                          </div>
+                          <div class="d-flex gap-2">
                             <button
                               type="button"
-                              class="btn btn-sm btn-outline-primary"
-                              @click="addNewAttribute(catalogueId)"
+                              class="btn btn-outline-primary btn-sm"
+                              @click="addNewAttribute(typeIndex)"
                             >
                               <i class="fas fa-plus"></i> Thêm thuộc tính
                             </button>
-                          </div>
-                          <select
-                            class="form-select"
-                            multiple
-                            v-model="selectedAttributes[catalogueId]"
-                            @change="handleAttributeSelection"
-                          >
-                            <option
-                              v-for="attr in attributes.filter(
-                                (a) =>
-                                  String(
-                                    a.attributeCatalogueId?._id ||
-                                      a.attributeCatalogueId
-                                  ) === String(catalogueId)
-                              )"
-                              :key="attr._id"
-                              :value="attr._id"
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              @click="removeAttributeType(typeIndex)"
                             >
-                              {{ attr.name }}
-                            </option>
-                          </select>
+                              <i class="fas fa-trash"></i>
+                            </button>
+                          </div>
+                        </div>
+                        <div class="attributes-list">
+                          <div
+                            v-for="(attr, attrIndex) in type.attributes"
+                            :key="attrIndex"
+                            class="attribute-item d-flex align-items-center gap-2 mb-2"
+                          >
+                            <input
+                              type="text"
+                              class="form-control form-control-sm"
+                              v-model="attr.name"
+                              @input="onAttributeInput(typeIndex, attrIndex)"
+                              placeholder="Tên thuộc tính"
+                            />
+                            <button
+                              type="button"
+                              class="btn btn-outline-danger btn-sm"
+                              @click="removeAttribute(typeIndex, attrIndex)"
+                            >
+                              <i class="fas fa-times"></i>
+                            </button>
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     <!-- Generated Variants -->
                     <div
-                      v-if="formData.variants.length > 0"
+                      v-if="
+                        attributeTypes.length > 0 &&
+                        attributeTypes.every(
+                          (type) => type.attributes.length > 0
+                        ) &&
+                        formData.variants.length > 0
+                      "
                       class="variants-list"
                     >
+                      <div class="row mb-3" v-if="formData.variants.length > 0">
+                        <div class="col-md-3">
+                          <input
+                            type="number"
+                            class="form-control"
+                            v-model="bulkPrice"
+                            min="0"
+                            placeholder="Nhập giá áp dụng cho tất cả biến thể"
+                          />
+                        </div>
+                        <div class="col-md-3">
+                          <button
+                            type="button"
+                            class="btn btn-success"
+                            @click="applyBulkPrice"
+                          >
+                            Áp dụng cho tất cả biến thể
+                          </button>
+                        </div>
+                      </div>
                       <div class="row">
                         <div
                           v-for="(variant, index) in formData.variants"
@@ -340,17 +340,12 @@
                               <div class="variant-attributes mb-2">
                                 <span
                                   v-for="(
-                                    attrId, catIndex
-                                  ) in selectedAttributeCatalogues"
-                                  :key="attrId"
+                                    attr, attrIndex
+                                  ) in variant.attributes"
+                                  :key="attrIndex"
                                   class="badge bg-primary me-2"
                                 >
-                                  {{
-                                    getAttributeName(
-                                      attrId,
-                                      variant[`attributeId${catIndex + 1}`]
-                                    )
-                                  }}
+                                  {{ attr.name }}
                                 </span>
                               </div>
                               <div class="variant-sku text-muted small">
@@ -369,7 +364,8 @@
                                     v-model="variant.price"
                                     :class="{
                                       'is-invalid':
-                                        errors[`variants.${index}.price`],
+                                        errors[`variants.${index}.price`] ||
+                                        !variant.price,
                                     }"
                                     required
                                     min="0"
@@ -377,7 +373,12 @@
                                   <span class="input-group-text">VNĐ</span>
                                 </div>
                                 <div class="invalid-feedback">
-                                  {{ errors[`variants.${index}.price`] }}
+                                  {{
+                                    errors[`variants.${index}.price`] ||
+                                    (!variant.price
+                                      ? "Vui lòng nhập giá sản phẩm"
+                                      : "")
+                                  }}
                                 </div>
                               </div>
 
@@ -433,8 +434,58 @@
                       </div>
                     </div>
                     <div v-else class="text-center text-muted py-3">
-                      Vui lòng chọn thuộc tính để tạo biến thể
+                      Vui lòng thêm loại thuộc tính và thuộc tính để tạo biến
+                      thể
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Add Attribute Type Modal -->
+            <div
+              v-if="showAddAttributeTypeModal"
+              class="modal fade show d-block"
+              tabindex="-1"
+            >
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Thêm loại thuộc tính mới</h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      @click="showAddAttributeTypeModal = false"
+                    ></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="mb-3">
+                      <label class="form-label required"
+                        >Tên loại thuộc tính</label
+                      >
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="newAttributeType.name"
+                        placeholder=""
+                      />
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      @click="showAddAttributeTypeModal = false"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="button"
+                      class="btn btn-primary"
+                      @click="addAttributeType"
+                    >
+                      Thêm
+                    </button>
                   </div>
                 </div>
               </div>
@@ -463,6 +514,8 @@
 import { ref, onMounted, watch, onBeforeUnmount } from "vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
+import AdminAttributeCatalogueService from "../../services/admin/attributeCatalogue.service";
+import AdminAttributeService from "../../services/admin/attribute.service";
 
 export default {
   name: "ProductForm",
@@ -490,6 +543,7 @@ export default {
       image: null,
       album: [],
       catalogueId: "",
+      attributeCatalogueIds: [],
       variants: [],
       publish: false,
     });
@@ -501,7 +555,23 @@ export default {
     const selectedAttributeCatalogues = ref([]);
     const newAttributes = ref([]);
     const selectedAttributes = ref({});
+    const showAddAttributeTypeModal = ref(false);
+    const newAttributeType = ref({ name: "" });
+    const attributeTypes = ref([]);
+    const originalAttributeTypes = ref([]);
+    const originalVariants = ref([]);
+    const isInitializing = ref(true);
     let editor = null;
+
+    // Biến và hàm áp dụng giá hàng loạt cho variants
+    const bulkPrice = ref(null);
+    const applyBulkPrice = () => {
+      if (bulkPrice.value !== null && !isNaN(bulkPrice.value)) {
+        formData.value.variants.forEach((variant) => {
+          variant.price = Number(bulkPrice.value);
+        });
+      }
+    };
 
     // Helper function to get full image URL
     const getImageUrl = (imagePath) => {
@@ -521,16 +591,11 @@ export default {
       return imagePath;
     };
 
-    const generateSKU = (combination) => {
+    const generateSKU = (attributes) => {
       const prefix = formData.value.code || "SKU";
-      const attributeNames = combination.map((attrId) => {
-        const attr = attributes.value.find((a) => a._id === attrId);
-        if (!attr || !attr.name) {
-          console.warn("Attribute not found or has no name:", attrId);
-          return "UNK";
-        }
-        return attr.name.substring(0, 3).toUpperCase();
-      });
+      const attributeNames = attributes.map((attr) =>
+        attr.name.substring(0, 3).toUpperCase()
+      );
       return `${prefix}-${attributeNames.join("-")}`;
     };
 
@@ -549,18 +614,11 @@ export default {
     };
 
     const generateVariants = () => {
-      // Nếu đang cập nhật sản phẩm và có biến thể hiện có, không tạo biến thể mới
-      if (props.product && formData.value.variants.length > 0) {
-        return;
-      }
-
-      // Clear existing variants
-      formData.value.variants = [];
-
-      // Get all selected attributes for each catalogue
-      const attributeGroups = selectedAttributeCatalogues.value.map(
-        (catalogueId) => selectedAttributes.value[catalogueId] || []
+      // Get all attributes for each type
+      const attributeGroups = attributeTypes.value.map(
+        (type) => type.attributes
       );
+      console.log("Attribute groups:", attributeGroups);
 
       // Kiểm tra xem có nhóm thuộc tính nào không có thuộc tính được chọn không
       if (attributeGroups.some((group) => group.length === 0)) {
@@ -569,34 +627,43 @@ export default {
 
       // Generate all possible combinations
       const combinations = cartesianProduct(attributeGroups);
+      console.log("Generated combinations:", combinations);
 
-      // Create variants from combinations
-      combinations.forEach((combination) => {
-        // Đảm bảo combination có ít nhất một phần tử
-        if (combination.length === 0) return;
-
-        const variant = {
-          sku: generateSKU(combination),
-          price: 0,
-          publish: true,
-          image: null,
-        };
-
-        // Add attribute IDs to variant
-        combination.forEach((attrId, index) => {
-          // Đảm bảo attributeId1 luôn được set
-          if (index === 0) {
-            variant.attributeId1 = attrId;
-          } else {
-            variant[`attributeId${index + 1}`] = attrId;
+      // Nếu đang cập nhật sản phẩm và có biến thể hiện có
+      if (props.product && formData.value.variants.length > 0) {
+        // Cập nhật SKU cho các biến thể hiện có
+        formData.value.variants.forEach((variant, index) => {
+          const combination = combinations[index];
+          if (combination) {
+            variant.sku = generateSKU(combination);
+            variant.attributes = combination.map((attr, idx) => ({
+              name: attr.name,
+              attributeCatalogueId: attr.attributeCatalogueId,
+              index: idx,
+            }));
           }
         });
+      } else {
+        // Clear existing variants
+        formData.value.variants = [];
 
-        // Chỉ thêm variant nếu có attributeId1
-        if (variant.attributeId1) {
+        // Create variants from combinations
+        combinations.forEach((combination) => {
+          const variant = {
+            sku: generateSKU(combination),
+            price: 0,
+            publish: true,
+            image: null,
+            attributes: combination.map((attr, index) => ({
+              name: attr.name,
+              attributeCatalogueId: attr.attributeCatalogueId,
+              index: index,
+            })),
+          };
+          console.log("Created variant:", variant);
           formData.value.variants.push(variant);
-        }
-      });
+        });
+      }
     };
 
     const initEditor = () => {
@@ -632,153 +699,93 @@ export default {
       });
     };
 
-    onMounted(async () => {
-      if (props.product) {
-        // Load product data
-        formData.value = {
-          ...props.product,
-          publish: props.product.publish || false,
-          catalogueId:
-            props.product.catalogueId?._id || props.product.catalogueId,
-          image: getImageUrl(props.product.image),
-          album: props.product.album.map((img) => getImageUrl(img)),
-          variants: props.product.variants.map((variant) => ({
-            ...variant,
-            attributeId1: variant.attributeId1?._id || variant.attributeId1,
-            attributeId2: variant.attributeId2?._id || variant.attributeId2,
-            image: getImageUrl(variant.image),
-            publish: variant.publish || false,
-          })),
-        };
-
-        // Load attribute catalogues for existing variants
-        const variantCatalogues = new Set();
-        props.product.variants.forEach((variant) => {
-          if (variant.attributeId1) {
-            const attr1 = attributes.value.find(
-              (a) =>
-                a._id === (variant.attributeId1?._id || variant.attributeId1)
-            );
-            if (attr1) variantCatalogues.add(attr1.attributeCatalogueId);
-          }
-          if (variant.attributeId2) {
-            const attr2 = attributes.value.find(
-              (a) =>
-                a._id === (variant.attributeId2?._id || variant.attributeId2)
-            );
-            if (attr2) variantCatalogues.add(attr2.attributeCatalogueId);
-          }
-        });
-
-        // Add selected catalogues
-        selectedAttributeCatalogues.value = Array.from(variantCatalogues);
-
-        // Fetch attributes for each catalogue
-        for (const catalogueId of selectedAttributeCatalogues.value) {
-          await fetchAttributes(catalogueId);
-        }
-
-        // Set selected attributes based on existing variants
-        selectedAttributes.value = {};
-        props.product.variants.forEach((variant) => {
-          if (variant.attributeId1) {
-            const attr1 = attributes.value.find(
-              (a) =>
-                a._id === (variant.attributeId1?._id || variant.attributeId1)
-            );
-            if (attr1) {
-              if (!selectedAttributes.value[attr1.attributeCatalogueId]) {
-                selectedAttributes.value[attr1.attributeCatalogueId] = [];
-              }
-              if (
-                !selectedAttributes.value[attr1.attributeCatalogueId].includes(
-                  attr1._id
-                )
-              ) {
-                selectedAttributes.value[attr1.attributeCatalogueId].push(
-                  attr1._id
-                );
-              }
-            }
-          }
-          if (variant.attributeId2) {
-            const attr2 = attributes.value.find(
-              (a) =>
-                a._id === (variant.attributeId2?._id || variant.attributeId2)
-            );
-            if (attr2) {
-              if (!selectedAttributes.value[attr2.attributeCatalogueId]) {
-                selectedAttributes.value[attr2.attributeCatalogueId] = [];
-              }
-              if (
-                !selectedAttributes.value[attr2.attributeCatalogueId].includes(
-                  attr2._id
-                )
-              ) {
-                selectedAttributes.value[attr2.attributeCatalogueId].push(
-                  attr2._id
-                );
-              }
-            }
-          }
-        });
-      }
-      await fetchAttributeCatalogues();
-      initEditor();
-    });
-
-    onBeforeUnmount(() => {
-      if (editor) {
-        editor.destroy();
-      }
-    });
+    // Add function to generate product code
+    const generateProductCode = () => {
+      const timestamp = new Date().getTime();
+      const random = Math.floor(Math.random() * 1000);
+      return `SP${timestamp}${random}`;
+    };
 
     const fetchAttributeCatalogues = async () => {
       try {
-        const token = localStorage.getItem("token-admin");
-        const response = await axios.get(
-          `${backendUrl}/api/attributeCatalogues`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        if (props.product) {
+          // For existing product, fetch only the required catalogues
+          const catalogues = [];
+          const missingCatalogues = [];
 
-        attributeCatalogues.value = response.data.data || response.data;
+          for (const catalogueId of props.product.attributeCatalogueIds) {
+            try {
+              const response = await axios.get(
+                `${backendUrl}/api/attributeCatalogues/${catalogueId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem(
+                      "token-admin"
+                    )}`,
+                  },
+                }
+              );
+              if (response.data) {
+                catalogues.push(response.data);
+              }
+            } catch (error) {
+              console.error(`Error fetching catalogue ${catalogueId}:`, error);
+              missingCatalogues.push(catalogueId);
+            }
+          }
+
+          attributeCatalogues.value = catalogues;
+          console.log("Fetched required attribute catalogues:", catalogues);
+
+          if (missingCatalogues.length > 0) {
+            toast.warning(
+              `Không thể tải ${missingCatalogues.length} danh mục thuộc tính. Các danh mục này có thể đã bị xóa.`
+            );
+            // Remove missing catalogues from product's attributeCatalogueIds
+            formData.value.attributeCatalogueIds =
+              formData.value.attributeCatalogueIds.filter(
+                (id) => !missingCatalogues.includes(id)
+              );
+          }
+        } else {
+          // For new product, fetch all catalogues
+          const response = await AdminAttributeCatalogueService.getAll();
+          if (response.data) {
+            attributeCatalogues.value = response.data.data || response.data;
+            console.log(
+              "Fetched all attribute catalogues:",
+              attributeCatalogues.value
+            );
+          } else {
+            throw new Error("Không có dữ liệu danh mục thuộc tính");
+          }
+        }
       } catch (error) {
         console.error("Error fetching attribute catalogues:", error);
-        toast.error("Không thể tải danh sách danh mục thuộc tính");
+        toast.error(
+          error.message || "Không thể tải danh sách danh mục thuộc tính"
+        );
+        attributeCatalogues.value = [];
       }
     };
 
-    const fetchAttributes = async (catalogueId) => {
+    const fetchAttributesForCatalogue = async (catalogueId) => {
       try {
-        const token = localStorage.getItem("token-admin");
-        const response = await axios.get(`${backendUrl}/api/attributes`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        console.log("API Response:", response.data);
-
-        // Kiểm tra và lấy dữ liệu từ response
-        let allAttributes = [];
-        if (response.data && response.data.data) {
-          allAttributes = response.data.data;
-        } else if (Array.isArray(response.data)) {
-          allAttributes = response.data;
-        }
-
-        console.log("All attributes before filter:", allAttributes);
-
-        // Lọc thuộc tính theo _id của danh mục
-        const catalogueAttributes = allAttributes.filter(
-          (attr) =>
-            String(
-              attr.attributeCatalogueId?._id || attr.attributeCatalogueId
-            ) === String(catalogueId)
+        const response = await axios.get(
+          `${backendUrl}/api/attributes/catalogue/${catalogueId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token-admin")}`,
+            },
+          }
         );
 
-        console.log("Catalogue ID:", catalogueId);
-        console.log("Filtered attributes:", catalogueAttributes);
+        const catalogueAttributes = response.data.data || response.data;
+        console.log(
+          "Fetched attributes for catalogue:",
+          catalogueId,
+          catalogueAttributes
+        );
 
         // Thêm vào danh sách attributes nếu chưa tồn tại
         catalogueAttributes.forEach((attr) => {
@@ -790,16 +797,168 @@ export default {
             attributes.value.push(attr);
           }
         });
-
-        console.log("Current attributes list:", attributes.value);
-
-        // Sắp xếp lại danh sách attributes theo tên
-        attributes.value.sort((a, b) => a.name.localeCompare(b.name));
       } catch (error) {
-        console.error("Error fetching attributes:", error);
+        console.error("Error fetching attributes for catalogue:", error);
         toast.error("Không thể tải danh sách thuộc tính");
       }
     };
+
+    const loadExistingAttributeTypes = async () => {
+      if (props.product && props.product.attributeCatalogueIds) {
+        try {
+          console.log(
+            "Loading attribute catalogues for IDs:",
+            props.product.attributeCatalogueIds
+          );
+
+          // Fetch all attribute catalogues first
+          await fetchAttributeCatalogues();
+
+          // For each catalogue ID, fetch its attributes and create attribute type
+          for (const catalogueId of props.product.attributeCatalogueIds) {
+            console.log("Processing catalogue ID:", catalogueId);
+
+            const catalogue = attributeCatalogues.value.find(
+              (cat) => cat._id === catalogueId
+            );
+
+            if (catalogue) {
+              console.log("Found catalogue:", catalogue);
+
+              // Fetch attributes for this catalogue
+              const response = await axios.get(
+                `${backendUrl}/api/attributes/catalogue/${catalogueId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem(
+                      "token-admin"
+                    )}`,
+                  },
+                }
+              );
+
+              const catalogueAttributes = response.data.data || response.data;
+              console.log(
+                "Fetched attributes for catalogue:",
+                catalogueId,
+                catalogueAttributes
+              );
+
+              if (catalogueAttributes && catalogueAttributes.length > 0) {
+                // Create attribute type with the fetched attributes
+                attributeTypes.value.push({
+                  name: catalogue.name,
+                  attributes: catalogueAttributes.map((attr) => ({
+                    name: attr.name,
+                    attributeCatalogueId: attr.attributeCatalogueId,
+                  })),
+                });
+              } else {
+                console.warn("No attributes found for catalogue:", catalogueId);
+              }
+            } else {
+              console.warn("Catalogue not found:", catalogueId);
+            }
+          }
+
+          console.log("Final attribute types:", attributeTypes.value);
+
+          // KHÔNG gọi generateVariants ở đây khi load attribute types từ CSDL
+          // Chỉ gọi generateVariants khi thực sự thay đổi attributeTypes (ở watch)
+        } catch (error) {
+          console.error("Error loading existing attribute types:", error);
+          toast.error("Không thể tải thông tin thuộc tính");
+        }
+      }
+    };
+
+    onMounted(async () => {
+      console.log("Component mounted");
+      if (props.product) {
+        console.log("Loading existing product:", props.product);
+        // Load product data
+        // Đảm bảo attributes.value đã có dữ liệu trước khi map variants
+        // Nếu chưa có, có thể cần fetch về trước (ở đây ưu tiên lấy từ attributes.value)
+        const mappedVariants = props.product.variants.map((variant) => {
+          // Nếu đã có attributes thì giữ nguyên
+          if (variant.attributes && variant.attributes.length > 0)
+            return {
+              ...variant,
+              image: getImageUrl(variant.image),
+              publish: variant.publish || false,
+            };
+          // Nếu chưa có, map từ attributeId1, attributeId2
+          const attrs = [];
+          if (variant.attributeId1) {
+            const attr1 = attributes.value.find(
+              (a) => a._id === variant.attributeId1
+            );
+            if (attr1)
+              attrs.push({
+                name: attr1.name,
+                attributeCatalogueId: attr1.attributeCatalogueId,
+                _id: attr1._id,
+              });
+          }
+          if (variant.attributeId2) {
+            const attr2 = attributes.value.find(
+              (a) => a._id === variant.attributeId2
+            );
+            if (attr2)
+              attrs.push({
+                name: attr2.name,
+                attributeCatalogueId: attr2.attributeCatalogueId,
+                _id: attr2._id,
+              });
+          }
+          // Giữ nguyên các trường khác (giá, hình ảnh, publish, ...)
+          return {
+            ...variant,
+            image: getImageUrl(variant.image),
+            publish: variant.publish || false,
+            attributes: attrs,
+          };
+        });
+        formData.value = {
+          ...props.product,
+          publish: props.product.publish || false,
+          catalogueId:
+            props.product.catalogueId?._id || props.product.catalogueId,
+          image: getImageUrl(props.product.image),
+          album: props.product.album.map((img) => getImageUrl(img)),
+          variants: mappedVariants,
+        };
+        // Lưu lại variants gốc để dùng lại nếu không thay đổi attributeTypes
+        originalVariants.value = JSON.parse(JSON.stringify(mappedVariants));
+        // In dữ liệu variants gốc trước khi render ra UI
+        console.log(
+          "=== VARIANTS FROM PRODUCT BEFORE RENDER ===",
+          JSON.stringify(props.product.variants, null, 2)
+        );
+        console.log("Initial formData:", formData.value);
+
+        // Load existing attribute types
+        await loadExistingAttributeTypes();
+        // Lưu lại attributeTypes gốc để so sánh khi cập nhật
+        originalAttributeTypes.value = JSON.parse(
+          JSON.stringify(attributeTypes.value)
+        );
+        // Đã load xong dữ liệu gốc, cho phép watch hoạt động
+        isInitializing.value = false;
+      } else {
+        // Generate initial code for new product only once
+        formData.value.code = generateProductCode();
+        console.log("Generated new product code:", formData.value.code);
+      }
+      await fetchAttributeCatalogues();
+      initEditor();
+    });
+
+    onBeforeUnmount(() => {
+      if (editor) {
+        editor.destroy();
+      }
+    });
 
     const handleAttributeCatalogueSelect = async (catalogueId) => {
       if (
@@ -808,7 +967,7 @@ export default {
       ) {
         selectedAttributeCatalogues.value.push(catalogueId);
         selectedAttributes[catalogueId] = [];
-        await fetchAttributes(catalogueId);
+        await fetchAttributesForCatalogue(catalogueId);
       }
     };
 
@@ -822,111 +981,38 @@ export default {
       }
     };
 
-    const addNewAttribute = async (catalogueId) => {
-      const catalogue = attributeCatalogues.value.find(
-        (cat) => cat._id === catalogueId
-      );
-      if (!catalogue) return;
-
-      const attributeName = prompt(
-        `Nhập tên thuộc tính cho danh mục ${catalogue.name}:`
-      );
-      if (!attributeName) return;
-
-      try {
-        const token = localStorage.getItem("token-admin");
-        const response = await axios.post(
-          `${backendUrl}/api/attributes/add`,
-          {
-            name: attributeName,
-            attributeCatalogueId: catalogueId,
-          },
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-
-        // Đảm bảo dữ liệu trả về có cấu trúc đúng
-        const newAttribute = {
-          _id: response.data.data?._id || response.data._id,
-          name: response.data.data?.name || response.data.name || attributeName,
-          attributeCatalogueId: catalogueId,
-        };
-
-        // Kiểm tra xem thuộc tính đã tồn tại chưa
-        const existingIndex = attributes.value.findIndex(
-          (a) => a._id === newAttribute._id
-        );
-        if (existingIndex === -1) {
-          attributes.value.push(newAttribute);
-        } else {
-          attributes.value[existingIndex] = newAttribute;
-        }
-
-        // Tự động chọn thuộc tính mới
-        if (!selectedAttributes.value[catalogueId]) {
-          selectedAttributes.value[catalogueId] = [];
-        }
-        selectedAttributes.value[catalogueId].push(newAttribute._id);
-
-        // Sắp xếp lại danh sách attributes
-        attributes.value.sort((a, b) => a.name.localeCompare(b.name));
-
-        // Kích hoạt tạo biến thể mới
-        handleAttributeSelection();
-
-        toast.success("Thêm thuộc tính mới thành công");
-      } catch (error) {
-        console.error("Error adding new attribute:", error);
-        toast.error("Không thể thêm thuộc tính mới");
+    const addNewAttribute = (typeIndex) => {
+      const attrs = attributeTypes.value[typeIndex].attributes;
+      if (attrs.length === 0 || attrs[attrs.length - 1].name.trim() !== "") {
+        attributeTypes.value[typeIndex].attributes.push({ name: "" });
       }
     };
 
-    const handleVariantAttributeChange = (
-      variantIndex,
-      attributeId,
-      isFirst
-    ) => {
-      const variant = formData.value.variants[variantIndex];
-
-      // Cập nhật thuộc tính mới
-      if (isFirst) {
-        variant.attributeId1 = attributeId;
-      } else {
-        variant.attributeId2 = attributeId;
+    const onAttributeInput = (typeIndex, attrIndex) => {
+      const attrs = attributeTypes.value[typeIndex].attributes;
+      // Nếu đang nhập ô cuối cùng và không trống, tự động thêm ô mới
+      if (
+        attrIndex === attrs.length - 1 &&
+        attrs[attrIndex].name.trim() !== ""
+      ) {
+        addNewAttribute(typeIndex);
       }
-
-      // Cập nhật SKU dựa trên các thuộc tính
-      const attr1 = attributes.value.find(
-        (attr) => attr._id === variant.attributeId1
-      );
-      const attr2 = attributes.value.find(
-        (attr) => attr._id === variant.attributeId2
-      );
-
-      variant.sku = `${formData.value.code || "TEMP"}-${attr1?.name || ""}-${
-        attr2?.name || ""
-      }`
-        .replace(/\s+/g, "")
-        .toUpperCase();
+      // Nếu có nhiều ô trống liên tiếp, chỉ giữ lại 1 ô trống cuối cùng
+      for (let i = attrs.length - 2; i >= 0; i--) {
+        if (attrs[i].name.trim() === "" && attrs[i + 1].name.trim() === "") {
+          attrs.splice(i, 1);
+        }
+      }
     };
 
-    const addVariant = () => {
-      if (selectedAttributeCatalogues.value.length === 0) {
-        toast.warning("Vui lòng chọn ít nhất một danh mục thuộc tính");
-        return;
-      }
+    const removeAttributeType = (typeIndex) => {
+      attributeTypes.value.splice(typeIndex, 1);
+      generateVariants();
+    };
 
-      const variant = {
-        sku: "",
-        price: 0,
-        image: null,
-        attributeId1: null,
-        attributeId2: null,
-        publish: true,
-      };
-
-      formData.value.variants.push(variant);
+    const removeAttribute = (typeIndex, attrIndex) => {
+      attributeTypes.value[typeIndex].attributes.splice(attrIndex, 1);
+      generateVariants();
     };
 
     const uploadImage = async (file) => {
@@ -995,73 +1081,283 @@ export default {
       }
     };
 
-    const removeVariant = (index) => {
-      formData.value.variants.splice(index, 1);
-    };
-
     const removeVariantImage = (index) => {
       formData.value.variants[index].image = null;
     };
 
     const handleSubmit = async () => {
       try {
-        // Validate variants before submitting
-        const invalidVariants = formData.value.variants.filter(
-          (v) => !v.attributeId1
+        // Validate attribute types and attributes
+        if (attributeTypes.value.length === 0) {
+          toast.error("Vui lòng thêm ít nhất một loại thuộc tính");
+          return;
+        }
+        const invalidTypes = attributeTypes.value.filter(
+          (type) =>
+            !type.attributes ||
+            type.attributes.length === 0 ||
+            type.attributes.some((attr) => !attr.name.trim())
         );
-        if (invalidVariants.length > 0) {
-          toast.error("Mỗi biến thể phải có ít nhất một thuộc tính");
+        if (invalidTypes.length > 0) {
+          toast.error(
+            "Mỗi loại thuộc tính phải có ít nhất một thuộc tính và tất cả thuộc tính phải có tên"
+          );
           return;
         }
 
-        // Convert image paths to relative paths before submitting
+        const savedAttributeTypes = [];
+        const attributeCatalogueIds = [];
+        let oldProduct = null;
+        if (props.product) {
+          try {
+            const response = await axios.get(
+              `${backendUrl}/api/products/${props.product._id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem(
+                    "token-admin"
+                  )}`,
+                },
+              }
+            );
+            oldProduct = response.data;
+          } catch (error) {
+            oldProduct = null;
+          }
+        }
+
+        // --- TÁCH LOGIC THÊM MỚI VÀ CẬP NHẬT ---
+        for (const [typeIdx, type] of attributeTypes.value.entries()) {
+          let catalogueId = null;
+          let catalogueData = null;
+          if (!props.product) {
+            // Chỉ gửi tên gốc, chấp nhận trùng tên
+            const catalogueResponse = await AdminAttributeCatalogueService.add({
+              name: type.name,
+            });
+            catalogueData = catalogueResponse.data.catalogue;
+            catalogueId = catalogueData._id;
+          } else {
+            // CẬP NHẬT: Nếu type không có _id (tức là loại thuộc tính mới), luôn tạo mới
+            let isNewCatalogue = !type._id;
+            if (!isNewCatalogue) {
+              // Tìm theo id
+              const oldCatalogue = oldProduct?.attributeCatalogueIds?.find(
+                (cat) => cat._id === type._id || cat === type._id
+              );
+              if (oldCatalogue) {
+                catalogueId = oldCatalogue._id || oldCatalogue;
+                catalogueData = oldCatalogue;
+                if (catalogueData.name !== type.name) {
+                  await AdminAttributeCatalogueService.update(catalogueId, {
+                    name: type.name,
+                  });
+                }
+              } else {
+                isNewCatalogue = true;
+              }
+            }
+            if (isNewCatalogue) {
+              // Chỉ gửi tên gốc, chấp nhận trùng tên
+              const catalogueResponse =
+                await AdminAttributeCatalogueService.add({
+                  name: type.name,
+                });
+              catalogueData = catalogueResponse.data.catalogue;
+              catalogueId = catalogueData._id;
+            }
+          }
+          attributeCatalogueIds.push(catalogueId);
+
+          // XỬ LÝ ATTRIBUTE
+          let oldAttributes = [];
+          if (props.product && catalogueId) {
+            try {
+              const response = await axios.get(
+                `${backendUrl}/api/attributes/catalogue/${catalogueId}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem(
+                      "token-admin"
+                    )}`,
+                  },
+                }
+              );
+              oldAttributes = response.data.data || response.data;
+            } catch {}
+          }
+          const attributeIds = [];
+          for (const attr of type.attributes) {
+            let attributeId = null;
+            let attributeData = null;
+            // THÊM MỚI: Luôn tạo mới attribute
+            if (!props.product) {
+              const attrResponse = await AdminAttributeService.add({
+                name: attr.name,
+                attributeCatalogueId: catalogueId,
+              });
+              attributeData = attrResponse.data;
+              attributeId = attributeData.id;
+            } else {
+              // CẬP NHẬT: Tìm attribute cũ, nếu không có thì tạo mới
+              const oldAttribute = oldAttributes.find(
+                (oldAttr) =>
+                  oldAttr._id === attr._id || oldAttr.name === attr.name
+              );
+              if (oldAttribute) {
+                attributeId = oldAttribute._id;
+                attributeData = oldAttribute;
+                if (attributeData.name !== attr.name) {
+                  await AdminAttributeService.update(attributeId, {
+                    name: attr.name,
+                  });
+                }
+              } else {
+                const attrResponse = await AdminAttributeService.add({
+                  name: attr.name,
+                  attributeCatalogueId: catalogueId,
+                });
+                attributeData = attrResponse.data;
+                attributeId = attributeData.id;
+              }
+            }
+            attributeIds.push(attributeId);
+          }
+          // XÓA ATTRIBUTE KHÔNG CÒN SỬ DỤNG (chỉ khi cập nhật)
+          if (props.product && oldAttributes.length > 0) {
+            const attributesToDelete = oldAttributes.filter(
+              (oldAttr) => !attributeIds.includes(oldAttr._id)
+            );
+            for (const attr of attributesToDelete) {
+              try {
+                await AdminAttributeService.delete(attr._id);
+              } catch {}
+            }
+          }
+          savedAttributeTypes.push({
+            catalogueId,
+            attributeIds,
+          });
+        }
+        // XÓA CATALOGUE KHÔNG CÒN SỬ DỤNG (chỉ khi cập nhật)
+        if (props.product && oldProduct?.attributeCatalogueIds) {
+          // Xóa hết các catalogue cũ không còn trong danh sách mới (so sánh theo id)
+          const newCatalogueIdSet = new Set(
+            attributeCatalogueIds.map((id) =>
+              typeof id === "object" ? id._id || id.id : id
+            )
+          );
+          const cataloguesToDelete = oldProduct.attributeCatalogueIds.filter(
+            (oldId) => {
+              const oldIdVal = oldId._id || oldId;
+              return !newCatalogueIdSet.has(oldIdVal);
+            }
+          );
+          for (const catalogueId of cataloguesToDelete) {
+            try {
+              const response = await axios.get(
+                `${backendUrl}/api/attributes/catalogue/${
+                  catalogueId._id || catalogueId
+                }`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem(
+                      "token-admin"
+                    )}`,
+                  },
+                }
+              );
+              const attributes = response.data.data || response.data;
+              for (const attr of attributes) {
+                await AdminAttributeService.delete(attr._id);
+              }
+              await AdminAttributeCatalogueService.delete(
+                catalogueId._id || catalogueId
+              );
+            } catch {}
+          }
+        }
+        // --- ĐỒNG BỘ VARIANTS ---
+        // Tạo variants mới dựa trên id attribute vừa tạo
+        const attributeIdMatrix = savedAttributeTypes.map(
+          (t) => t.attributeIds
+        );
+        let newVariants = [];
+        if (
+          attributeIdMatrix.length > 0 &&
+          attributeIdMatrix.every((arr) => arr.length > 0)
+        ) {
+          const combinations = cartesianProduct(
+            attributeIdMatrix.map((ids) =>
+              ids.map((id, idx) => ({ id, index: idx }))
+            )
+          );
+          newVariants = combinations.map((comb, idx) => {
+            const variant = formData.value.variants[idx] || {};
+            const attrIds = comb.map((c) => c.id);
+            return {
+              ...variant,
+              sku: generateSKU(
+                comb.map((c, i) => ({
+                  name: attributeTypes.value[i].attributes[c.index].name,
+                }))
+              ),
+              price: variant.price || 0,
+              publish: variant.publish !== undefined ? variant.publish : true,
+              image: variant.image
+                ? convertToRelativePath(variant.image)
+                : null,
+              attributeId1:
+                typeof attrIds[0] === "object"
+                  ? attrIds[0]._id || attrIds[0].id
+                  : attrIds[0],
+              attributeId2: attrIds[1]
+                ? typeof attrIds[1] === "object"
+                  ? attrIds[1]._id || attrIds[1].id
+                  : attrIds[1]
+                : undefined,
+              attributes: undefined,
+            };
+          });
+        }
+        // Đảm bảo attributeCatalogueIds là mảng id duy nhất
+        const uniqueCatalogueIds = [
+          ...new Set(
+            attributeCatalogueIds.map((id) =>
+              typeof id === "object" ? id._id || id.id : id
+            )
+          ),
+        ];
+        // Chuẩn bị dữ liệu gửi lên
         const submitData = {
           ...formData.value,
-          image: convertToRelativePath(formData.value.image),
+          attributeCatalogueIds: uniqueCatalogueIds,
+          image: formData.value.image
+            ? convertToRelativePath(formData.value.image)
+            : null,
           album: formData.value.album.map((img) => convertToRelativePath(img)),
-          variants: formData.value.variants.map((variant) => ({
-            ...variant,
-            image: convertToRelativePath(variant.image),
-          })),
+          variants: newVariants,
         };
-        console.log("Submit data:", submitData);
-
         const token = localStorage.getItem("token-admin");
-
-        // Log data before sending
-        console.log(
-          "Submitting product form data:",
-          JSON.parse(JSON.stringify(formData.value))
-        );
-
         if (props.product) {
-          const response = await axios.put(
+          await axios.put(
             `${backendUrl}/api/products/update/${props.product._id}`,
             submitData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
+            { headers: { Authorization: `Bearer ${token}` } }
           );
-          console.log("Update response:", response.data);
           toast.success("Cập nhật sản phẩm thành công");
         } else {
-          const response = await axios.post(
-            `${backendUrl}/api/products/add`,
-            submitData,
-            {
-              headers: { Authorization: `Bearer ${token}` },
-            }
-          );
-          console.log("Add response:", response.data);
+          await axios.post(`${backendUrl}/api/products/add`, submitData, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
           toast.success("Thêm sản phẩm mới thành công");
         }
         emit("submit");
       } catch (error) {
-        console.error("Error submitting form:", error);
         if (error.response?.data?.message) {
           toast.error(error.response.data.message);
         } else {
-          toast.error("Có lỗi xảy ra khi lưu sản phẩm");
+          toast.error(error.message || "Có lỗi xảy ra khi lưu sản phẩm");
         }
       }
     };
@@ -1124,6 +1420,10 @@ export default {
     watch(
       () => props.product,
       (newProduct) => {
+        console.log(
+          "=== PRODUCT DATA BEFORE UPDATE ===",
+          JSON.stringify(newProduct, null, 2)
+        );
         if (newProduct) {
           // Khi có sản phẩm mới, cập nhật lại formData
           formData.value = {
@@ -1132,14 +1432,18 @@ export default {
             catalogueId: newProduct.catalogueId?._id || newProduct.catalogueId,
             image: getImageUrl(newProduct.image),
             album: newProduct.album.map((img) => getImageUrl(img)),
-            variants: newProduct.variants.map((variant) => ({
-              ...variant,
-              attributeId1: variant.attributeId1?._id || variant.attributeId1,
-              attributeId2: variant.attributeId2?._id || variant.attributeId2,
-              image: getImageUrl(variant.image),
-              publish: variant.publish || false,
-            })),
+            variants: newProduct.variants.map((variant) => {
+              console.log("Processing variant before update:", variant);
+              return {
+                ...variant,
+                attributeId1: variant.attributeId1?._id || variant.attributeId1,
+                attributeId2: variant.attributeId2?._id || variant.attributeId2,
+                image: getImageUrl(variant.image),
+                publish: variant.publish || false,
+              };
+            }),
           };
+          console.log("Updated formData:", formData.value);
           // Update editor content when product changes
           if (editor) {
             editor.setData(newProduct.content || "");
@@ -1147,6 +1451,64 @@ export default {
         }
       },
       { immediate: true }
+    );
+
+    const addAttributeType = () => {
+      if (!newAttributeType.value.name.trim()) {
+        toast.error("Vui lòng nhập tên loại thuộc tính");
+        return;
+      }
+
+      if (attributeTypes.value.length >= 2) {
+        toast.error("Chỉ được thêm tối đa 2 loại thuộc tính");
+        return;
+      }
+
+      // Khi thêm mới attributeType, không có _id
+      attributeTypes.value.push({
+        name: newAttributeType.value.name,
+        attributes: [],
+        // KHÔNG có _id
+      });
+
+      newAttributeType.value.name = "";
+      showAddAttributeTypeModal.value = false;
+      generateVariants();
+    };
+
+    // Watch for changes in attribute types và tạo variants phù hợp
+    watch(
+      attributeTypes,
+      (newVal, oldVal) => {
+        if (isInitializing.value) return;
+        if (!props.product) {
+          // Chỉ generate nếu tất cả thuộc tính con đều có tên
+          const allFilled = newVal.every(
+            (type) =>
+              type.attributes.length > 0 &&
+              type.attributes.every((attr) => attr.name.trim() !== "")
+          );
+          if (allFilled) {
+            generateVariants();
+          } else {
+            formData.value.variants = [];
+          }
+          return;
+        }
+        // Cập nhật: logic cũ giữ nguyên
+        const isChanged =
+          JSON.stringify(newVal) !==
+          JSON.stringify(originalAttributeTypes.value);
+        if (isChanged) {
+          formData.value.variants = [];
+          generateVariants();
+        } else {
+          formData.value.variants = JSON.parse(
+            JSON.stringify(originalVariants.value)
+          );
+        }
+      },
+      { deep: true }
     );
 
     return {
@@ -1161,9 +1523,7 @@ export default {
       handleAttributeCatalogueSelect,
       removeAttributeCatalogue,
       addNewAttribute,
-      handleVariantAttributeChange,
-      addVariant,
-      removeVariant,
+      onAttributeInput,
       handleImageUpload,
       removeMainImage,
       handleAlbumUpload,
@@ -1177,6 +1537,17 @@ export default {
       generateSKU,
       getAttributeName,
       handleAttributeSelection,
+      showAddAttributeTypeModal,
+      newAttributeType,
+      removeAttributeType,
+      addAttributeType,
+      removeAttribute,
+      attributeTypes,
+      originalAttributeTypes,
+      originalVariants,
+      isInitializing,
+      bulkPrice,
+      applyBulkPrice,
     };
   },
 };
@@ -1432,5 +1803,96 @@ export default {
 
 .ckeditor-container.is-invalid {
   border-color: #dc3545;
+}
+
+.attribute-types-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  margin-bottom: 24px;
+}
+
+.attribute-type-item {
+  flex: 0 0 49%;
+  max-width: 49%;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid #eaeaea;
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s ease;
+  margin-bottom: 0;
+}
+
+.attribute-type-item:hover {
+  border-color: #d0d0d0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.attribute-type-item .form-control-sm {
+  font-size: 0.95rem;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  transition: all 0.2s ease;
+}
+
+.attribute-type-item .form-control-sm:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.attribute-type-item .btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.attribute-type-item .btn-outline-primary {
+  border: 1px solid #007bff;
+  color: #007bff;
+  background: transparent;
+}
+
+.attribute-type-item .btn-outline-primary:hover {
+  background: #007bff;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.attribute-type-item .btn-outline-danger {
+  border: 1px solid #dc3545;
+  color: #dc3545;
+  background: transparent;
+}
+
+.attribute-type-item .btn-outline-danger:hover {
+  background: #dc3545;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.attributes-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.attribute-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.attribute-item input.form-control-sm {
+  flex: 1;
+  min-width: 0;
+  background: #f8f9fa;
+}
+
+.attribute-item input.form-control-sm:focus {
+  background: #fff;
 }
 </style>

@@ -204,7 +204,6 @@ export default {
         const response = await reviewService.getReviewsByProduct(
           this.product._id
         );
-        console.log("Reviews response:", response);
 
         if (response && response.success && response.data) {
           const { reviews } = response.data;

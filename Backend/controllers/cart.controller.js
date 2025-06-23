@@ -1,4 +1,5 @@
 const Cart = require("../models/cart.model");
+const Product = require("../models/product.model");
 
 // Lấy giỏ hàng của khách hàng
 exports.getCart = async (req, res) => {
@@ -48,6 +49,21 @@ exports.addToCart = async (req, res) => {
     const { cartId } = req.params;
     const detail = req.body;
 
+    // Validate product and variants before adding to cart
+    if (detail.productId && detail.variants) {
+      for (const variant of detail.variants) {
+        const isValid = await Product.isVariantValid(
+          detail.productId,
+          variant._id
+        );
+        if (!isValid) {
+          return res.status(400).json({
+            message: "Sản phẩm hoặc biến thể không còn khả dụng",
+          });
+        }
+      }
+    }
+
     await Cart.addToCart(cartId, detail);
     res.status(200).json({ message: "Item added to cart successfully" });
   } catch (error) {
@@ -84,6 +100,14 @@ exports.updateCartItemQuantity = async (req, res) => {
         required: {
           quantity: "Quantity must be a non-negative number",
         },
+      });
+    }
+
+    // Check if variant is still valid
+    const isValid = await Product.isVariantValid(productId, variantId);
+    if (!isValid) {
+      return res.status(400).json({
+        message: "Sản phẩm hoặc biến thể không còn khả dụng",
       });
     }
 
@@ -230,5 +254,30 @@ exports.deleteCart = async (req, res) => {
     res.status(200).json({ message: "Cart deleted successfully" });
   } catch (error) {
     res.status(400).json({ message: error.message });
+  }
+};
+
+// Dọn dẹp giỏ hàng - loại bỏ sản phẩm đã bị xóa/ẩn
+exports.cleanCart = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+
+    const cleanedCart = await Cart.cleanInvalidItems(customerId);
+
+    if (!cleanedCart) {
+      return res.status(404).json({ message: "Cart not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Cart cleaned successfully",
+      data: cleanedCart,
+    });
+  } catch (error) {
+    console.error("Error cleaning cart:", error);
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
   }
 };

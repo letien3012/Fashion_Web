@@ -40,6 +40,20 @@
 
         <!-- Cart Content -->
         <div v-else class="cart-content">
+          <!-- Warning for removed items -->
+          <div v-if="hasRemovedItems" class="warning-banner">
+            <div class="warning-icon">
+              <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="warning-content">
+              <h4>Sản phẩm đã được cập nhật</h4>
+              <p>
+                Một số sản phẩm trong giỏ hàng đã bị ẩn hoặc xóa và đã được loại
+                bỏ tự động.
+              </p>
+            </div>
+          </div>
+
           <!-- Cart Actions -->
           <div class="cart-actions">
             <label class="select-all">
@@ -50,14 +64,16 @@
               />
               <span>Chọn tất cả ({{ flattenedCartItems.length }})</span>
             </label>
-            <button
-              v-if="selectedItems.length > 0"
-              @click="removeSelectedItems"
-              class="remove-selected"
-            >
-              <i class="fas fa-trash"></i>
-              Xóa đã chọn
-            </button>
+            <div class="action-buttons">
+              <button
+                v-if="selectedItems.length > 0"
+                @click="removeSelectedItems"
+                class="remove-selected"
+              >
+                <i class="fas fa-trash"></i>
+                Xóa đã chọn
+              </button>
+            </div>
           </div>
 
           <!-- Cart Items -->
@@ -71,7 +87,14 @@
                 <input
                   type="checkbox"
                   :checked="isItemSelected(item)"
-                  @change="toggleItemSelection(item)"
+                  :disabled="item.variant.isUnavailable"
+                  @change="
+                    item.variant.isUnavailable
+                      ? toast.warning(
+                          'Rất tiếc, sản phẩm này hiện đã ngừng kinh doanh hoặc tạm thời không còn bán. Vui lòng tham khảo các sản phẩm khác nhé!'
+                        )
+                      : toggleItemSelection(item)
+                  "
                 />
               </div>
               <div class="item-content">
@@ -85,12 +108,26 @@
                   />
                 </div>
                 <div class="item-details">
-                  <h3 class="item-name">{{ item.productId.name }}</h3>
+                  <h3
+                    class="item-name"
+                    :class="{ 'unavailable-link': item.variant.isUnavailable }"
+                    @click="
+                      item.variant.isUnavailable &&
+                        toast.warning(
+                          'Rất tiếc, sản phẩm này hiện đã ngừng kinh doanh hoặc tạm thời không còn bán. Vui lòng tham khảo các sản phẩm khác nhé!'
+                        )
+                    "
+                    style="user-select: text"
+                  >
+                    {{ item.productId.name }}
+                  </h3>
                   <p class="item-variant">Phân loại: {{ item.variant.sku }}</p>
                   <div class="item-quantity">
                     <button
                       @click="updateQuantity(item, item.variant, -1)"
-                      :disabled="item.variant.quantity <= 1"
+                      :disabled="
+                        item.variant.quantity <= 1 || item.variant.isUnavailable
+                      "
                       class="quantity-btn"
                     >
                       <i class="fas fa-minus"></i>
@@ -99,7 +136,8 @@
                     <button
                       @click="updateQuantity(item, item.variant, 1)"
                       :disabled="
-                        item.variant.quantity >= item.variant.stockQuantity
+                        item.variant.quantity >= item.variant.stockQuantity ||
+                        item.variant.isUnavailable
                       "
                       class="quantity-btn"
                     >
@@ -117,7 +155,9 @@
                     ]"
                   >
                     {{
-                      item.variant.stockQuantity === undefined
+                      item.variant.isUnavailable
+                        ? "Sản phẩm không còn bán"
+                        : item.variant.stockQuantity === undefined
                         ? "Đang cập nhật tồn kho"
                         : item.variant.quantity >= item.variant.stockQuantity
                         ? `Chỉ còn ${item.variant.stockQuantity} sản phẩm`
@@ -267,6 +307,7 @@ const cartItems = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const selectedItems = ref([]);
+const hasRemovedItems = ref(false);
 
 // Voucher related states
 const appliedVoucher = ref(null);
@@ -367,10 +408,12 @@ const bestPossiblePrice = computed(() => {
 const fetchCart = async () => {
   loading.value = true;
   error.value = null;
+  hasRemovedItems.value = false;
   try {
     const cart = await cartService.getCart();
     if (cart && cart.items) {
       cartItems.value = cart.items;
+
       // Fetch stock quantity for each variant
       for (const item of cartItems.value) {
         for (const variant of item.variants) {
@@ -401,16 +444,28 @@ const fetchCart = async () => {
               }
             }
           } catch (err) {
+            console.warn(
+              `Error fetching data for variant ${variant._id}:`,
+              err
+            );
             variant.stockQuantity = 0;
             variant.originPrice = variant.price; // fallback
             variant.priceSale = null;
           }
+        }
+        // Giả sử item.productId chứa thông tin sản phẩm
+        item.isUnavailable =
+          !!item.productId.deletedAt || item.productId.publish === false;
+        // Đánh dấu từng variant cũng vậy nếu cần (nếu variant có publish riêng)
+        for (const variant of item.variants) {
+          variant.isUnavailable = item.isUnavailable;
         }
       }
     } else {
       cartItems.value = [];
     }
   } catch (err) {
+    console.error("Error fetching cart:", err);
     error.value = "Không thể tải giỏ hàng. Vui lòng thử lại sau.";
     cartItems.value = [];
   } finally {
@@ -844,6 +899,12 @@ onMounted(async () => {
   cursor: pointer;
 }
 
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .remove-selected {
   background: #ff6b6b;
   color: white;
@@ -1100,6 +1161,38 @@ onMounted(async () => {
   cursor: not-allowed;
 }
 
+/* Warning Banner Styles */
+.warning-banner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.warning-icon {
+  color: #f39c12;
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.warning-content h4 {
+  margin: 0 0 0.5rem 0;
+  color: #856404;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.warning-content p {
+  margin: 0;
+  color: #856404;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
 /* Voucher Section Styles */
 .voucher-section {
   background: white;
@@ -1193,5 +1286,16 @@ onMounted(async () => {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.unavailable-link {
+  color: #aaa !important;
+  cursor: not-allowed;
+  pointer-events: auto;
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.unavailable-link:hover {
+  color: #aaa !important;
 }
 </style>

@@ -14,30 +14,67 @@ const AdminAttributeCatalogueService = {
   backendUrl, // Export thuộc tính này để dùng ở component
 
   async getAll() {
-    return axios.get(`${backendUrl}/api/attributeCatalogues`, getAuthHeaders());
+    try {
+      const response = await axios.get(
+        `${backendUrl}/api/attributeCatalogues`,
+        getAuthHeaders()
+      );
+      return response;
+    } catch (error) {
+      console.error("Error fetching attribute catalogues:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          "Không thể tải danh sách danh mục thuộc tính"
+      );
+    }
   },
 
   async add(data) {
-    return axios.post(
-      `${backendUrl}/api/attributeCatalogues/add`,
-      data,
-      getAuthHeaders()
-    );
+    try {
+      const response = await axios.post(
+        `${backendUrl}/api/attributeCatalogues/add`,
+        data,
+        getAuthHeaders()
+      );
+      return response;
+    } catch (error) {
+      console.error("Error adding attribute catalogue:", error);
+      throw new Error(
+        error.response?.data?.message || "Không thể thêm danh mục thuộc tính"
+      );
+    }
   },
 
   async update(id, data) {
-    return axios.put(
-      `${backendUrl}/api/attributeCatalogues/update/${id}`,
-      data,
-      getAuthHeaders()
-    );
+    try {
+      const response = await axios.put(
+        `${backendUrl}/api/attributeCatalogues/update/${id}`,
+        data,
+        getAuthHeaders()
+      );
+      return response;
+    } catch (error) {
+      console.error("Error updating attribute catalogue:", error);
+      throw new Error(
+        error.response?.data?.message ||
+          "Không thể cập nhật danh mục thuộc tính"
+      );
+    }
   },
 
   async delete(id) {
-    return axios.delete(
-      `${backendUrl}/api/attributeCatalogues/delete/${id}`,
-      getAuthHeaders()
-    );
+    try {
+      const response = await axios.delete(
+        `${backendUrl}/api/attributeCatalogues/delete/${id}`,
+        getAuthHeaders()
+      );
+      return response;
+    } catch (error) {
+      console.error("Error deleting attribute catalogue:", error);
+      throw new Error(
+        error.response?.data?.message || "Không thể xóa danh mục thuộc tính"
+      );
+    }
   },
 };
 
