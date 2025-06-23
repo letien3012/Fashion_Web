@@ -278,56 +278,124 @@ Product.prototype.save = async function () {
 
 Product.update = async function (id, data) {
   try {
-    console.log("Updating product with data:", data);
     let updateData = { ...data };
+    const oldProduct = await Product.findById(id);
+    if (!oldProduct) {
+      throw new Error("Product not found");
+    }
 
     // Handle main image update
+    let deletedMainImage = null;
     if (data.image && data.image.startsWith("data:image")) {
-      const oldProduct = await Product.findById(id);
       if (oldProduct.image) {
-        await ImageModel.deleteImage(oldProduct.image);
+        deletedMainImage = oldProduct.image;
       }
       updateData.image = await ImageModel.saveImage(data.image, "product");
+      // Trích xuất đặc trưng cho ảnh chính mới
+      await axios.post("http://localhost:3005/api/imageService/extract-features", {
+        imagePath: `http://localhost:3005${updateData.image}`,
+        productId: id
+      });
     }
 
     // Handle album images update
+    let deletedAlbumImages = [];
     if (data.album && data.album.length > 0) {
-      const oldProduct = await Product.findById(id);
+      // Tách ảnh mới và ảnh cũ
+      const newImages = data.album.filter((img) => img.startsWith("data:image"));
+      const existingImages = data.album.filter((img) => !img.startsWith("data:image"));
+
+      // Tìm các ảnh cũ đã bị loại bỏ
       if (oldProduct.album && oldProduct.album.length > 0) {
-        await ImageModel.deleteMultipleImages(oldProduct.album);
+        deletedAlbumImages = oldProduct.album.filter(
+          (oldImg) => !existingImages.includes(oldImg)
+        );
       }
 
-      const base64Images = data.album.filter((img) =>
-        img.startsWith("data:image")
-      );
-      if (base64Images.length > 0) {
-        const albumPaths = await ImageModel.saveMultipleImages(
-          base64Images,
-          "product"
-        );
-        updateData.album = albumPaths;
+      // Lưu các ảnh mới
+      if (newImages.length > 0) {
+        const newPaths = await ImageModel.saveMultipleImages(newImages, "product");
+        updateData.album = [...existingImages, ...newPaths];
+        // Trích xuất đặc trưng cho từng ảnh mới
+        for (const newPath of newPaths) {
+          await axios.post("http://localhost:3005/api/imageService/extract-features", {
+            imagePath: `http://localhost:3005${newPath}`,
+            productId: id
+          });
+        }
+      } else {
+        updateData.album = existingImages;
       }
+    } else if (oldProduct.album && oldProduct.album.length > 0) {
+      // Nếu album mới là rỗng, xóa hết ảnh cũ
+      deletedAlbumImages = oldProduct.album;
+      updateData.album = [];
     }
 
     // Handle variants update
+    let deletedVariantImages = [];
     if (data.variants && data.variants.length > 0) {
-      const oldProduct = await Product.findById(id);
-
-      // Delete old variant images
-      if (oldProduct.variants && oldProduct.variants.length > 0) {
-        const oldVariantImages = oldProduct.variants
-          .map((v) => v.image)
-          .filter(Boolean);
-        if (oldVariantImages.length > 0) {
-          await ImageModel.deleteMultipleImages(oldVariantImages);
-        }
-      }
+      const oldVariants = oldProduct.variants || [];
+      // Xác định các ảnh variant cũ bị thay thế hoặc bị xóa
+      const newVariantImages = data.variants.map(v => v.image).filter(Boolean);
+      const oldVariantImages = oldVariants.map(v => v.image).filter(Boolean);
+      deletedVariantImages = oldVariantImages.filter(oldImg => !newVariantImages.includes(oldImg));
 
       // Process new variants
-      for (let variant of data.variants) {
+      for (let i = 0; i < data.variants.length; i++) {
+        const variant = data.variants[i];
+        const oldVariant = oldVariants[i];
         if (variant.image && variant.image.startsWith("data:image")) {
+          // Nếu có ảnh cũ ở vị trí này và khác ảnh mới, thêm vào danh sách xóa
+          if (oldVariant && oldVariant.image && !deletedVariantImages.includes(oldVariant.image)) {
+            deletedVariantImages.push(oldVariant.image);
+          }
           variant.image = await ImageModel.saveImage(variant.image, "product");
+          // Trích xuất đặc trưng cho ảnh variant mới
+          await axios.post("http://localhost:3005/api/imageService/extract-features", {
+            imagePath: `http://localhost:3005${variant.image}`,
+            productId: id
+          });
         }
+      }
+    } else if (oldProduct.variants && oldProduct.variants.length > 0) {
+      // Nếu không còn variant nào, xóa hết ảnh variant cũ
+      deletedVariantImages = oldProduct.variants.map(v => v.image).filter(Boolean);
+    }
+
+    // Xóa đặc trưng và file ảnh cho ảnh chính nếu bị thay thế
+    if (deletedMainImage) {
+      try {
+        await axios.post("http://localhost:3005/api/imageService/delete-features", {
+          imagePaths: [deletedMainImage]
+        });
+        await ImageModel.deleteImage(deletedMainImage);
+      } catch (err) {
+        console.error("Error deleting main image features or file:", err);
+      }
+    }
+
+    // Xóa đặc trưng và file ảnh cho các ảnh album đã bị loại bỏ
+    if (deletedAlbumImages.length > 0) {
+      try {
+        await axios.post("http://localhost:3005/api/imageService/delete-features", {
+          imagePaths: deletedAlbumImages
+        });
+        await ImageModel.deleteMultipleImages(deletedAlbumImages);
+      } catch (err) {
+        console.error("Error deleting album image features or files:", err);
+      }
+    }
+
+    // Xóa đặc trưng và file ảnh cho các ảnh variant đã bị loại bỏ
+    if (deletedVariantImages.length > 0) {
+      try {
+        await axios.post("http://localhost:3005/api/imageService/delete-features", {
+          imagePaths: deletedVariantImages
+        });
+        await ImageModel.deleteMultipleImages(deletedVariantImages);
+      } catch (err) {
+        console.error("Error deleting variant image features or files:", err);
       }
     }
 
@@ -338,7 +406,6 @@ Product.update = async function (id, data) {
       new: true,
     }).populate("variants.attributeId1 variants.attributeId2");
 
-    console.log("Product updated:", updatedProduct);
     return updatedProduct;
   } catch (error) {
     console.error("Error updating product:", error);

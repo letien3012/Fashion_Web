@@ -59,10 +59,10 @@ class ImageModel {
   static async deleteMultipleImages(imagePaths) {
     try {
       // Chỉ xóa những ảnh là base64 (ảnh mới)
-      const newImages = imagePaths.filter((path) =>
-        path.startsWith("data:image")
-      );
-      for (const imagePath of newImages) {
+      // const newImages = imagePaths.filter((path) =>
+      //   path.startsWith("data:image")
+      // );
+      for (const imagePath of imagePaths) {
         await this.deleteImage(imagePath);
       }
     } catch (error) {

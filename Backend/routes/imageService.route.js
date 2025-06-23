@@ -5,7 +5,8 @@ const {
   detectOnly, 
   cropOnly, 
   extractAndSaveFeatures,
-  findSimilarImages 
+  findSimilarImages,
+  deleteImageFeaturesByPaths
 } = require("../imageService/imageService");
 const ImageModel = require("../models/image.model");
 const Product = require("../models/product.model");
@@ -266,6 +267,20 @@ router.post("/delete", async (req, res) => {
   try {
     await ImageModel.deleteImage(imagePath);
     res.json({ success: true, message: "Image deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.toString() });
+  }
+});
+
+// Route: POST /delete-features
+router.post("/delete-features", async (req, res) => {
+  const { imagePaths } = req.body;
+  if (!imagePaths || !Array.isArray(imagePaths) || imagePaths.length === 0) {
+    return res.status(400).json({ error: "No image paths provided" });
+  }
+  try {
+    const result = await deleteImageFeaturesByPaths(imagePaths);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.toString() });
   }
