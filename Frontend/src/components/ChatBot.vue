@@ -73,6 +73,41 @@
             </router-link>
           </div>
         </div>
+
+        <div v-if="foundProducts.length > 0" class="related-products">
+          <h5 class="related-title">
+            <i class="fas fa-box-open"></i>
+            Sản phẩm tìm được
+          </h5>
+          <div class="related-products-list">
+            <div
+              v-for="product in foundProducts"
+              :key="product._id"
+              class="related-product-item"
+            >
+              <div class="related-product-image">
+                <img
+                  :src="getImageUrl(product.image)"
+                  :alt="product.name"
+                  @error="handleImageError"
+                  @load="handleImageLoad"
+                />
+              </div>
+              <div class="related-product-info">
+                <h6>{{ product.name }}</h6>
+                <p class="related-price">
+                  {{ formatPrice(product.variants[0].price) }}
+                </p>
+                <router-link
+                  :to="'/product-detail/' + product._id"
+                  class="related-view-details"
+                >
+                  Xem chi tiết
+                </router-link>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="chat-input">
@@ -241,6 +276,7 @@ export default {
       chatbotData: null,
       currentProduct: null,
       imageError: false,
+      foundProducts: [],
     };
   },
   async created() {
@@ -257,6 +293,7 @@ export default {
     async sendMessage() {
       if (this.message.trim()) {
         const userMessage = this.message.trim();
+        this.message = "";
         this.messages.push({
           type: "user",
           content: userMessage,
@@ -310,18 +347,26 @@ export default {
           ) {
             let botResponse = data.candidates[0].content.parts[0].text;
             botResponse = this.cleanBotResponse(botResponse);
+            const foundProducts = this.checkProductMention(userMessage);
+            this.foundProducts = foundProducts;
+
+            if (foundProducts.length > 0) {
+              // Không push message bot, chỉ hiển thị danh sách sản phẩm
+              this.isLoading = false;
+              this.message = "";
+              this.$nextTick(() => {
+                const chatMessages = this.$refs.chatMessages;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+              });
+              return;
+            }
+
+            // Nếu không có sản phẩm, vẫn push message bot như cũ
             this.messages.push({
               type: "bot",
               content: botResponse,
               time: this.getCurrentTime(),
             });
-            // Chỉ kiểm tra nhắc đến sản phẩm trong userMessage
-            const productMentioned = this.checkProductMention(userMessage);
-            if (productMentioned) {
-              this.currentProduct = productMentioned;
-            } else {
-              this.currentProduct = null;
-            }
           } else {
             throw new Error("Invalid response format");
           }
@@ -374,33 +419,20 @@ export default {
     },
     checkProductMention(message) {
       if (!this.chatbotData?.products) {
-        return null;
+        return [];
       }
-      const lowerMessage = message.toLowerCase();
-      // So khớp gần đúng: tìm sản phẩm có tên chứa từ khóa hoặc tên gần giống
-      let bestMatch = null;
-      let bestScore = 0;
-      for (const product of this.chatbotData.products) {
-        const name = product.name.toLowerCase();
-        const code = product.code.toLowerCase();
-        // Nếu tên hoặc mã xuất hiện trong message
-        if (lowerMessage.includes(name) || lowerMessage.includes(code)) {
-          return product;
-        }
-        // So khớp gần đúng: đếm số từ trùng nhau
-        const nameWords = name.split(/\s+/);
-        let matchCount = 0;
-        for (const word of nameWords) {
-          if (lowerMessage.includes(word) && word.length > 2) matchCount++;
-        }
-        const score = matchCount / nameWords.length;
-        if (score > bestScore && score > 0.4) {
-          // ngưỡng 40%
-          bestScore = score;
-          bestMatch = product;
-        }
+      const lowerMessage = message.toLowerCase().trim();
+      if (!lowerMessage) {
+        return [];
       }
-      return bestMatch;
+      return this.chatbotData.products.filter((product) => {
+        const productName = product.name.toLowerCase();
+        const productCode = product.code.toLowerCase();
+        return (
+          productName.includes(lowerMessage) ||
+          productCode.includes(lowerMessage)
+        );
+      });
     },
     getImageUrl(imagePath) {
       console.log("Original image path:", imagePath);
@@ -862,5 +894,124 @@ export default {
   font-size: 28px;
   margin-bottom: 8px;
   color: #e63946;
+}
+
+.related-products {
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 15px 0;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  animation: productFadeIn 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes productFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.related-title {
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.related-title i {
+  font-size: 20px;
+}
+
+.related-products-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+}
+
+.related-product-item {
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.related-product-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.related-product-image {
+  width: 100%;
+  height: 150px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.13);
+  flex-shrink: 0;
+  background: #f8f8f8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.related-product-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.related-product-image img:hover {
+  transform: scale(1.07);
+}
+
+.related-product-info {
+  padding: 10px;
+}
+
+.related-product-info h6 {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+}
+
+.related-price {
+  color: #e63946;
+  font-weight: 600;
+  font-size: 14px;
+  margin: 2px 0 6px 0;
+}
+
+.related-view-details {
+  display: inline-block;
+  padding: 5px 12px;
+  background: linear-gradient(135deg, #e63946, #ff4d5a);
+  color: white;
+  text-decoration: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(230, 57, 70, 0.13);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.related-view-details:hover {
+  background: linear-gradient(135deg, #ff4d5a, #e63946);
+  transform: translateY(-2px) scale(1.05);
 }
 </style>
