@@ -192,6 +192,23 @@ function cosineSimilarity(vec1, vec2) {
   return dotProduct / (norm1 * norm2);
 }
 
+// Xóa đặc trưng ảnh theo mảng đường dẫn ảnh
+async function deleteImageFeaturesByPaths(imagePaths) {
+  try {
+    // Bỏ tiền tố localhost:3005 nếu có trong từng path
+    const cleanPaths = imagePaths.map((p) =>
+      p.replace("http://localhost:3005", "")
+    );
+    const result = await ImageFeature.deleteMany({
+      originalImage: { $in: cleanPaths },
+    });
+    return { success: true, deletedCount: result.deletedCount };
+  } catch (err) {
+    console.error("[deleteImageFeaturesByPaths] error:", err.message);
+    throw err;
+  }
+}
+
 module.exports = {
   detectOnly,
   cropOnly,
@@ -199,4 +216,5 @@ module.exports = {
   saveImageFeatures,
   extractAndSaveFeatures,
   findSimilarImages,
+  deleteImageFeaturesByPaths,
 };
