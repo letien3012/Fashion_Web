@@ -71,31 +71,57 @@
                     :key="index"
                   >
                     <td>
-                      <select
-                        v-model="detail.productId"
-                        class="form-control"
-                        @change="handleProductChange(index)"
-                        required
-                        :disabled="isInputDisabled"
-                        :class="{
-                          'is-invalid':
-                            errors[`import_details.${index}.productId`],
-                        }"
-                      >
-                        <option value="">Chọn sản phẩm</option>
-                        <option
-                          v-for="product in products"
-                          :key="product._id"
-                          :value="product._id"
-                        >
-                          {{ product.name }}
-                        </option>
-                      </select>
                       <div
-                        class="invalid-feedback"
-                        v-if="errors[`import_details.${index}.productId`]"
+                        class="product-search-container"
+                        v-click-away="() => closeSuggestions(index)"
                       >
-                        {{ errors[`import_details.${index}.productId`] }}
+                        <input
+                          type="text"
+                          v-model="searchQueries[index]"
+                          @focus="openSuggestions(index)"
+                          @input="handleSearch(index)"
+                          class="form-control"
+                          placeholder="Tìm kiếm sản phẩm"
+                          required
+                          :disabled="isInputDisabled"
+                          :class="{
+                            'is-invalid':
+                              errors[`import_details.${index}.productId`],
+                          }"
+                        />
+                        <div
+                          class="invalid-feedback"
+                          v-if="errors[`import_details.${index}.productId`]"
+                        >
+                          {{ errors[`import_details.${index}.productId`] }}
+                        </div>
+                        <!-- Suggestions dropdown -->
+                        <div
+                          v-if="
+                            activeSearchIndex === index &&
+                            filteredProducts(index).length > 0
+                          "
+                          class="search-suggestions"
+                        >
+                          <div
+                            v-for="product in filteredProducts(index)"
+                            :key="product._id"
+                            class="suggestion-item"
+                            @click="handleProductSelect(product, index)"
+                          >
+                            <img
+                              :src="getImageUrl(product.image)"
+                              :alt="product.name || ''"
+                              class="suggestion-image"
+                              @error="handleImageError"
+                            />
+                            <div class="suggestion-info">
+                              <div class="suggestion-name">
+                                {{ product.name || "" }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td>
@@ -259,6 +285,7 @@
 <script>
 import { ref, computed, onMounted, watch } from "vue";
 import axios from "axios";
+import vClickAway from "vue3-click-away";
 import "../../assets/styles/admin/list.css";
 import "../../assets/styles/admin/table.css";
 
@@ -278,6 +305,9 @@ export default {
       default: false,
     },
   },
+  directives: {
+    clickAway: vClickAway.directive,
+  },
   emits: ["close", "saved"],
   setup(props, { emit }) {
     const backendUrl = "http://localhost:3005";
@@ -287,6 +317,8 @@ export default {
     const attributes = ref([]);
     const loading = ref(false);
     const errors = ref({});
+    const searchQueries = ref([]);
+    const activeSearchIndex = ref(-1);
 
     const formData = ref({
       supplierId: "",
@@ -442,15 +474,16 @@ export default {
         price: 0,
         total: 0,
       });
+      searchQueries.value.push("");
       calculateDetailTotal(formData.value.import_details.length - 1);
     };
 
     const removeProductDetail = (index) => {
       formData.value.import_details.splice(index, 1);
+      searchQueries.value.splice(index, 1);
     };
 
     const handleProductChange = async (index) => {
-      const productId = formData.value.import_details[index].productId;
       formData.value.import_details[index].variantId = "";
       calculateDetailTotal(index);
     };
@@ -560,6 +593,67 @@ export default {
       emit("close");
     };
 
+    const openSuggestions = (index) => {
+      activeSearchIndex.value = index;
+    };
+
+    const closeSuggestions = (index) => {
+      if (activeSearchIndex.value === index) {
+        activeSearchIndex.value = -1;
+        // after closing suggestions, if a product was selected, the input should show its name
+        const detail = formData.value.import_details[index];
+        if (detail && detail.productId) {
+          searchQueries.value[index] = getProductName(detail.productId);
+        } else {
+          // If no product is selected, clear the search query if the user clicks away
+          // to avoid confusion. But only if there's no product Id yet.
+          if (!detail.productId) {
+            searchQueries.value[index] = '';
+          }
+        }
+      }
+    };
+    
+    const handleSearch = (index) => {
+      // The search is reactive via computed property filteredProducts
+      // You might want to add debouncing here in a real app
+    };
+
+    const handleProductSelect = (product, index) => {
+      const detail = formData.value.import_details[index];
+      detail.productId = product._id;
+      searchQueries.value[index] = product.name;
+      handleProductChange(index);
+      closeSuggestions(index);
+    };
+
+    const filteredProducts = (index) => {
+      if (index === -1) return [];
+      const query = searchQueries.value[index]?.toLowerCase() || '';
+      if (!query) {
+        return [];
+      }
+      return products.value.filter(
+        (p) => p.name.toLowerCase().includes(query)
+      );
+    };
+
+    const getProductName = (productId) => {
+      const product = products.value.find((p) => p._id === productId);
+      return product ? product.name : "";
+    };
+
+    const getImageUrl = (imagePath) => {
+      if (!imagePath) return "/images/placeholder.jpg";
+      if (imagePath.startsWith("http")) return imagePath;
+      return `${backendUrl}/${imagePath.replace(/^\/+|\/+$/g, "")}`;
+    };
+
+    const handleImageError = (e) => {
+      console.error("Image load error:", e);
+      e.target.src = "/images/placeholder.jpg";
+    };
+
     // Watch for isVisible changes
     watch(
       () => props.isVisible,
@@ -599,6 +693,16 @@ export default {
                   }))
                 : [],
             };
+            
+            // Cập nhật lại searchQueries cho các dòng chi tiết
+            if (Array.isArray(formData.value.import_details)) {
+              searchQueries.value = formData.value.import_details.map(
+                (detail) => getProductName(detail.productId)
+              );
+            } else {
+              searchQueries.value = [];
+            }
+
             // Tính lại total cho từng dòng
             formData.value.import_details.forEach((_, idx) =>
               calculateDetailTotal(idx)
@@ -637,6 +741,16 @@ export default {
       isStatusDisabled,
       availableStatuses,
       getStatusText,
+      searchQueries,
+      activeSearchIndex,
+      openSuggestions,
+      closeSuggestions,
+      handleSearch,
+      handleProductSelect,
+      filteredProducts,
+      getProductName,
+      getImageUrl,
+      handleImageError,
     };
   },
 };
@@ -784,7 +898,8 @@ export default {
 }
 
 .table-container {
-  overflow-x: auto;
+  /* overflow-x: auto; */ /* This was clipping the suggestions */
+  overflow: visible; /* Allow suggestions to overflow */
   margin: 0 -24px;
   padding: 0 24px;
 }
@@ -908,5 +1023,119 @@ export default {
 
 .delete-btn:hover:not(:disabled) {
   text-decoration: underline;
+}
+
+.product-search-container {
+  position: relative;
+}
+
+/* Styles from SearchSuggestions.vue */
+.search-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  margin-top: 8px;
+  z-index: 1050; /* Increased z-index */
+  max-height: 400px;
+  overflow-y: auto;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background-color: #f8f8f8;
+  transform: translateX(5px);
+}
+
+.suggestion-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-right: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: transform 0.3s ease;
+}
+
+.suggestion-item:hover .suggestion-image {
+  transform: scale(1.05);
+}
+
+.suggestion-info {
+  flex: 1;
+}
+
+.suggestion-name {
+  font-size: 15px;
+  color: #2c3e50;
+  margin-bottom: 6px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  /* Clamp to 2 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+  line-height: 1.4;
+  height: calc(1.4em * 2); /* Fixed height for 2 lines */
+}
+
+.suggestion-item:hover .suggestion-name {
+  color: #e74c3c;
+}
+
+.suggestion-price {
+  font-size: 14px;
+  color: #e74c3c;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+/* Custom scrollbar */
+.search-suggestions::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-suggestions::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.search-suggestions::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+}
+
+.search-suggestions::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
 }
 </style>
