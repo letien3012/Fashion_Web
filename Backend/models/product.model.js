@@ -33,7 +33,7 @@ const productSchema = new mongoose.Schema({
     {
       sku: { type: String, required: true },
       price: { type: Number, required: true },
-      image: { type: String, required: true },
+      image: { type: String, required: false },
       attributeId1: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
       attributeId2: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
       publish: { type: Boolean, default: true },
@@ -45,47 +45,52 @@ const productSchema = new mongoose.Schema({
   deletedAt: { type: Date },
 });
 
-// Pre-save middleware to handle images
+// Pre-save middleware to handle images and feature extraction
 productSchema.pre("save", async function (next) {
   try {
-    console.log("Pre-save middleware - Processing product:", this._id);
+    const productId = this._id; // ID is available here for both new and existing docs
 
     // Handle main image
-    if (
-      this.isModified("image") &&
-      this.image &&
-      this.image.startsWith("data:image")
-    ) {
-      console.log("Processing main image");
-      const imagePath = await ImageModel.saveImage(this.image, "product");
-      this.image = imagePath;
+    if (this.isModified("image") && this.image && this.image.startsWith("data:image")) {
+      const savedPath = await ImageModel.saveImage(this.image, "product");
+      this.image = savedPath; // Replace base64 with saved path
+      // Extract features for the new image
+      await axios.post("http://localhost:3005/api/imageService/extract-features", {
+        imagePath: `http://localhost:3005${savedPath}`,
+        productId: productId,
+      });
     }
 
     // Handle album images
     if (this.isModified("album") && this.album && this.album.length > 0) {
-      console.log("Processing album images");
-      const base64Images = this.album.filter((img) =>
-        img.startsWith("data:image")
-      );
-      if (base64Images.length > 0) {
-        const albumPaths = await ImageModel.saveMultipleImages(
-          base64Images,
-          "product"
-        );
-        this.album = albumPaths;
+      const processedAlbum = [];
+      for (const img of this.album) {
+        if (img && img.startsWith("data:image")) {
+          const savedPath = await ImageModel.saveImage(img, "product");
+          processedAlbum.push(savedPath); // Add the new path
+          // Extract features for the new image
+          await axios.post("http://localhost:3005/api/imageService/extract-features", {
+            imagePath: `http://localhost:3005${savedPath}`,
+            productId: productId,
+          });
+        } else {
+          processedAlbum.push(img); // Keep existing URL/path if not a new base64 image
+        }
       }
+      this.album = processedAlbum;
     }
 
     // Handle variant images
     if (this.isModified("variants")) {
-      console.log("Processing variant images");
       for (let variant of this.variants) {
         if (variant.image && variant.image.startsWith("data:image")) {
-          const imagePath = await ImageModel.saveImage(
-            variant.image,
-            "product"
-          );
-          variant.image = imagePath;
+          const savedPath = await ImageModel.saveImage(variant.image, "product");
+          variant.image = savedPath; // Replace base64 with saved path
+          // Extract features for the new variant image
+          await axios.post("http://localhost:3005/api/imageService/extract-features", {
+            imagePath: `http://localhost:3005${savedPath}`,
+            productId: productId,
+          });
         }
       }
     }
