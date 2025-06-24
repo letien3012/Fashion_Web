@@ -23,8 +23,12 @@
           </td>
           <td>{{ promotion.discount }}%</td>
           <td>
-            <span :class="getStatusBadgeClass(promotion.publish)">
-              {{ getStatusLabel(promotion.publish) }}
+            <span
+              :class="
+                getStatusBadgeClass(promotion.publish, promotion.end_date)
+              "
+            >
+              {{ getStatusLabel(promotion.publish, promotion.end_date) }}
             </span>
           </td>
           <td>
@@ -158,11 +162,19 @@ export default {
       };
     };
 
-    const getStatusLabel = (status) => {
+    const getStatusLabel = (status, endDate) => {
+      const now = new Date();
+      if (endDate && new Date(endDate) < now) {
+        return "Hết hạn";
+      }
       return status === "active" ? "Đang áp dụng" : "Không áp dụng";
     };
 
-    const getStatusBadgeClass = (status) => {
+    const getStatusBadgeClass = (status, endDate) => {
+      const now = new Date();
+      if (endDate && new Date(endDate) < now) {
+        return { "badge bg-expired": true };
+      }
       return {
         "badge bg-success": status === "active",
         "badge bg-secondary": status === "inactive",
@@ -238,6 +250,11 @@ td {
 .bg-secondary {
   background-color: #f5f5f5;
   color: #8c8c8c;
+}
+
+.bg-expired {
+  background-color: #ffeaea;
+  color: #ff4d4f;
 }
 
 .actions {

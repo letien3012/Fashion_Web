@@ -4,13 +4,23 @@
 
     <div class="review-summary">
       <div class="average-rating">
-        <span class="rating-number">{{ averageRating }}</span> trên 5
+        <span class="rating-number">{{
+          Number(averageRating).toFixed(1)
+        }}</span>
+        trên 5
+        <span v-if="totalReviews > 0" class="total-reviews"
+          >({{ totalReviews }} đánh giá)</span
+        >
+        <span v-else class="total-reviews">(Chưa có đánh giá)</span>
         <div class="star-rating">
           <i
             class="fas fa-star"
             v-for="n in 5"
             :key="n"
-            :class="{ active: n <= Math.round(averageRating) }"
+            :class="{
+              active: n <= Math.floor(averageRating),
+              half: n === Math.ceil(averageRating) && averageRating % 1 !== 0,
+            }"
           ></i>
         </div>
       </div>
@@ -67,218 +77,120 @@
       </div>
     </div>
 
-    <div v-if="reviewsLoading" class="loading-state">Đang tải đánh giá...</div>
-    <div v-else-if="reviewsError" class="error-state">{{ reviewsError }}</div>
-
-    <div v-else>
-      <div v-if="reviews.length" class="review-list">
-        <div
-          class="review-item"
-          v-for="(review, idx) in displayedReviews"
-          :key="idx"
-        >
-          <div class="review-header">
-            <img
-              :src="
-                review.customerId?.image
-                  ? `http://localhost:3005${review.customerId.image}`
-                  : defaultAvatar
-              "
-              class="user-avatar"
-            />
-            <div class="header-info">
-              <b>{{ review.customerId?.fullname || "Ẩn danh" }}</b>
-              <span class="review-rating">
-                <i
-                  class="fas fa-star"
-                  v-for="n in 5"
-                  :key="n"
-                  :class="{ active: n <= review.star }"
-                ></i>
-              </span>
-              <div class="review-meta">
-                {{ formatDate(review.createdAt) }}
-              </div>
+    <div v-if="reviews.length" class="review-list">
+      <div
+        class="review-item"
+        v-for="(review, idx) in displayedReviews"
+        :key="idx"
+      >
+        <div class="review-header">
+          <img
+            :src="
+              review.customerId?.image
+                ? `http://localhost:3005${review.customerId.image}`
+                : defaultAvatar
+            "
+            class="user-avatar"
+          />
+          <div class="header-info">
+            <b>{{ review.customerId?.fullname || "Ẩn danh" }}</b>
+            <span class="review-rating">
+              <i
+                class="fas fa-star"
+                v-for="n in 5"
+                :key="n"
+                :class="{ active: n <= review.star }"
+              ></i>
+            </span>
+            <div class="review-meta">
+              {{ formatDate(review.createdAt) }}
             </div>
           </div>
-          <div class="review-content-area">
-            <div class="review-text">
-              <p>{{ review.content }}</p>
-            </div>
-            <div
-              class="review-media"
-              v-if="(review.images && review.images.length > 0) || review.video"
-            >
-              <img
-                v-for="(image, imgIdx) in review.images"
-                :key="imgIdx"
-                :src="`http://localhost:3005${image}`"
-                alt="Review Image"
-                class="review-image"
-              />
-            </div>
+        </div>
+        <div class="review-content-area">
+          <div class="review-text">
+            <p>{{ review.content }}</p>
           </div>
-
           <div
-            v-if="review.reply && review.reply.length > 0"
-            class="admin-reply"
+            class="review-media"
+            v-if="(review.images && review.images.length > 0) || review.video"
           >
-            <b>Phản Hồi Của Người Bán:</b> {{ review.reply[0].content }}
+            <img
+              v-for="(image, imgIdx) in review.images"
+              :key="imgIdx"
+              :src="`http://localhost:3005${image}`"
+              alt="Review Image"
+              class="review-image"
+            />
           </div>
         </div>
-        <div v-if="hasMoreReviews" class="load-more-container">
-          <button class="load-more-btn" @click="loadMore">
-            Xem thêm đánh giá
-          </button>
+
+        <div v-if="review.reply && review.reply.length > 0" class="admin-reply">
+          <b>Phản Hồi Của Người Bán:</b> {{ review.reply[0].content }}
         </div>
       </div>
-      <div v-else class="no-reviews">
-        <i>Chưa có đánh giá nào cho sản phẩm này.</i>
+      <div v-if="hasMoreReviews" class="load-more-container">
+        <button class="load-more-btn" @click="loadMore">
+          Xem thêm đánh giá
+        </button>
       </div>
+    </div>
+    <div v-else class="no-reviews">
+      <i>Chưa có đánh giá nào cho sản phẩm này.</i>
     </div>
   </div>
 </template>
 
 <script>
-import { reviewService } from "../services/review.service";
 import defaultAvatar from "../assets/images/avatar_default.jpg";
 
 export default {
   name: "Review_ProductDetail",
   props: {
-    product: {
-      type: Object,
-      required: true,
-    },
+    product: { type: Object, required: true },
+    reviews: { type: Array, default: () => [] },
+    averageRating: { type: [Number, String], default: 0 },
+    totalReviews: { type: Number, default: 0 },
   },
   data() {
     return {
       userAvatar: defaultAvatar, // Default avatar path
-      fetchedReviews: [], // Data property to store fetched reviews array
-      reviewsLoading: false, // Loading state
-      reviewsError: null, // Error state
-      currentFilter: "all", // Add this line
-      displayCount: 5, // Number of reviews to show initially
+      currentFilter: "all",
+      displayCount: 5,
     };
   },
   computed: {
-    reviews() {
-      let filteredReviews =
-        this.fetchedReviews.length > 0
-          ? this.fetchedReviews
-          : this.product?.reviews || [];
-
-      // Apply filter
+    filteredReviews() {
+      let filtered = this.reviews;
       if (this.currentFilter !== "all") {
         if (this.currentFilter === "withComment") {
-          filteredReviews = filteredReviews.filter(
-            (review) => review.content && review.content.trim() !== ""
+          filtered = filtered.filter(
+            (r) => r.content && r.content.trim() !== ""
           );
         } else {
           const rating = parseInt(this.currentFilter);
-          filteredReviews = filteredReviews.filter(
-            (review) => review.star === rating
-          );
+          filtered = filtered.filter((r) => r.star === rating);
         }
       }
-
-      return filteredReviews;
+      return filtered;
     },
     displayedReviews() {
-      return this.reviews.slice(0, this.displayCount);
+      return this.filteredReviews.slice(0, this.displayCount);
     },
     hasMoreReviews() {
-      return this.displayCount < this.reviews.length;
-    },
-    totalReviews() {
-      return this.fetchedReviews.length > 0
-        ? this.fetchedReviews
-        : this.product?.reviews || [];
-    },
-    averageRating() {
-      if (!this.totalReviews || this.totalReviews.length === 0) {
-        return 0;
-      }
-      const totalStars = this.totalReviews.reduce(
-        (sum, review) => sum + (review.star || 0),
-        0
-      );
-      return (totalStars / this.totalReviews.length).toFixed(1);
-    },
-    filteredAverageRating() {
-      if (!this.reviews || this.reviews.length === 0) {
-        return 0;
-      }
-      const totalStars = this.reviews.reduce(
-        (sum, review) => sum + (review.star || 0),
-        0
-      );
-      return (totalStars / this.reviews.length).toFixed(1);
+      return this.displayCount < this.filteredReviews.length;
     },
     getCommentCount() {
-      return this.reviews.filter(
-        (review) => review.content && review.content.trim() !== ""
+      return this.filteredReviews.filter(
+        (r) => r.content && r.content.trim() !== ""
       ).length;
     },
-    getImageVideoCount() {
-      return () =>
-        this.reviews.filter(
-          (review) =>
-            (review.images && review.images.length > 0) || review.video
-        ).length;
-    },
     getRatingCount() {
-      // Ensure we are using the reviews array and 'star' property from backend
       return (rating) =>
-        this.reviews.filter((review) => review.star === rating).length;
-    },
-  },
-  async created() {
-    console.log("Review_ProductDetail created hook running.");
-  },
-  watch: {
-    "product._id": {
-      handler(newId) {
-        console.log("Product ID watch triggered. New ID:", newId);
-        if (newId) {
-          console.log("Fetching reviews for product ID:", newId);
-          this.fetchReviews(newId);
-        } else {
-          console.log("Product ID is null or undefined, not fetching reviews.");
-          this.fetchedReviews = []; // Clear reviews if product ID becomes invalid
-        }
-      },
-      immediate: true, // Run immediately when the watcher is set up
+        this.filteredReviews.filter((r) => r.star === rating).length;
     },
   },
   methods: {
-    async fetchReviews(productId) {
-      console.log("fetchReviews method called with productId:", productId);
-      this.reviewsLoading = true;
-      this.reviewsError = null;
-      try {
-        const response = await reviewService.getReviewsByProduct(productId);
-        console.log("Raw response from service:", response);
-
-        if (response && response.data && Array.isArray(response.data.reviews)) {
-          this.fetchedReviews = response.data.reviews;
-          console.log("Reviews fetched successfully:", this.fetchedReviews);
-        } else {
-          this.reviewsError =
-            "Could not fetch reviews or data format is incorrect.";
-          console.log(
-            "Fetch reviews successful but data format is unexpected:",
-            response
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching reviews:", error);
-        this.reviewsError = "Error loading reviews.";
-      } finally {
-        this.reviewsLoading = false;
-        console.log("fetchReviews method finished.");
-      }
-    },
     formatDate(dateString) {
       if (!dateString) return "N/A";
       const date = new Date(dateString);
