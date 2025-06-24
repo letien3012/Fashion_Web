@@ -33,7 +33,7 @@ const productSchema = new mongoose.Schema({
     {
       sku: { type: String, required: true },
       price: { type: Number, required: true },
-      image: { type: String, required: true },
+      image: { type: String, required: false, default: null },
       attributeId1: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
       attributeId2: { type: mongoose.Schema.Types.ObjectId, ref: "Attribute" },
       publish: { type: Boolean, default: true },
@@ -313,18 +313,25 @@ Product.update = async function (id, data) {
       }
       updateData.image = await ImageModel.saveImage(data.image, "product");
       // Trích xuất đặc trưng cho ảnh chính mới
-      await axios.post("http://localhost:3005/api/imageService/extract-features", {
-        imagePath: `http://localhost:3005${updateData.image}`,
-        productId: id
-      });
+      await axios.post(
+        "http://localhost:3005/api/imageService/extract-features",
+        {
+          imagePath: `http://localhost:3005${updateData.image}`,
+          productId: id,
+        }
+      );
     }
 
     // Handle album images update
     let deletedAlbumImages = [];
     if (data.album && data.album.length > 0) {
       // Tách ảnh mới và ảnh cũ
-      const newImages = data.album.filter((img) => img.startsWith("data:image"));
-      const existingImages = data.album.filter((img) => !img.startsWith("data:image"));
+      const newImages = data.album.filter((img) =>
+        img.startsWith("data:image")
+      );
+      const existingImages = data.album.filter(
+        (img) => !img.startsWith("data:image")
+      );
 
       // Tìm các ảnh cũ đã bị loại bỏ
       if (oldProduct.album && oldProduct.album.length > 0) {
@@ -335,14 +342,20 @@ Product.update = async function (id, data) {
 
       // Lưu các ảnh mới
       if (newImages.length > 0) {
-        const newPaths = await ImageModel.saveMultipleImages(newImages, "product");
+        const newPaths = await ImageModel.saveMultipleImages(
+          newImages,
+          "product"
+        );
         updateData.album = [...existingImages, ...newPaths];
         // Trích xuất đặc trưng cho từng ảnh mới
         for (const newPath of newPaths) {
-          await axios.post("http://localhost:3005/api/imageService/extract-features", {
-            imagePath: `http://localhost:3005${newPath}`,
-            productId: id
-          });
+          await axios.post(
+            "http://localhost:3005/api/imageService/extract-features",
+            {
+              imagePath: `http://localhost:3005${newPath}`,
+              productId: id,
+            }
+          );
         }
       } else {
         updateData.album = existingImages;
@@ -358,9 +371,13 @@ Product.update = async function (id, data) {
     if (data.variants && data.variants.length > 0) {
       const oldVariants = oldProduct.variants || [];
       // Xác định các ảnh variant cũ bị thay thế hoặc bị xóa
-      const newVariantImages = data.variants.map(v => v.image).filter(Boolean);
-      const oldVariantImages = oldVariants.map(v => v.image).filter(Boolean);
-      deletedVariantImages = oldVariantImages.filter(oldImg => !newVariantImages.includes(oldImg));
+      const newVariantImages = data.variants
+        .map((v) => v.image)
+        .filter(Boolean);
+      const oldVariantImages = oldVariants.map((v) => v.image).filter(Boolean);
+      deletedVariantImages = oldVariantImages.filter(
+        (oldImg) => !newVariantImages.includes(oldImg)
+      );
 
       // Process new variants
       for (let i = 0; i < data.variants.length; i++) {
@@ -368,28 +385,40 @@ Product.update = async function (id, data) {
         const oldVariant = oldVariants[i];
         if (variant.image && variant.image.startsWith("data:image")) {
           // Nếu có ảnh cũ ở vị trí này và khác ảnh mới, thêm vào danh sách xóa
-          if (oldVariant && oldVariant.image && !deletedVariantImages.includes(oldVariant.image)) {
+          if (
+            oldVariant &&
+            oldVariant.image &&
+            !deletedVariantImages.includes(oldVariant.image)
+          ) {
             deletedVariantImages.push(oldVariant.image);
           }
           variant.image = await ImageModel.saveImage(variant.image, "product");
           // Trích xuất đặc trưng cho ảnh variant mới
-          await axios.post("http://localhost:3005/api/imageService/extract-features", {
-            imagePath: `http://localhost:3005${variant.image}`,
-            productId: id
-          });
+          await axios.post(
+            "http://localhost:3005/api/imageService/extract-features",
+            {
+              imagePath: `http://localhost:3005${variant.image}`,
+              productId: id,
+            }
+          );
         }
       }
     } else if (oldProduct.variants && oldProduct.variants.length > 0) {
       // Nếu không còn variant nào, xóa hết ảnh variant cũ
-      deletedVariantImages = oldProduct.variants.map(v => v.image).filter(Boolean);
+      deletedVariantImages = oldProduct.variants
+        .map((v) => v.image)
+        .filter(Boolean);
     }
 
     // Xóa đặc trưng và file ảnh cho ảnh chính nếu bị thay thế
     if (deletedMainImage) {
       try {
-        await axios.post("http://localhost:3005/api/imageService/delete-features", {
-          imagePaths: [deletedMainImage]
-        });
+        await axios.post(
+          "http://localhost:3005/api/imageService/delete-features",
+          {
+            imagePaths: [deletedMainImage],
+          }
+        );
         await ImageModel.deleteImage(deletedMainImage);
       } catch (err) {
         console.error("Error deleting main image features or file:", err);
@@ -399,9 +428,12 @@ Product.update = async function (id, data) {
     // Xóa đặc trưng và file ảnh cho các ảnh album đã bị loại bỏ
     if (deletedAlbumImages.length > 0) {
       try {
-        await axios.post("http://localhost:3005/api/imageService/delete-features", {
-          imagePaths: deletedAlbumImages
-        });
+        await axios.post(
+          "http://localhost:3005/api/imageService/delete-features",
+          {
+            imagePaths: deletedAlbumImages,
+          }
+        );
         await ImageModel.deleteMultipleImages(deletedAlbumImages);
       } catch (err) {
         console.error("Error deleting album image features or files:", err);
@@ -411,9 +443,12 @@ Product.update = async function (id, data) {
     // Xóa đặc trưng và file ảnh cho các ảnh variant đã bị loại bỏ
     if (deletedVariantImages.length > 0) {
       try {
-        await axios.post("http://localhost:3005/api/imageService/delete-features", {
-          imagePaths: deletedVariantImages
-        });
+        await axios.post(
+          "http://localhost:3005/api/imageService/delete-features",
+          {
+            imagePaths: deletedVariantImages,
+          }
+        );
         await ImageModel.deleteMultipleImages(deletedVariantImages);
       } catch (err) {
         console.error("Error deleting variant image features or files:", err);
