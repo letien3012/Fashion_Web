@@ -42,10 +42,6 @@
 
           <!-- Empty state -->
           <div v-else-if="filteredOrders.length === 0" class="empty-state">
-            <img
-              src="../assets/images/empty-order.png"
-              alt="Không có đơn hàng"
-            />
             <p>Bạn chưa có đơn hàng nào</p>
             <router-link to="/" class="continue-shopping"
               >Tiếp tục mua sắm</router-link
