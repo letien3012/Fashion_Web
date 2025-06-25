@@ -1692,7 +1692,7 @@ export default {
 @keyframes productFadeIn {
   from {
     opacity: 0;
-    transform: translateY(30px) scale(0.95);
+    transform: translateY(30px) scale(0.94);
   }
   to {
     opacity: 1;
