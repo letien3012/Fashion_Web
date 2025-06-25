@@ -52,7 +52,7 @@ export default {
       products: [],
       loading: false,
       error: null,
-      displayCount: 4,
+      displayCount: 5,
       baseUrl: "http://localhost:3005",
     };
   },
@@ -88,7 +88,7 @@ export default {
 
       this.loading = true;
       this.error = null;
-      this.displayCount = 4;
+      this.displayCount = 5;
 
       try {
         const response = await productService.getProductsByCategory(

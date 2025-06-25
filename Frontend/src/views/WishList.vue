@@ -42,11 +42,53 @@
             </div>
             <div class="wishlist-grid">
               <ProductItem
-                v-for="product in wishlist"
+                v-for="product in paginatedWishlist"
                 :key="product._id"
                 :product="product"
                 @quick-view="handleQuickView"
               />
+            </div>
+
+            <!-- Pagination -->
+            <div v-if="totalPages > 1" class="pagination-container">
+              <div class="pagination-info">
+                Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} -
+                {{ Math.min(currentPage * itemsPerPage, wishlist.length) }}
+                trong tổng số {{ wishlist.length }} sản phẩm
+              </div>
+              <div class="pagination">
+                <button
+                  @click="goToPreviousPage"
+                  :disabled="currentPage === 1"
+                  class="pagination-btn prev-btn"
+                >
+                  <i class="fas fa-chevron-left"></i>
+                </button>
+
+                <button
+                  v-for="page in pageNumbers"
+                  :key="page"
+                  @click="page === '...' ? null : goToPage(page)"
+                  :class="[
+                    'pagination-btn',
+                    {
+                      active: page === currentPage,
+                      disabled: page === '...',
+                    },
+                  ]"
+                  :disabled="page === '...'"
+                >
+                  {{ page }}
+                </button>
+
+                <button
+                  @click="goToNextPage"
+                  :disabled="currentPage === totalPages"
+                  class="pagination-btn next-btn"
+                >
+                  <i class="fas fa-chevron-right"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -58,7 +100,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
 import Chatbot from "../components/Chatbot.vue";
@@ -75,12 +117,62 @@ const loading = ref(false);
 const error = ref(null);
 const baseUrl = "http://localhost:3005";
 
+// Pagination state
+const currentPage = ref(1);
+const itemsPerPage = ref(12); // 3 rows x 4 columns
+
 const getImageUrl = (path) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
   const fullUrl = `${baseUrl}${path}`;
   return fullUrl;
 };
+
+// Computed properties for pagination
+const totalPages = computed(() => {
+  return Math.ceil(wishlist.value.length / itemsPerPage.value);
+});
+
+const paginatedWishlist = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage.value;
+  const endIndex = startIndex + itemsPerPage.value;
+  return wishlist.value.slice(startIndex, endIndex);
+});
+
+const pageNumbers = computed(() => {
+  const pages = [];
+  const maxVisiblePages = 5;
+
+  if (totalPages.value <= maxVisiblePages) {
+    for (let i = 1; i <= totalPages.value; i++) {
+      pages.push(i);
+    }
+  } else {
+    if (currentPage.value <= 3) {
+      for (let i = 1; i <= 4; i++) {
+        pages.push(i);
+      }
+      pages.push("...");
+      pages.push(totalPages.value);
+    } else if (currentPage.value >= totalPages.value - 2) {
+      pages.push(1);
+      pages.push("...");
+      for (let i = totalPages.value - 3; i <= totalPages.value; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      pages.push("...");
+      for (let i = currentPage.value - 1; i <= currentPage.value + 1; i++) {
+        pages.push(i);
+      }
+      pages.push("...");
+      pages.push(totalPages.value);
+    }
+  }
+
+  return pages;
+});
 
 const loadWishlist = async () => {
   loading.value = true;
@@ -191,6 +283,26 @@ const handleQuickView = (product) => {
   router.push(`/product-detail/${product._id}`);
 };
 
+// Pagination methods
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+};
+
+const goToPreviousPage = () => {
+  if (currentPage.value > 1) {
+    goToPage(currentPage.value - 1);
+  }
+};
+
+const goToNextPage = () => {
+  if (currentPage.value < totalPages.value) {
+    goToPage(currentPage.value + 1);
+  }
+};
+
 onMounted(() => {
   loadWishlist();
 });
@@ -242,7 +354,7 @@ onMounted(() => {
 
 .wishlist-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
@@ -329,7 +441,14 @@ onMounted(() => {
   }
 
   .wishlist-grid {
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
+    gap: 15px;
+  }
+}
+
+@media (max-width: 768px) {
+  .wishlist-grid {
+    grid-template-columns: repeat(2, 1fr);
     gap: 15px;
   }
 }
@@ -337,6 +456,87 @@ onMounted(() => {
 @media (max-width: 576px) {
   .wishlist-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Pagination Styles */
+.pagination-container {
+  margin-top: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.pagination-info {
+  color: #666;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pagination-btn {
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid #ddd;
+  background: white;
+  color: #333;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.pagination-btn:hover:not(:disabled):not(.disabled) {
+  background: #e63946;
+  color: white;
+  border-color: #e63946;
+}
+
+.pagination-btn.active {
+  background: #e63946;
+  color: white;
+  border-color: #e63946;
+  font-weight: 600;
+}
+
+.pagination-btn:disabled,
+.pagination-btn.disabled {
+  background: #f5f5f5;
+  color: #ccc;
+  cursor: not-allowed;
+  border-color: #eee;
+}
+
+.pagination-btn.prev-btn,
+.pagination-btn.next-btn {
+  font-size: 0.8rem;
+}
+
+@media (max-width: 576px) {
+  .pagination {
+    gap: 5px;
+  }
+
+  .pagination-btn {
+    min-width: 35px;
+    height: 35px;
+    font-size: 0.8rem;
+  }
+
+  .pagination-info {
+    font-size: 0.8rem;
   }
 }
 </style>

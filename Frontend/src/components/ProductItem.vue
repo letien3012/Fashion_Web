@@ -1,5 +1,9 @@
 <template>
-  <router-link :to="getProductDetailLink(product)" class="product-card">
+  <router-link
+    v-if="product.publish !== false"
+    :to="getProductDetailLink(product)"
+    class="product-card"
+  >
     <div class="product-image">
       <img :src="product.image" :alt="product.name" @error="handleImageError" />
       <div class="discount-badge" v-if="product.discountPercentage">

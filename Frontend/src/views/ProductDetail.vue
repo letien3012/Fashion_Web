@@ -1156,7 +1156,7 @@ export default {
 
 .main-image {
   width: 100%;
-  height: auto;
+  height: 500px;
   object-fit: cover;
   border-radius: 0.5rem;
 }
