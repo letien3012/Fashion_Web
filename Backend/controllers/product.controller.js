@@ -4,34 +4,48 @@ const ImageModel = require("../models/image.model");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
+const AttributeCatalogue = require("../models/attributeCatalogue.model");
+const Attribute = require("../models/attribute.model");
 
 // Add helper function to download and process image
-const downloadAndProcessImage = async (imageUrl, folder = "product", productId = null) => {
+const downloadAndProcessImage = async (
+  imageUrl,
+  folder = "product",
+  productId = null
+) => {
   try {
-    console.log(imageUrl)
+    console.log(imageUrl);
     if (!imageUrl) return "";
     // Check if URL is valid
-    if (!imageUrl.startsWith('http')) return imageUrl;
+    if (!imageUrl.startsWith("http")) return imageUrl;
 
     // Download image
-    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+    const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
     const buffer = Buffer.from(response.data);
 
     // Convert to base64
-    const base64Image = `data:${response.headers['content-type']};base64,${buffer.toString('base64')}`;
-    
+    const base64Image = `data:${
+      response.headers["content-type"]
+    };base64,${buffer.toString("base64")}`;
+
     // Save using ImageModel
     const savedPath = await ImageModel.saveImage(base64Image, folder);
 
     // Extract features if productId is provided
     if (productId) {
       try {
-        await axios.post("http://localhost:3005/api/imageService/extract-features", {
-          imagePath: `http://localhost:3005${savedPath}`,
-          productId: productId
-        });
+        await axios.post(
+          "http://localhost:3005/api/imageService/extract-features",
+          {
+            imagePath: `http://localhost:3005${savedPath}`,
+            productId: productId,
+          }
+        );
       } catch (error) {
-        console.error(`Error extracting features for image ${savedPath}:`, error.message);
+        console.error(
+          `Error extracting features for image ${savedPath}:`,
+          error.message
+        );
       }
     }
 
@@ -42,15 +56,21 @@ const downloadAndProcessImage = async (imageUrl, folder = "product", productId =
   }
 };
 
-const downloadAndProcessMultipleImages = async (imageUrls, folder = "product", productId = null) => {
+const downloadAndProcessMultipleImages = async (
+  imageUrls,
+  folder = "product",
+  productId = null
+) => {
   try {
     if (!imageUrls || !Array.isArray(imageUrls)) return [];
-    const validUrls = imageUrls.filter(url => url && typeof url === 'string');
-    const downloadPromises = validUrls.map(url => downloadAndProcessImage(url, folder, productId));
+    const validUrls = imageUrls.filter((url) => url && typeof url === "string");
+    const downloadPromises = validUrls.map((url) =>
+      downloadAndProcessImage(url, folder, productId)
+    );
     const results = await Promise.all(downloadPromises);
-    return results.filter(path => path); // Remove empty paths
+    return results.filter((path) => path); // Remove empty paths
   } catch (error) {
-    console.error('Error processing multiple images:', error.message);
+    console.error("Error processing multiple images:", error.message);
     return [];
   }
 };
@@ -59,12 +79,18 @@ const downloadAndProcessMultipleImages = async (imageUrls, folder = "product", p
 const downloadAndConvertToBase64 = async (imageUrl) => {
   try {
     // If it's not a string or doesn't start with http, it's not a downloadable URL.
-    if (!imageUrl || typeof imageUrl !== "string" || !imageUrl.startsWith("http")) {
+    if (
+      !imageUrl ||
+      typeof imageUrl !== "string" ||
+      !imageUrl.startsWith("http")
+    ) {
       return imageUrl; // Return as is (might be empty, or already a path/base64)
     }
-    const response = await axios.get(imageUrl, { responseType: 'arraybuffer' });
-    const buffer = Buffer.from(response.data, 'binary');
-    return `data:${response.headers['content-type']};base64,${buffer.toString('base64')}`;
+    const response = await axios.get(imageUrl, { responseType: "arraybuffer" });
+    const buffer = Buffer.from(response.data, "binary");
+    return `data:${response.headers["content-type"]};base64,${buffer.toString(
+      "base64"
+    )}`;
   } catch (error) {
     console.error(`Error downloading image from ${imageUrl}:`, error.message);
     return ""; // Return empty string on error to avoid breaking the process
@@ -74,7 +100,9 @@ const downloadAndConvertToBase64 = async (imageUrl) => {
 // Helper to process multiple image URLs
 const downloadMultipleAndConvertToBase64 = async (imageUrls) => {
   if (!imageUrls || !Array.isArray(imageUrls)) return [];
-  const downloadPromises = imageUrls.map(url => downloadAndConvertToBase64(url));
+  const downloadPromises = imageUrls.map((url) =>
+    downloadAndConvertToBase64(url)
+  );
   return Promise.all(downloadPromises);
 };
 
@@ -133,6 +161,14 @@ exports.add = async (req, res) => {
           });
         }
       }
+      // Ensure attributeId1, attributeId2 are present in each variant if provided
+      req.body.variants = variants.map((v) => ({
+        ...v,
+        attributeId1:
+          v.attributeId1 || v.attributeId1 === "" ? v.attributeId1 : undefined,
+        attributeId2:
+          v.attributeId2 || v.attributeId2 === "" ? v.attributeId2 : undefined,
+      }));
     }
 
     const product = new Product(req.body);
@@ -543,13 +579,17 @@ exports.importFromExcel = async (req, res) => {
       const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
       const headerIndex = data.findIndex(
-        (row) => Array.isArray(row) && row.includes("STT") && row.includes("Mã sản phẩm")
+        (row) =>
+          Array.isArray(row) &&
+          row.includes("STT") &&
+          row.includes("Mã sản phẩm")
       );
 
       if (headerIndex === -1) {
         fs.unlinkSync(req.file.path);
         return res.status(400).json({
-          message: "Không tìm thấy dòng tiêu đề hợp lệ trong file Excel. Vui lòng kiểm tra lại file hoặc sử dụng template được cung cấp.",
+          message:
+            "Không tìm thấy dòng tiêu đề hợp lệ trong file Excel. Vui lòng kiểm tra lại file hoặc sử dụng template được cung cấp.",
         });
       }
 
@@ -563,10 +603,11 @@ exports.importFromExcel = async (req, res) => {
       if (skuIdx === -1 || priceIdx === -1 || variantImageIdx === -1) {
         fs.unlinkSync(req.file.path);
         return res.status(400).json({
-          message: "File Excel thiếu các cột bắt buộc: SKU, Giá, hoặc Đường dẫn ảnh biến thể."
+          message:
+            "File Excel thiếu các cột bắt buộc: SKU, Giá, hoặc Đường dẫn ảnh biến thể.",
         });
       }
-      
+
       const attrStartIdx = priceIdx + 1;
       const attrEndIdx = variantImageIdx;
       const attributeColumns = headerRow.slice(attrStartIdx, attrEndIdx);
@@ -581,22 +622,40 @@ exports.importFromExcel = async (req, res) => {
         if (isNewProductRow) {
           currentProductCode = row[1];
           if (!productGroups[currentProductCode]) {
-            productGroups[currentProductCode] = { product: {}, variants: [], startRow: excelRowNumber };
+            productGroups[currentProductCode] = {
+              product: {},
+              variants: [],
+              startRow: excelRowNumber,
+            };
           }
           let album = [];
-          if (row[7]) { // Album column
-            album = row[7].toString().split(",").map((url) => url.trim()).filter(Boolean);
+          if (row[7]) {
+            // Album column
+            album = row[7]
+              .toString()
+              .split(",")
+              .map((url) => url.trim())
+              .filter(Boolean);
           }
           productGroups[currentProductCode].product = {
-            code: row[1], name: row[2], shortDescription: row[3] || "", content: row[4] || "",
-            catalogueId: row[5], isDisplay: false, image: row[6] || "", album: album,
+            code: row[1],
+            name: row[2],
+            shortDescription: row[3] || "",
+            content: row[4] || "",
+            catalogueId: row[5],
+            isDisplay: false,
+            image: row[6] || "",
+            album: album,
           };
         }
         if (currentProductCode && row[skuIdx]) {
           const attrValues = row.slice(attrStartIdx, attrEndIdx);
           productGroups[currentProductCode].variants.push({
-            sku: row[skuIdx], price: parseFloat(row[priceIdx]) || 0, attrValues,
-            isDisplay: true, image: row[variantImageIdx] || "", // Using corrected index
+            sku: row[skuIdx],
+            price: parseFloat(row[priceIdx]) || 0,
+            attrValues,
+            isDisplay: true,
+            image: row[variantImageIdx] || "", // Using corrected index
             rowNumber: excelRowNumber,
           });
         }
@@ -608,7 +667,7 @@ exports.importFromExcel = async (req, res) => {
       for (const [productCode, group] of Object.entries(productGroups)) {
         try {
           const { product, variants, startRow } = group;
-          
+
           if (!product.code || !product.name || !product.catalogueId) {
             results.errors.push({
               row: startRow,
@@ -645,28 +704,65 @@ exports.importFromExcel = async (req, res) => {
             continue;
           }
 
-          // Convert image URLs to base64
-          product.image = await downloadAndConvertToBase64(product.image);
-          product.album = await downloadMultipleAndConvertToBase64(product.album);
-          
+          // --- BẮT ĐẦU mapping thuộc tính ---
+          // Luôn luôn tạo mới AttributeCatalogue cho từng cột thuộc tính của mỗi sản phẩm
+          let attributeCatalogueIds = [];
+          for (const attrColName of attributeColumns) {
+            const catalogue = await AttributeCatalogue.create({
+              name: attrColName,
+            });
+            attributeCatalogueIds.push(catalogue._id);
+          }
+          attributeCatalogueIds = attributeCatalogueIds.slice(0, 2); // chỉ lấy tối đa 2
+
+          // Xử lý variants: mapping attrValues sang attributeId1/2
           const processedVariants = [];
           for (const variant of variants) {
-              const variantImageBase64 = await downloadAndConvertToBase64(variant.image);
-              // attribute processing logic to get attrIds...
-              processedVariants.push({
-                  sku: variant.sku,
-                  price: variant.price,
-                  image: variantImageBase64 || "",
-                  publish: variant.isDisplay,
-                  // attributeId1, attributeId2 need to be set here based on attrValues
+            const attrValues = variant.attrValues || [];
+            let attributeId1 = null,
+              attributeId2 = null;
+            for (let i = 0; i < attributeCatalogueIds.length; i++) {
+              const attrValue = attrValues[i];
+              if (!attrValue) continue;
+              let attribute = await Attribute.findOne({
+                name: attrValue,
+                attributeCatalogueId: attributeCatalogueIds[i],
+                deletedAt: null,
               });
+              if (!attribute) {
+                attribute = await Attribute.create({
+                  name: attrValue,
+                  attributeCatalogueId: attributeCatalogueIds[i],
+                });
+              }
+              if (i === 0) attributeId1 = attribute._id;
+              if (i === 1) attributeId2 = attribute._id;
+            }
+            const variantImageBase64 = await downloadAndConvertToBase64(
+              variant.image
+            );
+            processedVariants.push({
+              sku: variant.sku,
+              price: variant.price,
+              image: variantImageBase64 || "",
+              publish: variant.isDisplay,
+              attributeId1,
+              attributeId2,
+            });
           }
+          // --- KẾT THÚC mapping thuộc tính ---
+
+          // Convert image URLs to base64
+          product.image = await downloadAndConvertToBase64(product.image);
+          product.album = await downloadMultipleAndConvertToBase64(
+            product.album
+          );
 
           const newProduct = new Product({
             ...product,
-            publish: product.isDisplay,
-            // attributeCatalogueIds: ...,
+            attributeCatalogueIds,
             variants: processedVariants,
+            publish: product.isDisplay,
             createdBy: req.user?.id || "system",
             updatedBy: req.user?.id || "system",
           });
@@ -674,7 +770,9 @@ exports.importFromExcel = async (req, res) => {
           await newProduct.save();
 
           results.success.push({
-            row: startRow, code: product.code, name: product.name,
+            row: startRow,
+            code: product.code,
+            name: product.name,
           });
           results.total++;
         } catch (error) {
@@ -688,13 +786,18 @@ exports.importFromExcel = async (req, res) => {
       res.json({ message: "Import hoàn tất", results });
     } catch (error) {
       console.error("Error processing Excel data:", error);
-      res.status(500).json({ message: "Lỗi khi xử lý dữ liệu từ Excel", error: error.message });
+      res.status(500).json({
+        message: "Lỗi khi xử lý dữ liệu từ Excel",
+        error: error.message,
+      });
     } finally {
       fs.unlinkSync(req.file.path);
     }
   } catch (error) {
     console.error("Error importing from Excel:", error);
-    res.status(500).json({ message: "Lỗi khi import từ Excel", error: error.message });
+    res
+      .status(500)
+      .json({ message: "Lỗi khi import từ Excel", error: error.message });
   }
 };
 
