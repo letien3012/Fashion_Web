@@ -381,4 +381,231 @@ router.post('/reset-password', async (req, res) => {
   }
 });
 
+// Middleware xác thực JWT token
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'Token không được cung cấp' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ success: false, message: 'Token không hợp lệ' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Endpoint xác minh mật khẩu hiện tại
+router.post('/verify-current-password', authenticateToken, async (req, res) => {
+  try {
+    const { currentPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!currentPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Vui lòng nhập mật khẩu hiện tại' 
+      });
+    }
+
+    // Tìm user theo ID
+    const user = await Customer.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy tài khoản' 
+      });
+    }
+
+    // So sánh mật khẩu hiện tại
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Mật khẩu hiện tại không đúng' 
+      });
+    }
+
+    return res.json({ 
+      success: true, 
+      message: 'Xác minh mật khẩu thành công' 
+    });
+  } catch (error) {
+    console.error('Lỗi xác minh mật khẩu:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server' 
+    });
+  }
+});
+
+// Endpoint đổi mật khẩu
+router.post('/change-password', authenticateToken, async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+    const userId = req.user.id;
+
+    if (!newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Vui lòng nhập mật khẩu mới' 
+      });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Mật khẩu mới phải có ít nhất 6 ký tự' 
+      });
+    }
+
+    // Tìm user theo ID
+    const user = await Customer.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy tài khoản' 
+      });
+    }
+
+    // Mã hóa mật khẩu mới
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Cập nhật mật khẩu mới
+    await Customer.findByIdAndUpdate(userId, { password: hashedPassword });
+
+    return res.json({ 
+      success: true, 
+      message: 'Đổi mật khẩu thành công' 
+    });
+  } catch (error) {
+    console.error('Lỗi đổi mật khẩu:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server' 
+    });
+  }
+});
+
+// Endpoint kiểm tra thông tin tài khoản
+router.get('/account-info', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Tìm user theo ID
+    const user = await Customer.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy tài khoản' 
+      });
+    }
+
+    return res.json({ 
+      success: true, 
+      data: {
+        email: user.email,
+        fullname: user.fullname,
+        providers: user.providers || [],
+        hasLocalProvider: user.providers && user.providers.includes('local')
+      }
+    });
+  } catch (error) {
+    console.error('Lỗi lấy thông tin tài khoản:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server' 
+    });
+  }
+});
+
+// Endpoint gửi mã xác minh qua email
+router.post('/send-verification-code', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Tìm user theo ID
+    const user = await Customer.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy tài khoản' 
+      });
+    }
+
+    // Kiểm tra xem tài khoản có provider local không
+    if (user.providers && user.providers.includes('local')) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Tài khoản này có thể sử dụng mật khẩu hiện tại' 
+      });
+    }
+
+    // Gửi email sử dụng service có sẵn
+    const sendVerificationCode = require('../mailer/sendVerificationCode');
+    await sendVerificationCode(user.email, user.fullname, "đổi mật khẩu");
+
+    return res.json({ 
+      success: true, 
+      message: 'Mã xác minh đã được gửi đến email của bạn' 
+    });
+  } catch (error) {
+    console.error('Lỗi gửi mã xác minh:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server khi gửi mã xác minh' 
+    });
+  }
+});
+
+// Endpoint xác minh mã
+router.post('/verify-code', authenticateToken, async (req, res) => {
+  try {
+    const { code } = req.body;
+    const userId = req.user.id;
+
+    if (!code) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Vui lòng nhập mã xác minh' 
+      });
+    }
+
+    // Tìm user theo ID
+    const user = await Customer.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Không tìm thấy tài khoản' 
+      });
+    }
+
+    // Sử dụng verifyCode service
+    const verifyCode = require('../mailer/verifyCode');
+    const result = await verifyCode(user.email, code);
+
+    if (!result.success) {
+      return res.status(400).json({ 
+        success: false, 
+        message: result.message 
+      });
+    }
+
+    return res.json({ 
+      success: true, 
+      message: 'Xác minh mã thành công' 
+    });
+  } catch (error) {
+    console.error('Lỗi xác minh mã:', error);
+    return res.status(500).json({ 
+      success: false, 
+      message: 'Lỗi server' 
+    });
+  }
+});
+
 module.exports = router;

@@ -23,7 +23,7 @@ function generateCode(length = 6) {
     .slice(2, 2 + length);
 }
 
-function generateEmailTemplate({ code = "123456", name = "User" }) {
+function generateEmailTemplate({ code = "123456", name = "User", purpose = "đăng ký" }) {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,7 +59,7 @@ function generateEmailTemplate({ code = "123456", name = "User" }) {
           <h1 style="margin: 0; font-size: 24px; font-weight: 500; color: #1f1f1f;">Mã OTP của bạn</h1>
           <p style="margin: 0; margin-top: 17px; font-size: 16px; font-weight: 500;">Xin chào ${name},</p>
           <p style="margin: 0; margin-top: 17px; font-weight: 500; letter-spacing: 0.56px;">
-            Cảm ơn bạn đã lựa chọn 3TL Company. Sử dụng mã OTP dưới đây để xác thực tài khoản của bạn.
+            Cảm ơn bạn đã lựa chọn 3TL Company. Sử dụng mã OTP dưới đây để xác thực ${purpose} tài khoản của bạn.
             Mã xác thực OTP có hiệu lực trong <span style="font-weight: 600; color: #1f1f1f;">5 phút</span>.
             Vui lòng không chia sẻ mã OTP này với bất kỳ ai.
           </p>
@@ -93,7 +93,7 @@ function generateEmailTemplate({ code = "123456", name = "User" }) {
 </html>`;
 }
 
-async function sendVerificationCode(email, name = "User") {
+async function sendVerificationCode(email, name = "User", purpose = "đăng ký") {
   const code = generateCode();
   await Verification.findOneAndUpdate(
     { email },
@@ -102,10 +102,10 @@ async function sendVerificationCode(email, name = "User") {
   );
 
   const mailOptions = {
-    from: `"Xác thực đăng ký" <${process.env.MAIL_USER}>`,
+    from: `"Xác thực ${purpose}" <${process.env.MAIL_USER}>`,
     to: email,
-    subject: "🔐 Mã xác thực của bạn",
-    html: generateEmailTemplate({ code, name }),
+    subject: `🔐 Mã xác thực ${purpose} của bạn`,
+    html: generateEmailTemplate({ code, name, purpose }),
   };
 
   await transporter.sendMail(mailOptions);
