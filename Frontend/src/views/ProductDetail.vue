@@ -74,10 +74,26 @@
                 }"
               ></i>
             </div>
-            <span class="rating-text" v-if="product.totalReviews > 0">
-              {{ product.rating }} ({{ product.totalReviews }} đánh giá)
+            <span
+              class="rating-text"
+              v-if="
+                !loading &&
+                attributesLoaded &&
+                !error &&
+                product.totalReviews > 0
+              "
+            >
+              {{ Number(product.rating).toFixed(1) }} ({{
+                product.totalReviews
+              }}
+              đánh giá)
             </span>
-            <span class="rating-text" v-else>Chưa có đánh giá</span>
+            <span
+              class="rating-text"
+              v-else-if="!loading && attributesLoaded && !error"
+            >
+              Chưa có đánh giá
+            </span>
           </div>
           <div class="product-price-container">
             <div class="price-row">
@@ -257,8 +273,8 @@
       <Review_ProductDetail
         :product="product"
         :reviews="reviews"
-        :total-reviews="product.totalReviews"
         :average-rating="product.rating"
+        :total-reviews="product.totalReviews"
         @submit-review="handleReviewSubmit"
       />
     </div>
@@ -335,97 +351,7 @@ export default {
     };
   },
   async created() {
-    try {
-      this.loading = true;
-      const productId = this.$route.params.id;
-
-      // Check wishlist status only if user is logged in
-      const token = localStorage.getItem("token");
-      if (token) {
-        await this.checkWishlistStatus();
-      }
-
-      const response = await productService.getProductById(productId);
-
-      if (response && response.data) {
-        const productData = response.data;
-        // Xử lý ảnh chính và album
-        const mainImage = productData.image.startsWith("http")
-          ? productData.image
-          : `http://localhost:3005${productData.image}`;
-
-        const albumImages = (productData.album || []).map((img) =>
-          img.startsWith("http") ? img : `http://localhost:3005${img}`
-        );
-
-        // Lấy danh sách attribute IDs từ variants
-        const attribute1Ids = new Set();
-        const attribute2Ids = new Set();
-        // Chỉ lấy từ các variant publish
-        (productData.variants || []).forEach((variant) => {
-          if (variant.publish !== false) {
-            if (variant.attributeId1) attribute1Ids.add(variant.attributeId1);
-            if (variant.attributeId2) attribute2Ids.add(variant.attributeId2);
-          }
-        });
-
-        // Fetch attribute details
-        await this.fetchAttributeDetails(
-          Array.from(attribute1Ids),
-          Array.from(attribute2Ids)
-        );
-
-        // Fetch reviews for the product
-        await this.loadProductReviews(productId);
-
-        this.product = {
-          ...productData,
-          image: mainImage,
-          images: [mainImage, ...albumImages],
-          variants: productData.variants.map((variant) => ({
-            ...variant,
-            image: variant.image.startsWith("http")
-              ? variant.image
-              : `http://localhost:3005${variant.image}`,
-          })),
-          attributes1: Array.from(attribute1Ids),
-          attributes2: Array.from(attribute2Ids),
-        };
-
-        // Set initial attributes if available
-        // Chỉ chọn variant publish làm mặc định
-        const firstPublishedVariant = this.product.variants.find(
-          (v) => v.publish !== false
-        );
-        if (firstPublishedVariant) {
-          this.selectedAttribute1 = firstPublishedVariant.attributeId1;
-          this.selectedAttribute2 = firstPublishedVariant.attributeId2;
-        }
-
-        // Load initial variant data
-        if (this.selectedAttribute1 && this.selectedAttribute2) {
-          await this.loadVariantData();
-        }
-      } else {
-        this.error = "Không tìm thấy thông tin sản phẩm";
-      }
-    } catch (error) {
-      console.error("Error in created hook:", error);
-      if (error.response) {
-        if (error.response.status === 404) {
-          this.error = "Không tìm thấy sản phẩm với ID này";
-        } else {
-          this.error = `Lỗi server: ${error.response.status}`;
-        }
-      } else if (error.request) {
-        this.error = "Không thể kết nối đến server";
-      } else {
-        this.error = "Có lỗi xảy ra khi tải thông tin sản phẩm";
-      }
-    } finally {
-      this.loading = false;
-      this.attributesLoaded = true;
-    }
+    await this.fetchAndInitProduct(this.$route.params.id);
   },
   watch: {
     selectedAttribute1: {
@@ -443,6 +369,14 @@ export default {
         });
       },
       immediate: true,
+    },
+    "$route.params.id": {
+      immediate: false,
+      handler(newId, oldId) {
+        if (newId && newId !== oldId) {
+          this.reloadProduct();
+        }
+      },
     },
   },
   computed: {
@@ -508,8 +442,111 @@ export default {
         )
       );
     },
+    hasReviews() {
+      return this.product.totalReviews > 0;
+    },
   },
   methods: {
+    async fetchAndInitProduct(productId) {
+      try {
+        this.loading = true;
+        this.error = null;
+        // Check wishlist status only if user is logged in
+        const token = localStorage.getItem("token");
+        if (token) {
+          await this.checkWishlistStatus();
+        }
+
+        const response = await productService.getProductById(productId);
+
+        if (response && response.data) {
+          const productData = response.data;
+          // Xử lý ảnh chính và album
+          const mainImage = productData.image.startsWith("http")
+            ? productData.image
+            : `http://localhost:3005${productData.image}`;
+
+          const albumImages = (productData.album || []).map((img) =>
+            img.startsWith("http") ? img : `http://localhost:3005${img}`
+          );
+
+          // Lấy danh sách attribute IDs từ variants
+          const attribute1Ids = new Set();
+          const attribute2Ids = new Set();
+          // Chỉ lấy từ các variant publish
+          (productData.variants || []).forEach((variant) => {
+            if (variant.publish !== false) {
+              if (variant.attributeId1) attribute1Ids.add(variant.attributeId1);
+              if (variant.attributeId2) attribute2Ids.add(variant.attributeId2);
+            }
+          });
+
+          // Fetch attribute details
+          await this.fetchAttributeDetails(
+            Array.from(attribute1Ids),
+            Array.from(attribute2Ids)
+          );
+
+          // Gán product trước, KHÔNG gán lại sau khi load review
+          this.product = {
+            ...productData,
+            image: mainImage,
+            images: [mainImage, ...albumImages],
+            variants: productData.variants.map((variant) => ({
+              ...variant,
+              image: variant.image.startsWith("http")
+                ? variant.image
+                : `http://localhost:3005${variant.image}`,
+            })),
+            attributes1: Array.from(attribute1Ids),
+            attributes2: Array.from(attribute2Ids),
+          };
+
+          // Set initial attributes if available
+          // Chỉ chọn variant publish làm mặc định
+          const firstPublishedVariant = this.product.variants.find(
+            (v) => v.publish !== false
+          );
+          if (firstPublishedVariant) {
+            this.selectedAttribute1 = firstPublishedVariant.attributeId1;
+            this.selectedAttribute2 = firstPublishedVariant.attributeId2;
+          } else {
+            this.selectedAttribute1 = "";
+            this.selectedAttribute2 = "";
+          }
+          this.quantity = 1;
+
+          // Load initial variant data
+          if (this.selectedAttribute1 && this.selectedAttribute2) {
+            await this.loadVariantData();
+          }
+
+          // Sau khi đã gán product, mới load review để cập nhật rating/reactive
+          await this.loadProductReviews(productId);
+        } else {
+          this.error = "Không tìm thấy thông tin sản phẩm";
+        }
+      } catch (error) {
+        console.error("Error loading product:", error);
+        if (error.response) {
+          if (error.response.status === 404) {
+            this.error = "Không tìm thấy sản phẩm với ID này";
+          } else {
+            this.error = `Lỗi server: ${error.response.status}`;
+          }
+        } else if (error.request) {
+          this.error = "Không thể kết nối đến server";
+        } else {
+          this.error = "Có lỗi xảy ra khi tải thông tin sản phẩm";
+        }
+      } finally {
+        this.loading = false;
+        this.attributesLoaded = true;
+      }
+    },
+    async reloadProduct() {
+      await this.fetchAndInitProduct(this.$route.params.id);
+    },
     async checkWishlistStatus() {
       try {
         const token = localStorage.getItem("token");
@@ -1017,53 +1054,33 @@ export default {
     },
     async loadProductReviews(productId) {
       try {
-        const response = await reviewService.getReviewsByProduct(productId);
-        console.log("Reviews response:", response);
-        if (response?.success && response?.data?.reviews) {
-          const reviews = response.data.reviews;
-          const activeReviews = reviews.filter((review) => {
-            return !review.deletedAt && review.star >= 1 && review.star <= 5;
-          });
-
-          // Lưu danh sách reviews để hiển thị
-          this.reviews = activeReviews;
-
-          if (activeReviews.length > 0) {
-            // Tính tổng số sao
-            const totalStars = activeReviews.reduce(
-              (sum, review) => sum + Number(review.star),
-              0
-            );
-
-            // Tính điểm trung bình và làm tròn đến 1 chữ số thập phân
-            const averageRating = totalStars / activeReviews.length;
-
-            // Cập nhật rating và totalReviews
-            this.product.rating = Number(averageRating.toFixed(1));
-            this.product.totalReviews = activeReviews.length;
-
-            // Log để debug
-            console.log("Review stats:", {
-              totalReviews: activeReviews.length,
-              totalStars,
-              averageRating: this.product.rating,
-              reviews: activeReviews,
-            });
-          } else {
-            // Reset nếu không có review hợp lệ
-            this.product.rating = 0;
-            this.product.totalReviews = 0;
-            this.reviews = [];
-          }
+        const response = await reviewService.getReviewsByProduct(
+          productId,
+          1,
+          10000
+        );
+        const reviews = response?.data?.reviews || [];
+        const totalReviews =
+          response?.data?.pagination?.total || reviews.length;
+        const activeReviews = reviews.filter(
+          (review) => !review.deletedAt && review.star >= 1 && review.star <= 5
+        );
+        this.reviews = activeReviews;
+        if (activeReviews.length > 0) {
+          const totalStars = activeReviews.reduce(
+            (sum, review) => sum + Number(review.star),
+            0
+          );
+          const averageRating = totalStars / activeReviews.length;
+          // CHỈ cập nhật field, KHÔNG gán lại this.product
+          this.product.rating = Number(averageRating.toFixed(1));
+          this.product.totalReviews = totalReviews;
         } else {
-          // Reset nếu không có dữ liệu
           this.product.rating = 0;
           this.product.totalReviews = 0;
           this.reviews = [];
         }
       } catch (error) {
-        console.error("Error loading reviews:", error);
-        // Reset khi có lỗi
         this.product.rating = 0;
         this.product.totalReviews = 0;
         this.reviews = [];
@@ -1139,7 +1156,7 @@ export default {
 
 .main-image {
   width: 100%;
-  height: auto;
+  height: 500px;
   object-fit: cover;
   border-radius: 0.5rem;
 }

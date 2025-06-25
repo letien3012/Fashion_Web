@@ -30,7 +30,7 @@
             <input
               v-model="searchQuery"
               type="text"
-              placeholder="Bạn có thể tìm kiếm theo tên ID đơn hàng hoặc Tên Sản phẩm"
+              placeholder="Tìm kiếm theo mã đơn hàng hoặc tên sản phẩm"
             />
           </div>
 
@@ -42,10 +42,6 @@
 
           <!-- Empty state -->
           <div v-else-if="filteredOrders.length === 0" class="empty-state">
-            <img
-              src="../assets/images/empty-order.png"
-              alt="Không có đơn hàng"
-            />
             <p>Bạn chưa có đơn hàng nào</p>
             <router-link to="/" class="continue-shopping"
               >Tiếp tục mua sắm</router-link
@@ -55,7 +51,7 @@
           <!-- Danh sách đơn hàng -->
           <div v-else class="orders-container">
             <div
-              v-for="order in filteredOrders"
+              v-for="order in paginatedOrders"
               :key="order.id"
               class="order-group"
             >
@@ -135,14 +131,6 @@
                 </button>
                 <div class="order-actions">
                   <button
-                    class="action-btn primary"
-                    v-if="order.status === 'shipping'"
-                    @click="confirmReceived(order.id)"
-                  >
-                    <i class="fas fa-check"></i>
-                    Đã nhận hàng
-                  </button>
-                  <button
                     class="action-btn"
                     v-if="order.status === 'delivered'"
                     @click="reviewOrder(order.id)"
@@ -165,6 +153,33 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Pagination -->
+          <div v-if="totalPages > 1" class="pagination">
+            <button
+              class="page-btn"
+              :disabled="currentPage === 1"
+              @click="currentPage--"
+            >
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <button
+              v-for="page in totalPages"
+              :key="page"
+              class="page-btn"
+              :class="{ active: currentPage === page }"
+              @click="currentPage = page"
+            >
+              {{ page }}
+            </button>
+            <button
+              class="page-btn"
+              :disabled="currentPage === totalPages"
+              @click="currentPage++"
+            >
+              <i class="fas fa-chevron-right"></i>
+            </button>
           </div>
 
           <!-- Product Selection Modal -->
@@ -348,7 +363,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import SidebarProfile from "../components/SidebarProfile.vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
@@ -362,6 +377,10 @@ import { useRouter } from "vue-router";
 const router = useRouter();
 const orders = ref([]);
 const loading = ref(false);
+
+// Pagination state
+const currentPage = ref(1);
+const itemsPerPage = ref(10); // 10 orders per page
 
 const orderTabs = [
   { label: "Tất cả", value: "all" },
@@ -384,13 +403,24 @@ const filteredOrders = computed(() => {
     const q = searchQuery.value.toLowerCase();
     result = result.filter(
       (o) =>
-        o.shopName.toLowerCase().includes(q) ||
+        o.code.toLowerCase().includes(q) ||
         o.order_detail.some((item) =>
           item.productId.name.toLowerCase().includes(q)
         )
     );
   }
   return result;
+});
+
+// Pagination computed properties
+const totalPages = computed(() => {
+  return Math.ceil(filteredOrders.value.length / itemsPerPage.value);
+});
+
+const paginatedOrders = computed(() => {
+  const startIndex = (currentPage.value - 1) * itemsPerPage.value;
+  const endIndex = startIndex + itemsPerPage.value;
+  return filteredOrders.value.slice(startIndex, endIndex);
 });
 
 // Add new computed property to check if order is within return period
@@ -401,6 +431,15 @@ const isWithinReturnPeriod = (orderDate) => {
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return diffDays <= 15;
 };
+
+// Watchers for pagination
+watch(currentTab, () => {
+  currentPage.value = 1;
+});
+
+watch(searchQuery, () => {
+  currentPage.value = 1;
+});
 
 function formatPrice(val) {
   return val.toLocaleString("vi-VN", { style: "currency", currency: "VND" });
@@ -619,15 +658,6 @@ const confirmCancelOrder = async () => {
   } catch (error) {
     console.error("Error cancelling order:", error);
     toast.error(error.response?.data?.message || "Không thể hủy đơn hàng");
-  }
-};
-
-const confirmReceived = async (orderId) => {
-  try {
-    // TODO: Implement confirm received logic
-    toast.info("Chức năng xác nhận đã nhận hàng đang được phát triển");
-  } catch (error) {
-    toast.error("Không thể xác nhận đã nhận hàng");
   }
 };
 
@@ -1803,5 +1833,86 @@ select.form-control {
 }
 .unavailable-link:hover {
   color: #aaa;
+}
+
+/* Pagination styles */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 30px;
+  padding: 20px 0;
+}
+
+.page-btn {
+  min-width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  padding: 0 12px;
+}
+
+.page-btn:hover:not(:disabled) {
+  border-color: #ff6b6b;
+  color: #ff6b6b;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.1);
+}
+
+.page-btn.active {
+  background: #ff6b6b;
+  color: white;
+  border-color: #ff6b6b;
+  font-weight: 500;
+}
+
+.page-btn:disabled {
+  background: #f5f5f5;
+  color: #999;
+  cursor: not-allowed;
+  border-color: #e0e0e0;
+}
+
+.page-btn i {
+  font-size: 12px;
+}
+
+@media (max-width: 768px) {
+  .pagination {
+    gap: 5px;
+    margin-top: 20px;
+    padding: 15px 0;
+  }
+
+  .page-btn {
+    min-width: 35px;
+    height: 35px;
+    font-size: 13px;
+    padding: 0 8px;
+  }
+}
+
+@media (max-width: 576px) {
+  .pagination {
+    gap: 3px;
+    margin-top: 15px;
+    padding: 10px 0;
+  }
+
+  .page-btn {
+    min-width: 30px;
+    height: 30px;
+    font-size: 12px;
+    padding: 0 6px;
+  }
 }
 </style>

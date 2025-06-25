@@ -99,30 +99,6 @@
             </div>
           </div>
 
-          <div class="filter-section">
-            <h3>Thuộc tính</h3>
-            <div
-              v-for="catalogue in attributeCatalogues"
-              :key="catalogue._id"
-              class="attribute-catalogue"
-            >
-              <h4>{{ catalogue.name }}</h4>
-              <div class="attribute-options">
-                <button
-                  v-for="attribute in attributes[catalogue._id]"
-                  :key="attribute._id"
-                  class="attribute-option"
-                  :class="{
-                    active: selectedAttributes.includes(attribute._id),
-                  }"
-                  @click="toggleAttribute(attribute._id)"
-                >
-                  {{ attribute.name }}
-                </button>
-              </div>
-            </div>
-          </div>
-
           <button class="clear-filters-btn" @click="clearFilters">
             Xóa bộ lọc
           </button>
@@ -235,14 +211,11 @@ export default {
       itemsPerPage: 20,
       sortBy: "newest",
       selectedCategories: [],
-      selectedAttributes: [],
       minPrice: 0,
       maxPrice: 10000000,
       priceRange: [0, 10000000],
       localPriceRange: [0, 10000000],
       categories: [],
-      attributeCatalogues: [],
-      attributes: {},
       products: [],
       allProducts: [],
       baseUrl: "http://localhost:3005",
@@ -272,26 +245,6 @@ export default {
         );
         result = result.filter((p) => {
           return categoryIds.includes(p.catalogueId);
-        });
-      }
-
-      // Lọc theo thuộc tính
-      if (this.selectedAttributes.length) {
-        result = result.filter((p) => {
-          if (!p.variants || !Array.isArray(p.variants)) {
-            return false;
-          }
-
-          return p.variants.some((variant) => {
-            const variantAttributeIds = [
-              String(variant.attributeId1),
-              String(variant.attributeId2),
-            ];
-
-            return this.selectedAttributes.some((selectedId) =>
-              variantAttributeIds.includes(String(selectedId))
-            );
-          });
         });
       }
 
@@ -476,42 +429,6 @@ export default {
       }
     },
 
-    async fetchAttributeCatalogues() {
-      try {
-        // Fetch all attribute catalogues
-        const catalogues = await attributeCatalogueService.getAllCatalogues();
-        console.log(catalogues);
-        // Ensure catalogues is an array
-        this.attributeCatalogues = Array.isArray(catalogues) ? catalogues : [];
-
-        // Initialize attributes object
-        this.attributes = {};
-
-        // Fetch attributes for each catalogue
-        for (const catalogue of this.attributeCatalogues) {
-          if (!catalogue || !catalogue._id) continue;
-
-          try {
-            // Get attributes for this specific catalogue
-            const attributes = await attributeService.getByCatalogueId(
-              catalogue._id
-            );
-            this.attributes[catalogue._id] = attributes;
-          } catch (error) {
-            console.error(
-              `Error fetching attributes for catalogue ${catalogue._id}:`,
-              error
-            );
-            this.attributes[catalogue._id] = [];
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching attribute catalogues:", error);
-        this.attributeCatalogues = [];
-        this.attributes = {};
-      }
-    },
-
     formatPrice(price) {
       return new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -529,24 +446,6 @@ export default {
       return Math.round(((original - sale) / original) * 100);
     },
 
-    toggleAttribute(attributeId) {
-      console.log("Toggling attribute:", attributeId);
-      const index = this.selectedAttributes.indexOf(attributeId);
-      if (index === -1) {
-        this.selectedAttributes.push(attributeId);
-        console.log(
-          "Added attribute. New selected attributes:",
-          this.selectedAttributes
-        );
-      } else {
-        this.selectedAttributes.splice(index, 1);
-        console.log(
-          "Removed attribute. New selected attributes:",
-          this.selectedAttributes
-        );
-      }
-    },
-
     handlePriceInput() {
       let [min, max] = this.priceRange;
       if (min > max) [min, max] = [max, min];
@@ -555,7 +454,6 @@ export default {
 
     clearFilters() {
       this.selectedCategories = [];
-      this.selectedAttributes = [];
       this.localPriceRange = [0, 10000000];
       this.priceRange = [0, 10000000];
       this.sortBy = "newest";
@@ -638,9 +536,6 @@ export default {
     selectedCategories() {
       this.currentPage = 1;
     },
-    selectedAttributes() {
-      this.currentPage = 1;
-    },
     "$route.query.category": {
       immediate: true,
       handler(newCategory) {
@@ -654,11 +549,7 @@ export default {
     this.priceRange = [0, 10000000];
   },
   async created() {
-    await Promise.all([
-      this.fetchProducts(),
-      this.fetchCategories(),
-      this.fetchAttributeCatalogues(),
-    ]);
+    await Promise.all([this.fetchProducts(), this.fetchCategories()]);
   },
 };
 </script>
@@ -977,51 +868,6 @@ export default {
   font-weight: 600;
   background: white;
   border-color: #ff6b6b;
-}
-
-.attribute-catalogue {
-  margin-bottom: 25px;
-}
-
-.attribute-catalogue:last-child {
-  margin-bottom: 0;
-}
-
-.attribute-catalogue h4 {
-  font-size: 15px;
-  color: #444;
-  margin-bottom: 15px;
-  font-weight: 500;
-}
-
-.attribute-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.attribute-option {
-  padding: 8px 16px;
-  border: 1px solid #e0e0e0;
-  border-radius: 20px;
-  background: white;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 13px;
-  color: #666;
-}
-
-.attribute-option:hover {
-  border-color: #ff6b6b;
-  color: #ff6b6b;
-  background: #fff5f5;
-}
-
-.attribute-option.active {
-  background: #ff6b6b;
-  color: white;
-  border-color: #ff6b6b;
-  box-shadow: 0 2px 8px rgba(255, 107, 107, 0.2);
 }
 
 .clear-filters-btn {
@@ -1403,10 +1249,6 @@ export default {
 
   .filter-section h3 {
     font-size: 16px;
-  }
-
-  .attribute-catalogue h4 {
-    font-size: 14px;
   }
 
   .filter-options {

@@ -57,10 +57,10 @@ const reviewService = {
   },
 
   // Get reviews by product ID
-  async getReviewsByProduct(productId) {
+  async getReviewsByProduct(productId, page = 1, limit = 1000) {
     try {
       const response = await axios.get(
-        `${backendUrl}/reviews/product/${productId}`,
+        `${backendUrl}/reviews/product/${productId}?page=${page}&limit=${limit}`,
         getAuthHeaders()
       );
       return response.data;

@@ -290,11 +290,19 @@
               </div>
             </div>
 
-            <ShippingLabel
-              ref="shippingLabel"
-              :order="order"
-              style="display: none"
-            />
+            <div
+              v-if="showShippingLabel"
+              style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                z-index: 9999;
+                background: white;
+                padding: 8px;
+              "
+            >
+              <ShippingLabel ref="shippingLabel" :order="order" />
+            </div>
           </template>
         </div>
       </div>
@@ -345,6 +353,7 @@ export default {
       showInvoice: false,
       showPdfPreview: false,
       pdfUrl: null,
+      showShippingLabel: false,
     };
   },
   methods: {
@@ -388,18 +397,19 @@ export default {
       }
     },
     async printOrder() {
+      this.showShippingLabel = true;
       await this.$nextTick();
       const element = this.$refs.shippingLabel.$el;
-      // Tạo PDF và lấy blob url
       const opt = {
         margin: 5,
         html2canvas: { scale: 2 },
-        jsPDF: { unit: "mm", format: [90, 130], orientation: "portrait" },
+        jsPDF: { unit: "mm", format: [150, 190], orientation: "portrait" },
       };
       const worker = html2pdf().set(opt).from(element);
       const pdfBlob = await worker.outputPdf("blob");
       this.pdfUrl = URL.createObjectURL(pdfBlob);
       this.showPdfPreview = true;
+      this.showShippingLabel = false;
     },
     closePdfPreview() {
       this.showPdfPreview = false;

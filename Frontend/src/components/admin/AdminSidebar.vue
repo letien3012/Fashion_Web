@@ -46,10 +46,10 @@
           <i class="fas fa-folder"></i>
           <span>Danh mục sản phẩm</span>
         </router-link>
-        <router-link to="/admin/attribute-catalogues" class="nav-item">
+        <!-- <router-link to="/admin/attribute-catalogues" class="nav-item">
           <i class="fas fa-list"></i>
           <span>Danh mục thuộc tính</span>
-        </router-link>
+        </router-link> -->
       </div>
 
       <!-- Quản lý kho & Nhà cung cấp -->
