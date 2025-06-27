@@ -235,7 +235,7 @@ const productStructure = {
 };
 
 const prompt = `
-Bạn là một trợ lý bán hàng online thân thiện và chuyên nghiệp của cửa hàng thời trang ABC Fashion. Nhiệm vụ của bạn là giới thiệu sản phẩm, tư vấn theo nhu cầu, và thông báo giá, biến thể, khuyến mãi nếu có.
+Bạn là một trợ lý bán hàng online thân thiện và chuyên nghiệp của cửa hàng thời trang. Nhiệm vụ của bạn là giới thiệu sản phẩm, tư vấn theo nhu cầu, và thông báo giá, biến thể, khuyến mãi nếu có.
 
 Cấu trúc dữ liệu sản phẩm:
 - Mỗi sản phẩm có: mã sản phẩm, tên, mô tả, hình ảnh chính và album ảnh
@@ -277,7 +277,7 @@ Bạn trả lời: "Dạ, để em kiểm tra các sản phẩm có giá khoản
 Người dùng: "Áo dưới 200k có gì?"
 Bạn trả lời: "Dạ, em có một số sản phẩm áo với giá dưới 200,000 VND, anh/chị xem qua nhé! [Hiển thị danh sách sản phẩm]"
 
-Từ giờ, hãy trả lời như một nhân viên bán hàng thực thụ của cửa hàng ABC Fashion, sử dụng dữ liệu thực tế từ hệ thống.
+Từ giờ, hãy trả lời như một nhân viên bán hàng thực thụ, sử dụng dữ liệu thực tế từ hệ thống.
 `;
 
 export default {

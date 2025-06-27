@@ -5,6 +5,7 @@ const Product = require("../models/product.model");
 // Thêm promotion mới
 exports.add = async (req, res) => {
   try {
+    console.log("[PROMOTION ADD] req.body:", JSON.stringify(req.body, null, 2));
     const { code, name, type, discount, productId } = req.body;
     if (!code || !name || !type || !discount) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -51,7 +52,8 @@ exports.add = async (req, res) => {
       data: savedPromotion,
     });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("[PROMOTION ADD ERROR]", error);
+    res.status(400).json({ message: error.message, error });
   }
 };
 
@@ -119,6 +121,10 @@ exports.getActivePromotions = async (req, res) => {
 // Cập nhật promotion
 exports.update = async (req, res) => {
   try {
+    console.log(
+      "[PROMOTION UPDATE] req.body:",
+      JSON.stringify(req.body, null, 2)
+    );
     const { code, name, type, discount, productId } = req.body;
     if (!code || !name || !type || !discount) {
       return res.status(400).json({ message: "Missing required fields" });
@@ -174,7 +180,8 @@ exports.update = async (req, res) => {
       data: updatedPromotion,
     });
   } catch (error) {
-    res.status(400).json({ message: error.message });
+    console.error("[PROMOTION UPDATE ERROR]", error);
+    res.status(400).json({ message: error.message, error });
   }
 };
 
@@ -241,6 +248,7 @@ exports.getDiscountedProducts = async (req, res) => {
               image: product.image,
               album: product.album,
               price: variant.price,
+              publish: product.publish,
               salePrice,
               discountPercentage: promotion.discount,
               variant: {

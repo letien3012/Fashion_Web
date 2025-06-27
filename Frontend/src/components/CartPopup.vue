@@ -3,7 +3,7 @@
     <div class="cart-popup-content">
       <div v-if="cart.length === 0" class="empty-cart">
         <img
-          src="../assets/images/business.png"
+          src="../assets/images/no_cart.png"
           alt="Không có sản phẩm"
           class="empty-img"
         />

@@ -185,7 +185,9 @@ exports.add = async (req, res) => {
 // Lấy danh sách sản phẩm
 exports.getAll = async (req, res) => {
   try {
-    const products = await Product.find({ deletedAt: null });
+    const products = await Product.find({ deletedAt: null }).sort({
+      createdAt: -1,
+    });
     res.status(200).json({
       message: "Products retrieved successfully",
       data: products,

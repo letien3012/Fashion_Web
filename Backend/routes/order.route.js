@@ -28,4 +28,8 @@ router.delete("/:id", orderController.delete);
 router.post("/:id/return", auth, orderController.requestReturn);
 router.put("/:id/return", orderController.processReturnRequest);
 
+router.put("/:id/online-detail", orderController.updateOnlineDetail);
+
+router.put("/:orderCode/status-by-code", orderController.updateStatusByCode);
+
 module.exports = router;

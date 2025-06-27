@@ -30,6 +30,9 @@ const routes = {
   banner: require("./routes/banner.route"),
   review: require("./routes/review.route"),
   location: require("./routes/location.routes"),
+  vnpay: require("./routes/vnpay.route"),
+  paypal: require("./routes/paypal.route"),
+  payos: require("./routes/payos.route"),
 };
 
 // Đăng ký các route API
@@ -52,6 +55,9 @@ app.use("/api/imageService", routes.imageService);
 app.use("/api/banners", routes.banner);
 app.use("/api/reviews", routes.review);
 app.use("/api/location", routes.location);
+app.use("/api/vnpay", routes.vnpay);
+app.use("/api/paypal", routes.paypal);
+app.use("/api/payos", routes.payos);
 
 // Middleware xử lý lỗi
 app.use((err, req, res, next) => {

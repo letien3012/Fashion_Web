@@ -22,6 +22,9 @@ import ResetPW from "../components/FormResetPW.vue";
 import StoreSystem from "../views/StoreSystem.vue";
 import ReturnPolicy from "../views/ReturnPolicy.vue";
 import PrivacyPolicy from "../views/PrivacyPolicy.vue";
+import VnpayReturn from "../views/VnpayReturn.vue";
+import PayosReturn from "../views/payos/PayosReturn.vue";
+import PayosCancle from "../views/payos/PayosCancle.vue";
 
 const routes = [
   {
@@ -136,6 +139,23 @@ const routes = [
     path: "/privacy-policy",
     name: "privacy-policy",
     component: PrivacyPolicy,
+  },
+  {
+    path: "/vnpay-return",
+    name: "VnpayReturn",
+    component: VnpayReturn,
+  },
+  {
+    path: "/paypal-return",
+    component: () => import("../views/PaypalReturn.vue"),
+  },
+  {
+    path: "/payos-return",
+    component: PayosReturn,
+  },
+  {
+    path: "/payos-cancle",
+    component: PayosCancle,
   },
   ...adminRoutes,
 ];

@@ -122,33 +122,27 @@
                     }}</span>
                   </div>
                 </div>
-                <button
-                  class="action-btn danger cancel-btn-below"
-                  v-if="order.status === 'pending'"
-                  @click="cancelOrder(order.id)"
-                >
-                  Hủy đơn
-                </button>
-                <div class="order-actions">
+                <div class="order-actions-row">
                   <button
-                    class="action-btn"
-                    v-if="order.status === 'delivered'"
-                    @click="reviewOrder(order.id)"
+                    class="action-btn danger cancel-btn-below"
+                    v-if="order.status === 'pending'"
+                    @click="cancelOrder(order.id)"
                   >
-                    <i class="fas fa-star"></i>
-                    Đánh giá
+                    Hủy đơn
                   </button>
                   <button
-                    class="action-btn warning"
+                    class="action-btn retry-pay-btn"
+                    :disabled="isRetrying"
                     v-if="
-                      order.status === 'delivered' &&
-                      !order.actionDetail &&
-                      isWithinReturnPeriod(order.updatedAt)
+                      order.method !== 'COD' &&
+                      order.status === 'pending' &&
+                      (!order.online_method_detail ||
+                        order.online_method_detail.status !== 'PAID')
                     "
-                    @click="requestReturn(order.id)"
+                    @click="retryPayosPayment(order)"
                   >
-                    <i class="fas fa-undo"></i>
-                    Yêu cầu trả hàng
+                    <span v-if="!isRetrying">Thanh toán lại</span>
+                    <span v-else>Đang chuyển hướng...</span>
                   </button>
                 </div>
               </div>
@@ -370,6 +364,7 @@ import Footer from "../components/Footer.vue";
 import Chatbot from "../components/Chatbot.vue";
 import Review from "./Review.vue";
 import { orderService } from "../services/order.service";
+import { payosService } from "../services/payos.service";
 import { productService, getVariantPrice } from "../services/product.service";
 import { toast } from "vue3-toastify";
 import { useRouter } from "vue-router";
@@ -512,6 +507,20 @@ onMounted(async () => {
           })
         );
 
+        // Bổ sung: nếu là đơn online mà thiếu paymentUrl nhưng có paymentId, cảnh báo
+        let online_method_detail = order.online_method_detail;
+        if (
+          order.method !== "COD" &&
+          online_method_detail &&
+          !online_method_detail.paymentUrl &&
+          online_method_detail.paymentId
+        ) {
+          // Nếu có thể tự tạo link từ paymentId, hãy tạo ở đây (nếu PayOS hỗ trợ)
+          // Ví dụ: online_method_detail.paymentUrl = `https://payos.vn/payment/${online_method_detail.paymentId}`;
+          // Nếu không, chỉ cảnh báo
+          online_method_detail.missingPaymentUrl = true;
+        }
+
         return {
           id: order._id,
           date: new Date(order.createdAt).toLocaleDateString(),
@@ -524,6 +533,7 @@ onMounted(async () => {
           discount: order.discount,
           total_ship_fee: order.total_ship_fee,
           method: order.method,
+          online_method_detail: online_method_detail,
           order_detail: orderDetails,
           canReview: order.status === "completed",
         };
@@ -949,6 +959,56 @@ const submitReturnRequest = async () => {
     );
   }
 };
+
+const isRetrying = ref(false);
+async function retryPayosPayment(order) {
+  if (!confirm("Bạn có chắc chắn muốn thanh toán lại cho đơn hàng này?"))
+    return;
+  try {
+    isRetrying.value = true;
+    // Tạo orderCode mới để PayOS tạo QR mới
+    const newOrderCode = `${Date.now()}`;
+    // Gọi đúng service và method để tạo link thanh toán
+    const payosRes = await payosService.createPayment({
+      orderCode: newOrderCode,
+      total_price: order.total,
+      customerInfo: {
+        name: order.fullname,
+        phone: order.phone,
+        address: order.address,
+        province_code: order.actionDetail?.province_code || "",
+        district_code: order.actionDetail?.district_code || "",
+        ward_code: order.actionDetail?.ward_code || "",
+      },
+      items: order.order_detail,
+    });
+    if (payosRes && payosRes.paymentUrl) {
+      // Cập nhật lại thông tin thanh toán online cho đơn hàng
+      await orderService.updateOrderOnlineDetail(order.code, {
+        paymentUrl: payosRes.paymentUrl,
+        paymentId: payosRes.paymentId,
+        orderCode: payosRes.orderCode,
+        status: "PAID",
+      });
+      // Cập nhật trạng thái đơn hàng sang processing với orderCode mới
+      await orderService.updateOrderStatusByCode(
+        payosRes.orderCode,
+        "processing"
+      );
+      // Chuyển hướng đến trang thanh toán
+      window.location.href = payosRes.paymentUrl;
+    } else {
+      toast.error("Không lấy được link thanh toán mới từ PayOS!");
+    }
+  } catch (e) {
+    toast.error(
+      "Lỗi khi tạo lại link thanh toán: " +
+        (e?.response?.data?.message || e.message)
+    );
+  } finally {
+    isRetrying.value = false;
+  }
+}
 </script>
 
 <style scoped>
@@ -1421,17 +1481,11 @@ const submitReturnRequest = async () => {
 }
 
 /* Action buttons styles */
-.order-actions {
+.order-actions-row {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 10px;
   margin-top: 8px;
-}
-
-@media (max-width: 768px) {
-  .order-actions {
-    flex-direction: column;
-    gap: 8px;
-  }
 }
 
 .action-btn {
@@ -1914,5 +1968,44 @@ select.form-control {
     font-size: 12px;
     padding: 0 6px;
   }
+}
+
+.retry-pay-btn {
+  background: #f0f7ff;
+  border: 1px solid #2563eb;
+  color: #2563eb;
+  margin-left: 0;
+  width: 180px;
+  min-width: 140px;
+  max-width: 180px;
+  padding: 8px 0;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 1rem;
+  box-shadow: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+@media (max-width: 991px) {
+  .retry-pay-btn {
+    margin-top: 10px;
+    width: 100%;
+    min-width: unset;
+    max-width: unset;
+  }
+}
+.retry-pay-btn:hover:not(:disabled) {
+  background: #2563eb;
+  color: #fff;
+  border-color: #2563eb;
+}
+.retry-pay-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
 }
 </style>

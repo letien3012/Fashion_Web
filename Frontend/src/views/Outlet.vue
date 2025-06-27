@@ -116,6 +116,9 @@ export default {
     filteredProducts() {
       let result = [...this.products];
 
+      // Lọc sản phẩm đã duyệt
+      result = result.filter((p) => p.publish === true);
+
       // Sắp xếp
       switch (this.sortBy) {
         case "discount-desc":
@@ -144,6 +147,9 @@ export default {
       const start = (this.currentPage - 1) * this.itemsPerPage;
       const end = start + this.itemsPerPage;
       return this.filteredProducts.slice(start, end);
+    },
+    publishedCount() {
+      return this.filteredProducts.filter((p) => p.publish === true).length;
     },
   },
   methods: {

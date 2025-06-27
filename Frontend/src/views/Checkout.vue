@@ -78,7 +78,15 @@
                         name="paymentMethod"
                       />
                       <div class="method-content">
-                        <i class="fas fa-money-bill-wave"></i>
+                        <img
+                          src="/src/assets/images/COD_LOGO.png"
+                          alt="COD"
+                          style="
+                            height: 28px;
+                            max-width: 60px;
+                            object-fit: contain;
+                          "
+                        />
                         <div class="method-info">
                           <span class="method-name"
                             >Thanh toán khi nhận hàng (COD)</span
@@ -89,19 +97,80 @@
                         </div>
                       </div>
                     </label>
+                    <!-- <label class="payment-method">
+                      <input
+                        type="radio"
+                        v-model="paymentMethod"
+                        value="VNPAY"
+                        name="paymentMethod"
+                      />
+                      <div class="method-content">
+                        <img
+                          src="/src/assets/images/vnpay.webp"
+                          alt="VNPAY"
+                          style="
+                            height: 28px;
+                            max-width: 60px;
+                            object-fit: contain;
+                          "
+                        />
+                        <div class="method-info">
+                          <span class="method-name">Thanh toán qua VNPAY</span>
+                          <span class="method-description"
+                            >Thanh toán qua cổng VNPAY (ATM, QR, thẻ quốc
+                            tế...)</span
+                          >
+                        </div>
+                      </div>
+                    </label> -->
                     <label class="payment-method">
                       <input
                         type="radio"
                         v-model="paymentMethod"
-                        value="ONLINE"
+                        value="PAYPAL"
                         name="paymentMethod"
                       />
                       <div class="method-content">
-                        <i class="fas fa-credit-card"></i>
+                        <img
+                          src="/src/assets/images/PAYPAL_LOGO.png"
+                          alt="PAYPAL"
+                          style="
+                            height: 28px;
+                            max-width: 60px;
+                            object-fit: contain;
+                          "
+                        />
                         <div class="method-info">
-                          <span class="method-name">Thanh toán online</span>
+                          <span class="method-name">Thanh toán qua PayPal</span>
                           <span class="method-description"
-                            >Thanh toán qua thẻ ngân hàng hoặc ví điện tử</span
+                            >Thanh toán bằng tài khoản PayPal hoặc thẻ quốc
+                            tế</span
+                          >
+                        </div>
+                      </div>
+                    </label>
+                    <label class="payment-method">
+                      <input
+                        type="radio"
+                        v-model="paymentMethod"
+                        value="PAYOS"
+                        name="paymentMethod"
+                      />
+                      <div class="method-content">
+                        <img
+                          src="/src/assets/images/payos.png"
+                          alt="PAYOS"
+                          style="
+                            height: 28px;
+                            max-width: 60px;
+                            object-fit: contain;
+                          "
+                        />
+                        <div class="method-info">
+                          <span class="method-name">Thanh toán qua PayOS</span>
+                          <span class="method-description"
+                            >Thanh toán qua cổng PayOS (ATM, QR, thẻ quốc
+                            tế...)</span
                           >
                         </div>
                       </div>
@@ -359,7 +428,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
 import Header from "../components/Header.vue";
 import Footer from "../components/Footer.vue";
 import Chatbot from "../components/Chatbot.vue";
@@ -370,6 +439,9 @@ import { orderService } from "../services/order.service";
 import { cartService } from "../services/cart.service";
 import { promotionService } from "../services/promotion.service";
 import { customerService } from "../services/customer.service";
+import { vnpayService } from "../services/vnpay.service";
+import { paypalService } from "../services/paypal.service";
+import { payosService } from "../services/payos.service";
 
 const router = useRouter();
 const checkoutItems = ref([]);
@@ -632,12 +704,9 @@ const submitOrder = async () => {
   if (!validateForm()) {
     return;
   }
-
   try {
     isLoading.value = true;
-
     const userInfo = JSON.parse(localStorage.getItem("user"));
-
     const orderData = {
       items: checkoutItems.value.map((item) => ({
         productId: item.productId._id,
@@ -674,31 +743,130 @@ const submitOrder = async () => {
           }
         : null,
     };
-
-    const response = await orderService.create(orderData);
-    if (response) {
-      localStorage.removeItem("checkoutItems");
-      localStorage.removeItem("appliedVoucher");
-
-      try {
-        const cart = await cartService.getCart();
-        if (cart) {
-          for (const item of checkoutItems.value) {
-            await cartService.removeFromCart(
-              cart._id,
-              item.productId._id,
-              item.variantId
-            );
+    if (paymentMethod.value === "VNPAY") {
+      // Gọi API lấy link thanh toán VNPAY
+      const response = await vnpayService.createPayment(orderData);
+      if (response && response.paymentUrl) {
+        // Xóa cart localStorage
+        localStorage.removeItem("checkoutItems");
+        localStorage.removeItem("appliedVoucher");
+        // Xóa cart trên server
+        try {
+          const cart = await cartService.getCart();
+          if (cart) {
+            for (const item of checkoutItems.value) {
+              await cartService.removeFromCart(
+                cart._id,
+                item.productId._id,
+                item.variantId
+              );
+            }
           }
-        }
-      } catch {
-        // Silently handle cart removal error
+        } catch {}
+        window.location.href = response.paymentUrl;
+        return;
+      } else {
+        toast.error("Không lấy được link thanh toán VNPAY!");
       }
-
-      toast.success("Đặt hàng thành công!", {
-        autoClose: 500,
+    } else if (paymentMethod.value === "PAYPAL") {
+      // Lưu đơn hàng tạm thời
+      localStorage.setItem("pendingPaypalOrder", JSON.stringify(orderData));
+      const { approveUrl } = await paypalService.createOrder(orderData);
+      if (approveUrl) {
+        // Xóa cart localStorage
+        localStorage.removeItem("checkoutItems");
+        localStorage.removeItem("appliedVoucher");
+        // Xóa cart trên server
+        try {
+          const cart = await cartService.getCart();
+          if (cart) {
+            for (const item of checkoutItems.value) {
+              await cartService.removeFromCart(
+                cart._id,
+                item.productId._id,
+                item.variantId
+              );
+            }
+          }
+        } catch {}
+        window.location.href = approveUrl;
+        return;
+      } else {
+        toast.error("Không lấy được link thanh toán PayPal!");
+      }
+    } else if (paymentMethod.value === "PAYOS") {
+      // 1. Tạo đơn hàng trước
+      const orderRes = await orderService.create({
+        ...orderData,
+        method: "PAYOS",
+        status: "pending",
       });
-      router.push("/");
+      if (orderRes && orderRes.order && orderRes.order.code) {
+        // Xóa cart localStorage
+        localStorage.removeItem("checkoutItems");
+        localStorage.removeItem("appliedVoucher");
+        // Xóa cart trên server
+        try {
+          const cart = await cartService.getCart();
+          if (cart) {
+            for (const item of checkoutItems.value) {
+              await cartService.removeFromCart(
+                cart._id,
+                item.productId._id,
+                item.variantId
+              );
+            }
+          }
+        } catch {}
+        // 2. Gọi API lấy link thanh toán PayOS với orderCode vừa tạo
+        const payosRes = await payosService.createPayment({
+          orderCode: orderRes.order.code,
+          total_price: orderData.total_price,
+          customerInfo: orderData.customerInfo,
+          items: orderData.items,
+        });
+        if (payosRes && payosRes.paymentUrl) {
+          await orderService.updateOrderOnlineDetail(orderRes.order.code, {
+            paymentUrl: payosRes.paymentUrl,
+            paymentId: payosRes.paymentId,
+            orderCode: payosRes.orderCode,
+          });
+          window.location.href = payosRes.paymentUrl;
+          return;
+        } else {
+          toast.error("Không lấy được link thanh toán PayOS!");
+          return;
+        }
+      } else {
+        toast.error("Không lưu được đơn hàng!");
+      }
+      return;
+    } else {
+      // Thanh toán COD như cũ
+      const response = await orderService.create({
+        ...orderData,
+        status: "pending",
+      });
+      if (response) {
+        // Xóa cart localStorage
+        localStorage.removeItem("checkoutItems");
+        localStorage.removeItem("appliedVoucher");
+        // Xóa cart trên server
+        try {
+          const cart = await cartService.getCart();
+          if (cart) {
+            for (const item of checkoutItems.value) {
+              await cartService.removeFromCart(
+                cart._id,
+                item.productId._id,
+                item.variantId
+              );
+            }
+          }
+        } catch {}
+        toast.success("Đặt hàng thành công!", { autoClose: 500 });
+        router.push("/");
+      }
     }
   } catch (error) {
     console.error("Error creating order:", error);
@@ -1170,7 +1338,7 @@ const submitOrder = async () => {
   background: white;
   padding: 0.3rem 0.6rem;
   border-radius: 4px;
-  border: 1px dashed #3498db;
+  border: 1px dashed #bcd;
 }
 
 .voucher-discount {

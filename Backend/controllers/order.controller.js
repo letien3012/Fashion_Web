@@ -5,11 +5,10 @@ const ImageModel = require("../models/image.model");
 
 // Generate unique order code
 const generateOrderCode = () => {
-  const timestamp = Date.now().toString();
-  const random = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
-  return `ORD${timestamp}${random}`;
+  // Dùng timestamp (13 số) + random 2 số (tối đa 15 số, an toàn cho PayOS)
+  const timestamp = Date.now(); // 13 số
+  const random = Math.floor(Math.random() * 90 + 10); // 2 số (10-99)
+  return Number(`${timestamp}${random}`); // Tổng cộng 15 số
 };
 
 // Create new order
@@ -74,9 +73,10 @@ exports.create = async (req, res) => {
     }
 
     // Create order
+    const orderCode = generateOrderCode();
     const order = new Order({
       customerId: customerInfo.customerId,
-      code: generateOrderCode(),
+      code: orderCode,
       fullname: customerInfo.name,
       phone: customerInfo.phone,
       address: customerInfo.address,
@@ -107,6 +107,7 @@ exports.create = async (req, res) => {
     res.status(201).json({
       message: "Order created successfully",
       order: savedOrder,
+      orderCode: orderCode,
     });
   } catch (error) {
     console.error("Error creating order:", error);
@@ -415,38 +416,48 @@ exports.getSalesData = async (req, res) => {
 // Lấy top sản phẩm bán chạy
 exports.getTopProducts = async (req, res) => {
   try {
-    const { timeFilter } = req.query;
+    const { timeFilter, year, month, startDate, endDate } = req.query;
     let matchQuery = { status: "delivered", deletedAt: null };
-    let dateFilter = {};
 
     // Xây dựng query dựa trên bộ lọc thời gian
-    const now = new Date();
     switch (timeFilter) {
-      case "week":
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        startOfWeek.setHours(0, 0, 0, 0);
-        dateFilter = { $gte: startOfWeek, $lte: now };
-        break;
-
-      case "month":
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-        dateFilter = { $gte: startOfMonth, $lte: now };
-        break;
-
       case "year":
-        const startOfYear = new Date(now.getFullYear(), 0, 1);
-        dateFilter = { $gte: startOfYear, $lte: now };
+        if (!year)
+          return res
+            .status(400)
+            .json({ success: false, message: "Năm không được để trống" });
+        matchQuery.createdAt = {
+          $gte: new Date(year, 0, 1),
+          $lt: new Date(parseInt(year) + 1, 0, 1),
+        };
         break;
-
+      case "month":
+        if (!year || !month)
+          return res.status(400).json({
+            success: false,
+            message: "Năm và tháng không được để trống",
+          });
+        matchQuery.createdAt = {
+          $gte: new Date(year, month - 1, 1),
+          $lt: new Date(year, month, 1),
+        };
+        break;
+      case "custom":
+        if (!startDate || !endDate)
+          return res.status(400).json({
+            success: false,
+            message: "Ngày bắt đầu và kết thúc không được để trống",
+          });
+        matchQuery.createdAt = {
+          $gte: new Date(startDate),
+          $lt: new Date(endDate),
+        };
+        break;
       default:
-        return res.status(400).json({
-          success: false,
-          message: "Bộ lọc thời gian không hợp lệ",
-        });
+        return res
+          .status(400)
+          .json({ success: false, message: "Bộ lọc thời gian không hợp lệ" });
     }
-
-    matchQuery.createdAt = dateFilter;
 
     const topProducts = await Order.aggregate([
       { $match: matchQuery },
@@ -651,5 +662,63 @@ exports.processReturnRequest = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+exports.updateOnlineDetail = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { online_method_detail } = req.body;
+    // Tìm theo code trước, nếu không có thì tìm theo online_method_detail.orderCode
+    let order = await Order.findOne({ code: id });
+    if (!order) {
+      order = await Order.findOne({ "online_method_detail.orderCode": id });
+    }
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    // Merge các trường mới vào online_method_detail cũ
+    order.online_method_detail = {
+      ...(order.online_method_detail || {}),
+      ...(online_method_detail || {}),
+    };
+    await order.save();
+    res
+      .status(200)
+      .json({ message: "Cập nhật online_method_detail thành công", order });
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+exports.updateStatusByCode = async (req, res) => {
+  try {
+    const { status } = req.body;
+    const { orderCode } = req.params;
+    // Ưu tiên tìm theo order.code
+    let order = await Order.findOne({ code: orderCode });
+    // Nếu không tìm thấy, thử tìm theo online_method_detail.orderCode
+    if (!order) {
+      order = await Order.findOne({
+        "online_method_detail.orderCode": orderCode,
+      });
+    }
+    if (!order) {
+      return res.status(404).json({ message: "Không tìm thấy đơn hàng" });
+    }
+    console.log("ORDER", order);
+    order.status = status;
+    order.updatedAt = new Date();
+    // Luôn đồng bộ lại online_method_detail.orderCode = orderCode
+    if (order.online_method_detail) {
+      order.online_method_detail.orderCode = orderCode;
+    }
+
+    await order.save();
+    return res
+      .status(200)
+      .json({ message: "Order status updated successfully", order });
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
   }
 };

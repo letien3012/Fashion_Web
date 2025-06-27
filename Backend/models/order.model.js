@@ -155,6 +155,10 @@ const orderSchema = new mongoose.Schema({
     type: String,
     default: "",
   },
+  online_method_detail: {
+    type: mongoose.Schema.Types.Mixed, // hoặc Object
+    default: null,
+  },
 });
 
 // Static method to get order by ID

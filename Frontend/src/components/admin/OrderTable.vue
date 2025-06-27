@@ -3,6 +3,13 @@
     <table>
       <thead>
         <tr>
+          <th>
+            <input
+              type="checkbox"
+              :checked="allSelected"
+              @change="$emit('select-all-orders', $event.target.checked)"
+            />
+          </th>
           <th>Mã đơn hàng</th>
           <th>Khách hàng</th>
           <th>Tổng tiền</th>
@@ -14,6 +21,13 @@
       </thead>
       <tbody>
         <tr v-for="order in orders" :key="order._id">
+          <td>
+            <input
+              type="checkbox"
+              :checked="selectedOrderIds.includes(order._id)"
+              @change="$emit('select-order', order._id, $event.target.checked)"
+            />
+          </td>
           <td>{{ order.code || order._id }}</td>
           <td>
             <div class="customer-info">
@@ -26,10 +40,22 @@
             </div>
           </td>
           <td>{{ formatPrice(order.total_price) }}</td>
-          <td>{{ formatPaymentMethod(order.method) }}</td>
+          <td>
+            <template v-if="getPaymentMethodIcon(order.method)">
+              <img
+                :src="getPaymentMethodIcon(order.method)"
+                :alt="order.method"
+                style="height: 28px; max-width: 60px; object-fit: contain"
+                @error="onImgError"
+              />
+            </template>
+            <template v-else>
+              <span>{{ order.method }}</span>
+            </template>
+          </td>
           <td>
             <span :class="['status', getStatusClass(order.status)]">
-              {{ formatStatus(order.status) }}
+              {{ formatStatusDisplay(order.status) }}
             </span>
           </td>
           <td>{{ formatDate(order.createdAt) }}</td>
@@ -47,7 +73,7 @@
                   "
                   :class="['status-btn', getStatusClass(nextStatus)]"
                 >
-                  {{ formatStatus(nextStatus) }}
+                  {{ formatStatusAction(nextStatus) }}
                 </button>
                 <button
                   v-if="
@@ -163,12 +189,24 @@ export default {
       type: Boolean,
       default: false,
     },
+    selectedOrderIds: {
+      type: Array,
+      default: () => [],
+    },
   },
   data() {
     return {
       showReturnModal: false,
       selectedOrder: null,
     };
+  },
+  computed: {
+    allSelected() {
+      return (
+        this.orders.length > 0 &&
+        this.orders.every((order) => this.selectedOrderIds.includes(order._id))
+      );
+    },
   },
   methods: {
     formatPrice(price) {
@@ -188,13 +226,24 @@ export default {
         minute: "2-digit",
       });
     },
-    formatStatus(status) {
+    formatStatusDisplay(status) {
       const statusMap = {
         pending: "Chờ xử lý",
         processing: "Đã xác nhận",
         shipping: "Đang giao hàng",
         delivered: "Đã giao hàng",
         cancelled: "Đã hủy",
+        returned: "Trả hàng",
+      };
+      return statusMap[status] || status;
+    },
+    formatStatusAction(status) {
+      const statusMap = {
+        pending: "Chờ xử lý",
+        processing: "Xác nhận",
+        shipping: "Vận chuyển",
+        delivered: "Đã giao hàng",
+        cancelled: "Hủy đơn",
         returned: "Trả hàng",
       };
       return statusMap[status] || status;
@@ -233,7 +282,7 @@ export default {
 
       const result = await Swal.fire({
         title: "Xác nhận thay đổi trạng thái?",
-        text: `Bạn có chắc chắn muốn chuyển trạng thái đơn hàng sang "${this.formatStatus(
+        text: `Bạn có chắc chắn muốn chuyển trạng thái đơn hàng sang "${this.formatStatusDisplay(
           newStatus
         )}"?`,
         icon: "question",
@@ -294,6 +343,33 @@ export default {
       } catch (error) {
         console.error("Error rejecting return:", error);
       }
+    },
+    getPaymentMethodIcon(method) {
+      try {
+        switch ((method || "").toUpperCase()) {
+          case "COD":
+            return new URL("../../assets/images/COD_LOGO.png", import.meta.url)
+              .href;
+          case "PAYOS":
+            return new URL("../../assets/images/payos.png", import.meta.url)
+              .href;
+          case "PAYPAL":
+            return new URL(
+              "../../assets/images/PAYPAL_LOGO.png",
+              import.meta.url
+            ).href;
+          case "VNPAY":
+            return new URL("../../assets/images/vnpay.webp", import.meta.url)
+              .href;
+          default:
+            return "";
+        }
+      } catch (e) {
+        return "";
+      }
+    },
+    onImgError(e) {
+      e.target.style.display = "none";
     },
   },
 };
