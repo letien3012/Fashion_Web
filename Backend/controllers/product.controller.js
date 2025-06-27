@@ -793,13 +793,20 @@ exports.importFromExcel = async (req, res) => {
         error: error.message,
       });
     } finally {
-      fs.unlinkSync(req.file.path);
+      // Xóa file tạm một cách an toàn, không gửi response ở đây
+      fs.unlink(req.file.path, (err) => {
+        if (err) {
+          console.error("Không thể xóa file tạm:", err);
+        }
+      });
     }
   } catch (error) {
     console.error("Error importing from Excel:", error);
-    res
-      .status(500)
-      .json({ message: "Lỗi khi import từ Excel", error: error.message });
+    if (!res.headersSent) {
+      res
+        .status(500)
+        .json({ message: "Lỗi khi import từ Excel", error: error.message });
+    }
   }
 };
 
