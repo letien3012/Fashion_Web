@@ -134,7 +134,7 @@
                     class="action-btn retry-pay-btn"
                     :disabled="isRetrying"
                     v-if="
-                      order.method !== 'COD' &&
+                      order.method == 'PAYOS' &&
                       order.status === 'pending' &&
                       (!order.online_method_detail ||
                         order.online_method_detail.status !== 'PAID')

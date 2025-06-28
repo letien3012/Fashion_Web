@@ -159,24 +159,59 @@ exports.update = async (req, res) => {
 exports.delete = async (req, res) => {
   try {
     const { id } = req.params;
-    const catalogue = await ProductCatalogue.findById(id);
-    if (!catalogue) {
-      return res.status(404).json({
-        message: "Không tìm thấy danh mục",
-      });
-    }
 
-    // Delete icon if exists
-    if (catalogue.icon) {
-      await ImageModel.deleteImage(catalogue.icon);
-    }
-
-    await catalogue.delete();
+    await ProductCatalogue.softDelete(id);
 
     res.status(200).json({
       message: "Xóa danh mục thành công",
     });
   } catch (error) {
+    console.error("Delete catalogue error:", error);
+    if (error.message.includes("not found")) {
+      return res.status(404).json({
+        message: "Không tìm thấy danh mục",
+      });
+    }
+    if (error.message.includes("already been deleted")) {
+      return res.status(400).json({
+        message: "Danh mục đã được xóa trước đó",
+      });
+    }
+    if (error.message.includes("has child catalogues")) {
+      return res.status(400).json({
+        message:
+          "Không thể xóa danh mục có danh mục con. Vui lòng xóa các danh mục con trước.",
+      });
+    }
+    if (error.message.includes("has products")) {
+      return res.status(400).json({
+        message:
+          "Không thể xóa danh mục có sản phẩm. Vui lòng xóa hoặc di chuyển các sản phẩm trước.",
+      });
+    }
+    res.status(500).json({
+      message: "Lỗi server",
+      error: error.message,
+    });
+  }
+};
+
+// Kiểm tra xem danh mục có thể xóa được hay không
+exports.canDelete = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await ProductCatalogue.canDelete(id);
+
+    res.status(200).json({
+      data: result,
+    });
+  } catch (error) {
+    console.error("Can delete catalogue error:", error);
+    if (error.message.includes("not found")) {
+      return res.status(404).json({
+        message: "Không tìm thấy danh mục",
+      });
+    }
     res.status(500).json({
       message: "Lỗi server",
       error: error.message,

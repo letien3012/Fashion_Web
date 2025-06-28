@@ -32,4 +32,7 @@ router.put("/:id/online-detail", orderController.updateOnlineDetail);
 
 router.put("/:orderCode/status-by-code", orderController.updateStatusByCode);
 
+// Route cho admin tạo đơn hàng
+router.post("/admin", orderController.createByAdmin);
+
 module.exports = router;

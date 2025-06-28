@@ -39,7 +39,13 @@
             </div>
             <div class="message-time">{{ msg.time }}</div>
           </template>
-          <template v-else-if="msg.type === 'product-list'">
+          <template
+            v-else-if="
+              msg.type === 'product-list' &&
+              msg.products &&
+              msg.products.length > 0
+            "
+          >
             <div class="related-products">
               <h5 class="related-title">
                 <i class="fas fa-box-open"></i>
@@ -89,7 +95,10 @@
         </div>
 
         <!-- Add product display section -->
-        <div v-if="currentProduct" class="product-preview">
+        <div
+          v-if="currentProduct && Object.keys(currentProduct).length > 0"
+          class="product-preview"
+        >
           <div class="product-image">
             <img
               :src="getImageUrl(currentProduct.image)"
@@ -118,22 +127,6 @@
       </div>
 
       <div class="chat-input">
-        <div class="input-actions">
-          <input
-            type="file"
-            ref="fileInput"
-            accept="image/*"
-            @change="handleImageSelect"
-            style="display: none"
-          />
-          <button
-            class="action-btn"
-            @click="triggerFileInput"
-            title="Tìm kiếm bằng hình ảnh"
-          >
-            <i class="fas fa-camera"></i>
-          </button>
-        </div>
         <input
           type="text"
           placeholder="Nhập tin nhắn của bạn..."
@@ -320,6 +313,22 @@ export default {
 
         this.isLoading = true;
         try {
+          // Nếu câu hỏi không liên quan đến sản phẩm, trả lời mặc định
+          if (!this.isProductRelatedQuestion(userMessage)) {
+            this.messages.push({
+              type: "bot",
+              content:
+                "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi về sản phẩm, giá, khuyến mãi, thuộc tính... của cửa hàng. Bạn vui lòng đặt câu hỏi liên quan nhé!",
+              time: this.getCurrentTime(),
+            });
+            this.isLoading = false;
+            this.$nextTick(() => {
+              const chatMessages = this.$refs.chatMessages;
+              chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+            return;
+          }
+
           // Refresh data before sending to ensure latest information
           this.chatbotData = await getChatbotData();
 
@@ -405,18 +414,19 @@ export default {
               time: this.getCurrentTime(),
             });
 
-            this.messages.push({
-              type: "product-list",
-              products: foundProducts,
-              query: userMessage,
-              time: this.getCurrentTime(),
-            });
-
-            this.foundProductsHistory.push({
-              products: foundProducts,
-              query: userMessage,
-              time: this.getCurrentTime(),
-            });
+            if (foundProducts.length > 0) {
+              this.messages.push({
+                type: "product-list",
+                products: foundProducts,
+                query: userMessage,
+                time: this.getCurrentTime(),
+              });
+              this.foundProductsHistory.push({
+                products: foundProducts,
+                query: userMessage,
+                time: this.getCurrentTime(),
+              });
+            }
 
             this.isLoading = false;
             this.$nextTick(() => {
@@ -440,18 +450,19 @@ export default {
               time: this.getCurrentTime(),
             });
 
-            this.messages.push({
-              type: "product-list",
-              products: foundProducts,
-              query: userMessage,
-              time: this.getCurrentTime(),
-            });
-
-            this.foundProductsHistory.push({
-              products: foundProducts,
-              query: userMessage,
-              time: this.getCurrentTime(),
-            });
+            if (foundProducts.length > 0) {
+              this.messages.push({
+                type: "product-list",
+                products: foundProducts,
+                query: userMessage,
+                time: this.getCurrentTime(),
+              });
+              this.foundProductsHistory.push({
+                products: foundProducts,
+                query: userMessage,
+                time: this.getCurrentTime(),
+              });
+            }
 
             this.isLoading = false;
             this.$nextTick(() => {
@@ -480,62 +491,6 @@ export default {
               chatMessages.scrollTop = chatMessages.scrollHeight;
             });
             return;
-          }
-
-          // Nếu không có sản phẩm, sử dụng AI để trả lời
-          const response = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      {
-                        text: `Dữ liệu hiện tại của cửa hàng:
-                        Sản phẩm: ${JSON.stringify(this.chatbotData.products)}
-                        Danh mục: ${JSON.stringify(this.chatbotData.catalogues)}
-                        Thuộc tính: ${JSON.stringify(
-                          this.chatbotData.attributes
-                        )}
-                        Danh mục thuộc tính: ${JSON.stringify(
-                          this.chatbotData.attributeCatalogues
-                        )}
-                        Khuyến mãi: ${JSON.stringify(
-                          this.chatbotData.promotions
-                        )}
-                        Sản phẩm bán chạy: ${JSON.stringify(
-                          this.chatbotData.bestSelling
-                        )}
-
-                        Người dùng: ${userMessage}`,
-                      },
-                    ],
-                  },
-                ],
-              }),
-            }
-          );
-
-          const data = await response.json();
-
-          if (
-            data.candidates &&
-            data.candidates[0]?.content?.parts?.[0]?.text
-          ) {
-            let botResponse = data.candidates[0].content.parts[0].text;
-            botResponse = this.cleanBotResponse(botResponse);
-
-            this.messages.push({
-              type: "bot",
-              content: botResponse,
-              time: this.getCurrentTime(),
-            });
-          } else {
-            throw new Error("Invalid response format");
           }
         } catch (error) {
           console.error("Error getting response from Gemini:", error);
@@ -595,6 +550,7 @@ export default {
 
       // Tách từ khóa tìm kiếm thành các từ riêng lẻ
       const searchTerms = lowerMessage.split(/\s+/);
+      const fullQuery = searchTerms.join(" ");
 
       // Kiểm tra xem có phải câu hỏi về giá không
       const priceInfo = this.extractPriceInfo(lowerMessage);
@@ -615,6 +571,32 @@ export default {
         const productCode = product.code.toLowerCase();
         const productDesc = (product.description || "").toLowerCase();
         const productPrice = product.variants?.[0]?.price || 0;
+
+        // Xác định main keyword (ưu tiên cụm từ liên tiếp có trong câu hỏi)
+        let mainKeywordMatched = false;
+        if (productName.includes(fullQuery)) {
+          score += 10;
+          mainKeywordMatched = true;
+        }
+
+        // Tính điểm cho từng từ khóa như cũ
+        searchTerms.forEach((term) => {
+          if (productName.includes(term)) {
+            score += 3;
+            mainKeywordMatched = true;
+            if (productName.startsWith(term)) score += 2;
+          }
+          if (productCode.includes(term)) score += 2;
+          if (productDesc.includes(term)) score += 1;
+
+          if (product.catalogueId && this.chatbotData.catalogues) {
+            const catalogue = this.chatbotData.catalogues.find(
+              (cat) => cat._id === product.catalogueId
+            );
+            if (catalogue && catalogue.name.toLowerCase().includes(term))
+              score += 2;
+          }
+        });
 
         // Nếu có thông tin về giá, ưu tiên tìm theo giá
         if (priceInfo) {
@@ -643,32 +625,23 @@ export default {
           }
         }
 
-        // Nếu có thông tin về thuộc tính, ưu tiên tìm theo thuộc tính
-        if (attributeInfo && attributeInfo.hasAttribute) {
+        // Chỉ cộng điểm thuộc tính nếu tên sản phẩm đã khớp main keyword
+        if (mainKeywordMatched && attributeInfo && attributeInfo.hasAttribute) {
           const attributeScore = this.calculateAttributeScore(
             product,
             attributeInfo
           );
-          score += attributeScore;
+          score += Math.min(attributeScore, 5);
         }
 
-        // Tính điểm cho mỗi từ khóa
-        searchTerms.forEach((term) => {
-          if (productName.includes(term)) {
-            score += 3;
-            if (productName.startsWith(term)) score += 2;
-          }
-          if (productCode.includes(term)) score += 2;
-          if (productDesc.includes(term)) score += 1;
-
-          if (product.catalogueId && this.chatbotData.catalogues) {
-            const catalogue = this.chatbotData.catalogues.find(
-              (cat) => cat._id === product.catalogueId
-            );
-            if (catalogue && catalogue.name.toLowerCase().includes(term))
-              score += 2;
-          }
-        });
+        // Nếu người dùng hỏi về thuộc tính mà không có main keyword, không gợi ý sản phẩm
+        if (
+          attributeInfo &&
+          attributeInfo.hasAttribute &&
+          !mainKeywordMatched
+        ) {
+          score = 0;
+        }
 
         return { ...product, score };
       });
@@ -997,12 +970,14 @@ export default {
         "xanh dương": "Xanh dương",
         "xanh lá": "Xanh lá",
         đỏ: "Đỏ",
+        "màu đỏ": "Đỏ",
         vàng: "Vàng",
         hồng: "Hồng",
         tím: "Tím",
         cam: "Cam",
         nâu: "Nâu",
         xám: "Xám",
+        navy: "Navy",
         "xanh navy": "Xanh navy",
         "xanh đen": "Xanh đen",
       };
@@ -1025,7 +1000,7 @@ export default {
           foundColors.push(colorKeywords[word]);
         }
 
-        // Kiểm tra cụm từ 2 từ (ví dụ: "size s", "xanh dương")
+        // Kiểm tra cụm từ 2 từ (ví dụ: "size s", "xanh dương", "màu đỏ")
         if (i < words.length - 1) {
           const twoWordPhrase = `${word} ${words[i + 1]}`;
           if (sizeKeywords[twoWordPhrase]) {
@@ -1117,17 +1092,17 @@ export default {
               }
             }
 
-            // Kiểm tra màu
+            // Kiểm tra màu (không phân biệt hoa thường, cho phép khớp một phần)
             if (colors.length > 0) {
               const colorMatch = colors.some((color) => {
                 const colorLower = color.toLowerCase();
-                // Kiểm tra chính xác hoặc chứa từ khóa
                 return (
-                  attrValue === colorLower || attrValue.includes(colorLower)
+                  attrValue.includes(colorLower) ||
+                  colorLower.includes(attrValue)
                 );
               });
               if (colorMatch) {
-                variantScore += 10; // Tăng điểm cho màu chính xác
+                variantScore += 10; // Tăng điểm cho màu chính xác hoặc gần đúng
                 this.debugLog("Color Match Found", {
                   productName: product.name,
                   requestedColor: colors,
@@ -1245,6 +1220,31 @@ export default {
 
       return response;
     },
+    isProductRelatedQuestion(message) {
+      const productKeywords = [
+        "áo",
+        "quần",
+        "váy",
+        "giày",
+        "sản phẩm",
+        "mũ",
+        "đầm",
+        "áo sơ mi",
+        "áo thun",
+        "áo khoác",
+        "size",
+        "màu",
+        "giá",
+        "khuyến mãi",
+        "giảm giá",
+        "voucher",
+        "phụ kiện",
+        "bán chạy",
+      ];
+      return productKeywords.some((keyword) =>
+        message.toLowerCase().includes(keyword)
+      );
+    },
   },
 };
 </script>
@@ -1336,6 +1336,10 @@ export default {
   gap: 10px;
   color: white;
   font-weight: 600;
+}
+
+.chat-title i {
+  font-size: 20px;
 }
 
 .chat-title i {

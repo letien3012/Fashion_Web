@@ -722,3 +722,88 @@ exports.updateStatusByCode = async (req, res) => {
     return res.status(400).json({ message: error.message });
   }
 };
+
+// API cho admin tạo đơn hàng, cho phép truyền employeeId và status
+exports.createByAdmin = async (req, res) => {
+  try {
+    const {
+      customerInfo,
+      items,
+      total_product_price,
+      total_price,
+      discount,
+      method,
+      note,
+      employeeId,
+      status, // status mong muốn (ví dụ: 'delivered')
+    } = req.body;
+    // Process each item and its variants to allocate consignments
+    for (const item of items) {
+      for (const variant of item.variants) {
+        let remainingQuantity = variant.quantity;
+        variant.consignments = [];
+        const consignments = await Consignment.find({
+          productId: item.productId,
+          variantId: variant._id,
+          publish: true,
+          current_quantity: { $gt: 0 },
+        }).sort({ createdAt: 1 });
+        for (const consignment of consignments) {
+          if (remainingQuantity <= 0) break;
+          const quantityToTake = Math.min(
+            remainingQuantity,
+            consignment.current_quantity
+          );
+          variant.consignments.push({
+            consignmentId: consignment._id,
+            quantity: quantityToTake,
+          });
+          await Consignment.decreaseQuantity(consignment._id, quantityToTake);
+          remainingQuantity -= quantityToTake;
+        }
+        if (remainingQuantity > 0) {
+          throw new Error(
+            `Không đủ số lượng cho biến thể ${variant.sku} (ID: ${variant._id}). Cần thêm ${remainingQuantity} sản phẩm.`
+          );
+        }
+      }
+    }
+    const orderCode = generateOrderCode();
+    const order = new Order({
+      customerId: customerInfo.customerId,
+      code: orderCode,
+      fullname: customerInfo.name,
+      phone: customerInfo.phone,
+      address: customerInfo.address,
+      province_code: customerInfo.province_code || "",
+      district_code: customerInfo.district_code || "",
+      ward_code: customerInfo.ward_code || "",
+      order_detail: items,
+      total_product_price,
+      total_price,
+      discount: discount || 0,
+      method: method || "COD",
+      note: note || "",
+      status: status || "pending", // lấy status từ body, mặc định là pending
+      employeeId: employeeId || null, // lấy employeeId từ body
+      voucher: req.body.voucher || null,
+    });
+    if (customerInfo) {
+      await Customer.findByIdAndUpdate(customerInfo.customerId, {
+        fullname: customerInfo.name,
+        phone: customerInfo.phone,
+        address: customerInfo.address,
+        updatedAt: new Date(),
+      });
+    }
+    const savedOrder = await order.save();
+    res.status(201).json({
+      message: "Order created successfully (admin)",
+      order: savedOrder,
+      orderCode: orderCode,
+    });
+  } catch (error) {
+    console.error("Error creating order (admin):", error);
+    res.status(400).json({ message: error.message });
+  }
+};

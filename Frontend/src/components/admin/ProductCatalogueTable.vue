@@ -34,7 +34,12 @@
               <button class="edit-btn" @click="$emit('edit', catalogue)">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="delete-btn" @click="$emit('delete', catalogue)">
+              <button
+                class="delete-btn"
+                :class="{ disabled: !catalogue.canDelete }"
+                @click="$emit('delete', catalogue)"
+                :title="getDeleteTooltip(catalogue)"
+              >
                 <i class="fas fa-trash"></i>
               </button>
             </div>
@@ -62,6 +67,12 @@ export default {
       if (!parentId) return "-";
       const parent = this.catalogues.find((cat) => cat._id === parentId);
       return parent ? parent.name : "-";
+    },
+    getDeleteTooltip(catalogue) {
+      if (catalogue.canDelete === false) {
+        return catalogue.deleteReason || "Không thể xóa danh mục này";
+      }
+      return "Xóa danh mục";
     },
   },
 };
@@ -141,6 +152,17 @@ td {
 
 .delete-btn:hover {
   background: #ffa39e;
+}
+
+.delete-btn.disabled {
+  background: #f5f5f5;
+  color: #d9d9d9;
+  cursor: not-allowed;
+}
+
+.delete-btn.disabled:hover {
+  background: #f5f5f5;
+  color: #d9d9d9;
 }
 
 .no-data {

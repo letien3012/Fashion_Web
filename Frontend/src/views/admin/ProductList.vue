@@ -54,24 +54,25 @@
 
         <select class="filter-select" v-model="sortBy" @change="handleSort">
           <option value="name">Sắp xếp theo tên</option>
-          <option value="price">Sắp xếp theo giá</option>
           <option value="createdAt">Sắp xếp theo ngày tạo</option>
         </select>
       </div>
     </div>
 
     <ProductTable
-      :products="filteredProducts"
+      :products="paginatedProducts"
       :product-catalogues="productCatalogues"
       :loading="loading"
       @edit="handleEdit"
       @delete="handleDelete"
     />
 
-    <div class="pagination-info">
+    <div v-if="filteredProducts.length > 0" class="pagination-info">
       <span class="showing-info">
-        Hiển thị {{ startIndex + 1 }}-{{ endIndex }} /
-        {{ filteredProducts.length }} sản phẩm
+        Hiển thị {{ filteredProducts.length > 0 ? startIndex + 1 : 0 }}-{{
+          endIndex
+        }}
+        / {{ filteredProducts.length }} sản phẩm
       </span>
       <div class="pagination">
         <button
@@ -318,8 +319,6 @@ export default {
         let comparison = 0;
         if (this.sortBy === "name") {
           comparison = a.name.localeCompare(b.name);
-        } else if (this.sortBy === "price") {
-          comparison = a.price - b.price;
         } else if (this.sortBy === "createdAt") {
           comparison = new Date(a.createdAt) - new Date(b.createdAt);
         }
@@ -329,25 +328,36 @@ export default {
       return result;
     },
     paginatedProducts() {
-      const start = (this.currentPage - 1) * this.itemsPerPage;
-      const end = start + this.itemsPerPage;
+      const itemsPerPage = parseInt(this.itemsPerPage);
+      const currentPage = parseInt(this.currentPage);
+      const start = (currentPage - 1) * itemsPerPage;
+      const end = start + itemsPerPage;
       return this.filteredProducts.slice(start, end);
     },
     totalPages() {
-      return Math.ceil(this.filteredProducts.length / this.itemsPerPage);
+      const itemsPerPage = parseInt(this.itemsPerPage);
+      return Math.ceil(this.filteredProducts.length / itemsPerPage);
     },
     startIndex() {
-      return (this.currentPage - 1) * this.itemsPerPage;
+      const itemsPerPage = parseInt(this.itemsPerPage);
+      const currentPage = parseInt(this.currentPage);
+      return (currentPage - 1) * itemsPerPage;
     },
     endIndex() {
+      const itemsPerPage = parseInt(this.itemsPerPage);
       return Math.min(
-        this.startIndex + this.itemsPerPage,
+        this.startIndex + itemsPerPage,
         this.filteredProducts.length
       );
     },
     displayedPages() {
       const pages = [];
       const maxVisiblePages = 5;
+
+      // Nếu không có trang nào, trả về mảng rỗng
+      if (this.totalPages === 0) {
+        return pages;
+      }
 
       if (this.totalPages <= maxVisiblePages) {
         for (let i = 1; i <= this.totalPages; i++) {
@@ -481,11 +491,14 @@ export default {
 
     handleSort() {
       this.sortOrder = this.sortOrder === "asc" ? "desc" : "asc";
+      this.currentPage = 1;
     },
 
     changePage(page) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page;
+      const pageNum = parseInt(page);
+      const totalPages = parseInt(this.totalPages);
+      if (pageNum >= 1 && pageNum <= totalPages) {
+        this.currentPage = pageNum;
       }
     },
 
@@ -640,6 +653,16 @@ export default {
         this.currentPage = 1;
       },
       deep: true,
+    },
+    totalPages: {
+      handler(newTotalPages) {
+        const currentPage = parseInt(this.currentPage);
+        const totalPages = parseInt(newTotalPages);
+        if (currentPage > totalPages && totalPages > 0) {
+          this.currentPage = totalPages;
+        }
+      },
+      immediate: true,
     },
   },
 };

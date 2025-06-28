@@ -162,7 +162,7 @@ async function findSimilarImages(base64Image, limit = 5) {
     // Lọc: chỉ giữ bản similarity cao nhất cho mỗi productId và có similarity > 0.6
     const bestByProduct = {};
     similarities.forEach((sim) => {
-      if (sim.similarity > 0.5) {
+      if (sim.similarity > 0.55) {
         const productId = sim.productId.toString(); // Convert ObjectId to string for consistent comparison
         if (
           !bestByProduct[productId] ||
