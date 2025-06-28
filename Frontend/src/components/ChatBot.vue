@@ -118,22 +118,6 @@
       </div>
 
       <div class="chat-input">
-        <div class="input-actions">
-          <input
-            type="file"
-            ref="fileInput"
-            accept="image/*"
-            @change="handleImageSelect"
-            style="display: none"
-          />
-          <button
-            class="action-btn"
-            @click="triggerFileInput"
-            title="Tìm kiếm bằng hình ảnh"
-          >
-            <i class="fas fa-camera"></i>
-          </button>
-        </div>
         <input
           type="text"
           placeholder="Nhập tin nhắn của bạn..."
