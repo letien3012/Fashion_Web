@@ -39,13 +39,7 @@
             </div>
             <div class="message-time">{{ msg.time }}</div>
           </template>
-          <template
-            v-else-if="
-              msg.type === 'product-list' &&
-              msg.products &&
-              msg.products.length > 0
-            "
-          >
+          <template v-else-if="msg.type === 'product-list'">
             <div class="related-products">
               <h5 class="related-title">
                 <i class="fas fa-box-open"></i>
@@ -95,10 +89,7 @@
         </div>
 
         <!-- Add product display section -->
-        <div
-          v-if="currentProduct && Object.keys(currentProduct).length > 0"
-          class="product-preview"
-        >
+        <div v-if="currentProduct" class="product-preview">
           <div class="product-image">
             <img
               :src="getImageUrl(currentProduct.image)"
@@ -127,6 +118,22 @@
       </div>
 
       <div class="chat-input">
+        <div class="input-actions">
+          <input
+            type="file"
+            ref="fileInput"
+            accept="image/*"
+            @change="handleImageSelect"
+            style="display: none"
+          />
+          <button
+            class="action-btn"
+            @click="triggerFileInput"
+            title="Tìm kiếm bằng hình ảnh"
+          >
+            <i class="fas fa-camera"></i>
+          </button>
+        </div>
         <input
           type="text"
           placeholder="Nhập tin nhắn của bạn..."
@@ -216,11 +223,14 @@ export default {
       this.isLoading = true;
       try {
         // Lấy embedding cho câu hỏi từ backend
-        const embeddingRes = await fetch("http://localhost:3005/api/rag/embedding", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userMessage })
-        });
+        const embeddingRes = await fetch(
+          "http://localhost:3005/api/rag/embedding",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: userMessage }),
+          }
+        );
         const embeddingData = await embeddingRes.json();
         if (embeddingData.embedding) {
           this.userQuestionEmbedding = embeddingData.embedding;
@@ -228,11 +238,14 @@ export default {
         // Lấy sản phẩm liên quan nhất từ backend (tối đa 5)
         let relatedProducts = [];
         try {
-          const retrieveRes = await fetch("http://localhost:3005/api/rag/retrieve", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ embedding: this.userQuestionEmbedding })
-          });
+          const retrieveRes = await fetch(
+            "http://localhost:3005/api/rag/retrieve",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ embedding: this.userQuestionEmbedding }),
+            }
+          );
           const retrieveData = await retrieveRes.json();
           if (Array.isArray(retrieveData.products)) {
             relatedProducts = retrieveData.products.slice(0, 5);
@@ -250,7 +263,7 @@ export default {
         }
         // 3. Tạo prompt RAG
         const ragPrompt = this.generateRAGPrompt(userMessage, retrievedData);
-        console.log(ragPrompt)
+        console.log(ragPrompt);
         // 4. Gọi LLM sinh câu trả lời
         const botResponse = await this.callLLM(ragPrompt);
         // 5. Hiển thị kết quả
@@ -259,195 +272,8 @@ export default {
           content: botResponse,
           time: this.getCurrentTime(),
         });
-<<<<<<< HEAD
-
-        this.isLoading = true;
-        try {
-          // Nếu câu hỏi không liên quan đến sản phẩm, trả lời mặc định
-          if (!this.isProductRelatedQuestion(userMessage)) {
-            this.messages.push({
-              type: "bot",
-              content:
-                "Xin lỗi, tôi chỉ hỗ trợ các câu hỏi về sản phẩm, giá, khuyến mãi, thuộc tính... của cửa hàng. Bạn vui lòng đặt câu hỏi liên quan nhé!",
-              time: this.getCurrentTime(),
-            });
-            this.isLoading = false;
-            this.$nextTick(() => {
-              const chatMessages = this.$refs.chatMessages;
-              chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
-            return;
-          }
-
-          // Refresh data before sending to ensure latest information
-          this.chatbotData = await getChatbotData();
-
-          // Kiểm tra xem có phải câu hỏi về giá không
-          const priceInfo = this.extractPriceInfo(userMessage.toLowerCase());
-          const foundProducts = this.checkProductMention(userMessage);
-
-          // Kiểm tra xem có phải câu hỏi về thuộc tính (size, màu) không
-          const attributeInfo = this.extractAttributeInfo(
-            userMessage.toLowerCase()
-          );
-
-          // Debug log để kiểm tra
-          this.debugLog("ChatBot Debug", {
-            userMessage,
-            isBestSellingQuery: false,
-            priceInfo,
-            attributeInfo,
-            bestSellingData: this.chatbotData.bestSelling,
-            productsData: this.chatbotData.products?.length || 0,
-          });
-
-          // Nếu là câu hỏi về sản phẩm bán chạy, xử lý trước
-          if (false) {
-            let bestSellingProducts = [];
-
-            // Sử dụng dữ liệu best-selling nếu có
-            if (
-              this.chatbotData.bestSelling &&
-              this.chatbotData.bestSelling.length > 0
-            ) {
-              bestSellingProducts = this.chatbotData.bestSelling.slice(0, 3);
-            } else {
-              // Fallback: sắp xếp theo view_count nếu không có dữ liệu best-selling
-              bestSellingProducts = this.chatbotData.products
-                .sort((a, b) => (b.view_count || 0) - (a.view_count || 0))
-                .slice(0, 3);
-            }
-
-            if (bestSellingProducts.length > 0) {
-              const smartResponse =
-                this.generateBestSellingResponse(bestSellingProducts);
-
-              this.messages.push({
-                type: "bot",
-                content: smartResponse,
-                time: this.getCurrentTime(),
-              });
-
-              this.messages.push({
-                type: "product-list",
-                products: bestSellingProducts,
-                query: userMessage,
-                time: this.getCurrentTime(),
-              });
-
-              this.foundProductsHistory.push({
-                products: bestSellingProducts,
-                query: userMessage,
-                time: this.getCurrentTime(),
-              });
-
-              this.isLoading = false;
-              this.$nextTick(() => {
-                const chatMessages = this.$refs.chatMessages;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
-              });
-              return;
-            }
-          }
-
-          // Nếu có sản phẩm tìm thấy và có thông tin về thuộc tính, tạo câu trả lời thông minh
-          if (foundProducts.length > 0 && attributeInfo.hasAttribute) {
-            const smartResponse = this.generateAttributeResponse(
-              userMessage,
-              foundProducts,
-              attributeInfo
-            );
-
-            this.messages.push({
-              type: "bot",
-              content: smartResponse,
-              time: this.getCurrentTime(),
-            });
-
-            if (foundProducts.length > 0) {
-              this.messages.push({
-                type: "product-list",
-                products: foundProducts,
-                query: userMessage,
-                time: this.getCurrentTime(),
-              });
-              this.foundProductsHistory.push({
-                products: foundProducts,
-                query: userMessage,
-                time: this.getCurrentTime(),
-              });
-            }
-
-            this.isLoading = false;
-            this.$nextTick(() => {
-              const chatMessages = this.$refs.chatMessages;
-              chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
-            return;
-          }
-
-          // Nếu có sản phẩm tìm thấy và có thông tin về giá, tạo câu trả lời thông minh
-          if (foundProducts.length > 0 && priceInfo.hasPriceInfo) {
-            const smartResponse = this.generatePriceResponse(
-              userMessage,
-              foundProducts,
-              priceInfo
-            );
-
-            this.messages.push({
-              type: "bot",
-              content: smartResponse,
-              time: this.getCurrentTime(),
-            });
-
-            if (foundProducts.length > 0) {
-              this.messages.push({
-                type: "product-list",
-                products: foundProducts,
-                query: userMessage,
-                time: this.getCurrentTime(),
-              });
-              this.foundProductsHistory.push({
-                products: foundProducts,
-                query: userMessage,
-                time: this.getCurrentTime(),
-              });
-            }
-
-            this.isLoading = false;
-            this.$nextTick(() => {
-              const chatMessages = this.$refs.chatMessages;
-              chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
-            return;
-          }
-
-          // Nếu chỉ có sản phẩm tìm thấy (không có thông tin giá cụ thể)
-          if (foundProducts.length > 0) {
-            this.messages.push({
-              type: "product-list",
-              products: foundProducts,
-              query: userMessage,
-              time: this.getCurrentTime(),
-            });
-            this.foundProductsHistory.push({
-              products: foundProducts,
-              query: userMessage,
-              time: this.getCurrentTime(),
-            });
-            this.isLoading = false;
-            this.$nextTick(() => {
-              const chatMessages = this.$refs.chatMessages;
-              chatMessages.scrollTop = chatMessages.scrollHeight;
-            });
-            return;
-          }
-        } catch (error) {
-          console.error("Error getting response from Gemini:", error);
-=======
         // Nếu có sản phẩm, show danh sách
         if (retrievedData.products?.length) {
->>>>>>> 5806659d9d5fe102838c6d1275152ea9610526e1
           this.messages.push({
             type: "product-list",
             products: retrievedData.products,
@@ -477,10 +303,20 @@ export default {
       }
       if (msg.match(/\d+(k|tr|nghìn|triệu|vnd|₫)/) || msg.includes("giá")) {
         // Có giá trị giá
-        return { intent: "search_product_by_price", entity: { priceInfo: this.extractPriceInfo(msg) } };
+        return {
+          intent: "search_product_by_price",
+          entity: { priceInfo: this.extractPriceInfo(msg) },
+        };
       }
-      if (msg.includes("size") || msg.includes("màu") || msg.includes("màu sắc")) {
-        return { intent: "search_product_by_attribute", entity: { attributeInfo: this.extractAttributeInfo(msg) } };
+      if (
+        msg.includes("size") ||
+        msg.includes("màu") ||
+        msg.includes("màu sắc")
+      ) {
+        return {
+          intent: "search_product_by_attribute",
+          entity: { attributeInfo: this.extractAttributeInfo(msg) },
+        };
       }
       // Mặc định: tìm sản phẩm theo từ khóa
       return { intent: "search_product", entity: { keyword: msg } };
@@ -498,39 +334,56 @@ export default {
       let context = "";
       // Thông tin sản phẩm liên quan
       if (retrievedData.products && retrievedData.products.length > 0) {
-        context += retrievedData.products.map(product => {
-          let desc = product.name ? `Sản phẩm: ${product.name}. ` : "";
-          if (product.description) desc += `Mô tả: ${product.description}. `;
-          if (product.content) desc += `Thông tin chi tiết: ${product.content}. `;
-          if (product.catalogueId && product.catalogueId.name) desc += `Danh mục: ${product.catalogueId.name}. `;
-          if (product.variants && product.variants.length > 0) {
-            desc += `Các biến thể sản phẩm: `;
-            desc += product.variants.map(variant => {
-              let variantInfo = "";
-              if (variant.attributeId1 && variant.attributeId1.name) variantInfo += variant.attributeId1.name;
-              if (variant.attributeId2 && variant.attributeId2.name) variantInfo += ` ${variant.attributeId2.name}`;
-              if (variant.price) variantInfo += ` giá ${variant.price.toLocaleString('vi-VN')} VNĐ`;
-              return variantInfo.trim();
-            }).filter(Boolean).join('; ') + ". ";
-          }
-          return desc.trim();
-        }).join('\n');
+        context += retrievedData.products
+          .map((product) => {
+            let desc = product.name ? `Sản phẩm: ${product.name}. ` : "";
+            if (product.description) desc += `Mô tả: ${product.description}. `;
+            if (product.content)
+              desc += `Thông tin chi tiết: ${product.content}. `;
+            if (product.catalogueId && product.catalogueId.name)
+              desc += `Danh mục: ${product.catalogueId.name}. `;
+            if (product.variants && product.variants.length > 0) {
+              desc += `Các biến thể sản phẩm: `;
+              desc +=
+                product.variants
+                  .map((variant) => {
+                    let variantInfo = "";
+                    if (variant.attributeId1 && variant.attributeId1.name)
+                      variantInfo += variant.attributeId1.name;
+                    if (variant.attributeId2 && variant.attributeId2.name)
+                      variantInfo += ` ${variant.attributeId2.name}`;
+                    if (variant.price)
+                      variantInfo += ` giá ${variant.price.toLocaleString(
+                        "vi-VN"
+                      )} VNĐ`;
+                    return variantInfo.trim();
+                  })
+                  .filter(Boolean)
+                  .join("; ") + ". ";
+            }
+            return desc.trim();
+          })
+          .join("\n");
       }
       // Thông tin khuyến mãi
       if (retrievedData.promotions && retrievedData.promotions.length > 0) {
-        if (context) context += '\n';
-        context += retrievedData.promotions.map(promo => {
-          let promoDesc = promo.name ? `Khuyến mãi: ${promo.name}. ` : "";
-          if (promo.description) promoDesc += `Mô tả: ${promo.description}. `;
-          if (promo.discount) promoDesc += `Giảm giá: ${promo.discount}. `;
-          if (promo.voucher_condition) {
-            if (promo.voucher_condition.min_order_value) promoDesc += `Đơn tối thiểu: ${promo.voucher_condition.min_order_value}. `;
-            if (promo.voucher_condition.max_discount) promoDesc += `Giảm tối đa: ${promo.voucher_condition.max_discount}. `;
-          }
-          if (promo.start_date) promoDesc += `Bắt đầu: ${promo.start_date}. `;
-          if (promo.end_date) promoDesc += `Kết thúc: ${promo.end_date}. `;
-          return promoDesc.trim();
-        }).join('\n');
+        if (context) context += "\n";
+        context += retrievedData.promotions
+          .map((promo) => {
+            let promoDesc = promo.name ? `Khuyến mãi: ${promo.name}. ` : "";
+            if (promo.description) promoDesc += `Mô tả: ${promo.description}. `;
+            if (promo.discount) promoDesc += `Giảm giá: ${promo.discount}. `;
+            if (promo.voucher_condition) {
+              if (promo.voucher_condition.min_order_value)
+                promoDesc += `Đơn tối thiểu: ${promo.voucher_condition.min_order_value}. `;
+              if (promo.voucher_condition.max_discount)
+                promoDesc += `Giảm tối đa: ${promo.voucher_condition.max_discount}. `;
+            }
+            if (promo.start_date) promoDesc += `Bắt đầu: ${promo.start_date}. `;
+            if (promo.end_date) promoDesc += `Kết thúc: ${promo.end_date}. `;
+            return promoDesc.trim();
+          })
+          .join("\n");
       }
       return `Bạn là một trợ lý bán hàng chuyên nghiệp, thân thiện và nhiệt tình.\nDưới đây là danh sách sản phẩm và khuyến mãi có thể liên quan đến câu hỏi của khách hàng:\n${context}\n\nCâu hỏi của khách hàng: "${userMessage}"\n\nHãy làm theo hướng dẫn sau:\n- Nếu không có thông tin sản phẩm và khuyến mãi thì trả lời là không có thông tin.\n- Nếu câu hỏi liên quan đến sản phẩm, khuyến mãi hãy trả lời tự nhiên và thân thiện trước, giống như đang nói chuyện với khách.\n- Nếu câu hỏi không liên quan đến sản phẩm, khuyến mãi hãy trả lời hợp lý và tự nhiên nhất có thể.\nLuôn ưu tiên trải nghiệm thân thiện và dễ hiểu cho khách hàng.`;
     },
@@ -578,331 +431,8 @@ export default {
       }).format(price);
     },
     checkProductMention(message) {
-<<<<<<< HEAD
-      if (!this.chatbotData?.products) {
-        return [];
-      }
-      const lowerMessage = message.toLowerCase().trim();
-      if (!lowerMessage) {
-        return [];
-      }
-
-      // Tách từ khóa tìm kiếm thành các từ riêng lẻ
-      const searchTerms = lowerMessage.split(/\s+/);
-      const fullQuery = searchTerms.join(" ");
-
-      // Kiểm tra xem có phải câu hỏi về giá không
-      const priceInfo = this.extractPriceInfo(lowerMessage);
-
-      // Kiểm tra xem có phải câu hỏi về thuộc tính (size, màu) không
-      const attributeInfo = this.extractAttributeInfo(lowerMessage);
-
-      // Debug log từ khóa tìm kiếm
-      this.debugLog("Từ khóa tìm kiếm", {
-        searchTerms,
-        priceInfo,
-        attributeInfo,
-      });
-
-      let results = this.chatbotData.products.map((product) => {
-        let score = 0;
-        const productName = product.name.toLowerCase();
-        const productCode = product.code.toLowerCase();
-        const productDesc = (product.description || "").toLowerCase();
-        const productPrice = product.variants?.[0]?.price || 0;
-
-        // Xác định main keyword (ưu tiên cụm từ liên tiếp có trong câu hỏi)
-        let mainKeywordMatched = false;
-        if (productName.includes(fullQuery)) {
-          score += 10;
-          mainKeywordMatched = true;
-        }
-
-        // Tính điểm cho từng từ khóa như cũ
-        searchTerms.forEach((term) => {
-          if (productName.includes(term)) {
-            score += 3;
-            mainKeywordMatched = true;
-            if (productName.startsWith(term)) score += 2;
-          }
-          if (productCode.includes(term)) score += 2;
-          if (productDesc.includes(term)) score += 1;
-
-          if (product.catalogueId && this.chatbotData.catalogues) {
-            const catalogue = this.chatbotData.catalogues.find(
-              (cat) => cat._id === product.catalogueId
-            );
-            if (catalogue && catalogue.name.toLowerCase().includes(term))
-              score += 2;
-          }
-        });
-
-        // Nếu có thông tin về giá, ưu tiên tìm theo giá
-        if (priceInfo) {
-          const { minPrice, maxPrice, targetPrice } = priceInfo;
-
-          if (targetPrice) {
-            // Tìm sản phẩm có giá gần với giá mục tiêu
-            const priceDiff = Math.abs(productPrice - targetPrice);
-            const priceScore = Math.max(0, 10 - Math.floor(priceDiff / 10000)); // Giảm điểm theo độ chênh lệch giá
-            score += priceScore;
-          } else if (minPrice !== null && maxPrice !== null) {
-            // Tìm sản phẩm trong khoảng giá
-            if (productPrice >= minPrice && productPrice <= maxPrice) {
-              score += 8;
-            }
-          } else if (minPrice !== null) {
-            // Tìm sản phẩm có giá >= minPrice
-            if (productPrice >= minPrice) {
-              score += 6;
-            }
-          } else if (maxPrice !== null) {
-            // Tìm sản phẩm có giá <= maxPrice
-            if (productPrice <= maxPrice) {
-              score += 6;
-            }
-          }
-        }
-
-        // Chỉ cộng điểm thuộc tính nếu tên sản phẩm đã khớp main keyword
-        if (mainKeywordMatched && attributeInfo && attributeInfo.hasAttribute) {
-          const attributeScore = this.calculateAttributeScore(
-            product,
-            attributeInfo
-          );
-          score += Math.min(attributeScore, 5);
-        }
-
-        // Nếu người dùng hỏi về thuộc tính mà không có main keyword, không gợi ý sản phẩm
-        if (
-          attributeInfo &&
-          attributeInfo.hasAttribute &&
-          !mainKeywordMatched
-        ) {
-          score = 0;
-        }
-
-        return { ...product, score };
-      });
-
-      // Debug log tất cả sản phẩm có điểm > 0 trước khi sắp xếp
-      const productsWithScore = results.filter((p) => p.score > 0);
-      this.debugLog(
-        "Sản phẩm tìm thấy trước khi sắp xếp",
-        productsWithScore.map((p) => ({
-          name: p.name,
-          score: p.score,
-          price: p.variants?.[0]?.price || 0,
-          sold: p.sold_count || 0,
-          views: p.view_count || 0,
-        }))
-      );
-
-      // Sắp xếp và lọc kết quả
-      results = productsWithScore
-        .sort((a, b) => {
-          // Ưu tiên điểm thuộc tính trước
-          if (b.score !== a.score) {
-            return b.score - a.score;
-          }
-
-          // Nếu điểm bằng nhau, ưu tiên theo số lượng bán
-          if ((b.sold_count || 0) !== (a.sold_count || 0)) {
-            return (b.sold_count || 0) - (a.sold_count || 0);
-          }
-
-          // Cuối cùng ưu tiên theo lượt xem
-          return (b.view_count || 0) - (a.view_count || 0);
-        })
-        .slice(0, 3);
-
-      // Debug log kết quả cuối cùng
-      this.debugLog(
-        "Kết quả cuối cùng sau khi sắp xếp",
-        results.map((p, i) => ({
-          rank: i + 1,
-          name: p.name,
-          score: p.score,
-          price: p.variants?.[0]?.price || 0,
-          sold: p.sold_count || 0,
-          views: p.view_count || 0,
-        }))
-      );
-
-      return results;
-    },
-    extractPriceInfo(message) {
-      // Các pattern để nhận diện giá
-      const pricePatterns = [
-        // "100k", "200k", "1tr", "2tr"
-        {
-          regex: /(\d+)(k|tr)/g,
-          multiplier: (unit) => (unit === "k" ? 1000 : 1000000),
-        },
-        // "100 nghìn", "200 nghìn", "1 triệu", "2 triệu"
-        {
-          regex: /(\d+)\s*(nghìn|triệu)/g,
-          multiplier: (unit) => (unit === "nghìn" ? 1000 : 1000000),
-        },
-        // "100.000", "200.000" (nếu có dấu chấm, không đơn vị, mặc định là nghìn)
-        { regex: /(\d{1,3}(?:\.\d{3})*)/g, multiplier: 1 },
-        // "100 000", "200 000" (nếu có khoảng trắng, không đơn vị, mặc định là nghìn)
-        { regex: /(\d{1,3}(?:\s\d{3})*)/g, multiplier: 1 },
-      ];
-
-      let minPrice = null;
-      let maxPrice = null;
-      let targetPrice = null;
-
-      // Tìm các từ khóa chỉ định khoảng giá
-      const rangeKeywords = {
-        dưới: "below",
-        trên: "above",
-        từ: "from",
-        đến: "to",
-        khoảng: "around",
-        tầm: "around",
-      };
-
-      const words = message.split(/\s+/);
-      let currentRange = null;
-
-      for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-
-        // Kiểm tra từ khóa khoảng giá
-        if (rangeKeywords[word]) {
-          currentRange = rangeKeywords[word];
-          continue;
-        }
-
-        // Nếu là số không có đơn vị, mặc định là nghìn
-        if (/^\d{2,6}$/.test(word)) {
-          let price = parseInt(word);
-          // Nếu số nhỏ hơn 10000, mặc định là nghìn
-          if (price < 10000) price = price * 1000;
-          if (price > 0) {
-            if (
-              currentRange === "around" ||
-              currentRange === "khoảng" ||
-              currentRange === "tầm"
-            ) {
-              targetPrice = price;
-              minPrice = Math.floor(price * 0.8);
-              maxPrice = Math.ceil(price * 1.2);
-            } else if (currentRange === "below" || currentRange === "dưới") {
-              maxPrice = price;
-            } else if (currentRange === "above" || currentRange === "trên") {
-              minPrice = price;
-            } else if (currentRange === "from") {
-              minPrice = price;
-            } else if (currentRange === "to") {
-              maxPrice = price;
-            } else {
-              targetPrice = price;
-              minPrice = Math.floor(price * 0.8);
-              maxPrice = Math.ceil(price * 1.2);
-            }
-          }
-        }
-
-        // Nếu là số có đơn vị vnd hoặc ₫ thì lấy đúng số đó
-        if (/^\d+(vnd|₫)$/.test(word)) {
-          let price = parseInt(word.replace(/(vnd|₫)/, ""));
-          if (price > 0) {
-            if (
-              currentRange === "around" ||
-              currentRange === "khoảng" ||
-              currentRange === "tầm"
-            ) {
-              targetPrice = price;
-              minPrice = Math.floor(price * 0.8);
-              maxPrice = Math.ceil(price * 1.2);
-            } else if (currentRange === "below" || currentRange === "dưới") {
-              maxPrice = price;
-            } else if (currentRange === "above" || currentRange === "trên") {
-              minPrice = price;
-            } else if (currentRange === "from") {
-              minPrice = price;
-            } else if (currentRange === "to") {
-              maxPrice = price;
-            } else {
-              targetPrice = price;
-              minPrice = Math.floor(price * 0.8);
-              maxPrice = Math.ceil(price * 1.2);
-            }
-          }
-        }
-
-        // Tìm giá trong từ hiện tại với các pattern còn lại
-        for (const pattern of pricePatterns) {
-          const matches = word.match(pattern.regex);
-          if (matches) {
-            for (const match of matches) {
-              let price = 0;
-              if (pattern.multiplier === 1) {
-                // Xử lý số có dấu chấm hoặc khoảng trắng
-                price = parseInt(match.replace(/[.\s]/g, ""));
-                // Nếu không có đơn vị, mặc định là nghìn
-                if (price < 10000) price = price * 1000;
-              } else {
-                // Xử lý "100k", "1tr"
-                const number = parseInt(
-                  match.replace(/[k|tr|nghìn|triệu]/g, "")
-                );
-                const unit = match.replace(/\d+/g, "");
-                price = number * pattern.multiplier(unit);
-              }
-              if (price > 0) {
-                if (
-                  currentRange === "around" ||
-                  currentRange === "khoảng" ||
-                  currentRange === "tầm"
-                ) {
-                  targetPrice = price;
-                  minPrice = Math.floor(price * 0.8);
-                  maxPrice = Math.ceil(price * 1.2);
-                } else if (
-                  currentRange === "below" ||
-                  currentRange === "dưới"
-                ) {
-                  maxPrice = price;
-                } else if (
-                  currentRange === "above" ||
-                  currentRange === "trên"
-                ) {
-                  minPrice = price;
-                } else if (currentRange === "from") {
-                  minPrice = price;
-                } else if (currentRange === "to") {
-                  maxPrice = price;
-                } else {
-                  targetPrice = price;
-                  minPrice = Math.floor(price * 0.8);
-                  maxPrice = Math.ceil(price * 1.2);
-                }
-              }
-            }
-          }
-        }
-      }
-
-      // Nếu có cả min và max, tạo khoảng giá
-      if (minPrice !== null && maxPrice !== null && minPrice > maxPrice) {
-        [minPrice, maxPrice] = [maxPrice, minPrice];
-      }
-
-      return {
-        minPrice,
-        maxPrice,
-        targetPrice,
-        hasPriceInfo:
-          minPrice !== null || maxPrice !== null || targetPrice !== null,
-      };
-=======
       // Không còn dùng nữa, trả về []
       return [];
->>>>>>> 5806659d9d5fe102838c6d1275152ea9610526e1
     },
     getImageUrl(imagePath) {
       console.log("Original image path:", imagePath);
@@ -973,14 +503,12 @@ export default {
         "xanh dương": "Xanh dương",
         "xanh lá": "Xanh lá",
         đỏ: "Đỏ",
-        "màu đỏ": "Đỏ",
         vàng: "Vàng",
         hồng: "Hồng",
         tím: "Tím",
         cam: "Cam",
         nâu: "Nâu",
         xám: "Xám",
-        navy: "Navy",
         "xanh navy": "Xanh navy",
         "xanh đen": "Xanh đen",
       };
@@ -1003,7 +531,7 @@ export default {
           foundColors.push(colorKeywords[word]);
         }
 
-        // Kiểm tra cụm từ 2 từ (ví dụ: "size s", "xanh dương", "màu đỏ")
+        // Kiểm tra cụm từ 2 từ (ví dụ: "size s", "xanh dương")
         if (i < words.length - 1) {
           const twoWordPhrase = `${word} ${words[i + 1]}`;
           if (sizeKeywords[twoWordPhrase]) {
@@ -1093,17 +621,17 @@ export default {
               }
             }
 
-            // Kiểm tra màu (không phân biệt hoa thường, cho phép khớp một phần)
+            // Kiểm tra màu
             if (colors.length > 0) {
               const colorMatch = colors.some((color) => {
                 const colorLower = color.toLowerCase();
+                // Kiểm tra chính xác hoặc chứa từ khóa
                 return (
-                  attrValue.includes(colorLower) ||
-                  colorLower.includes(attrValue)
+                  attrValue === colorLower || attrValue.includes(colorLower)
                 );
               });
               if (colorMatch) {
-                variantScore += 10; // Tăng điểm cho màu chính xác hoặc gần đúng
+                variantScore += 10; // Tăng điểm cho màu chính xác
                 this.debugLog("Color Match Found", {
                   productName: product.name,
                   requestedColor: colors,
@@ -1125,130 +653,6 @@ export default {
 
       return score;
     },
-<<<<<<< HEAD
-    // Thêm method mới để tạo câu trả lời thông minh cho câu hỏi về sản phẩm bán chạy
-    generateBestSellingResponse(products) {
-      const productCount = products.length;
-      let response = "Dạ, ";
-
-      if (productCount > 0) {
-        const topProduct = products[0];
-
-        // Kiểm tra xem có dữ liệu totalSold không (từ best-selling API)
-        if (topProduct.totalSold !== undefined && topProduct.totalSold > 0) {
-          response += `dựa trên số lượng đã bán thực tế, sản phẩm bán chạy nhất là "${topProduct.name}" với ${topProduct.totalSold} sản phẩm đã bán. `;
-        } else if (
-          topProduct.sold_count !== undefined &&
-          topProduct.sold_count > 0
-        ) {
-          response += `dựa trên số lượng đã bán, sản phẩm bán chạy nhất là "${topProduct.name}" với ${topProduct.sold_count} sản phẩm đã bán. `;
-        } else {
-          // Fallback: sử dụng view_count nếu không có dữ liệu bán hàng
-          const viewCount = topProduct.view_count || 0;
-          response += `dựa trên lượt xem, sản phẩm phổ biến nhất là "${topProduct.name}" với ${viewCount} lượt xem. `;
-        }
-
-        // Thêm thông tin về giá của sản phẩm bán chạy nhất
-        const topProductPrice = this.formatPrice(
-          topProduct.variants?.[0]?.price || 0
-        );
-        response += `Giá của sản phẩm này là ${topProductPrice}. `;
-      }
-
-      response += "Anh/chị xem qua các sản phẩm bên dưới nhé!";
-
-      return response;
-    },
-
-    // Thêm method mới để tạo câu trả lời thông minh cho câu hỏi về thuộc tính
-    generateAttributeResponse(userMessage, products, attributeInfo) {
-      const { sizes, colors } = attributeInfo;
-      const productCount = products.length;
-
-      let response = "Dạ, ";
-
-      // Tạo câu trả lời dựa trên thuộc tính tìm kiếm
-      if (sizes.length > 0 && colors.length > 0) {
-        // Có cả size và màu
-        const sizeText = sizes.join(", ");
-        const colorText = colors.join(", ");
-        response += `em tìm thấy ${productCount} sản phẩm có size ${sizeText} màu ${colorText} cho anh/chị ạ. `;
-      } else if (sizes.length > 0) {
-        // Chỉ có size
-        const sizeText = sizes.join(", ");
-        response += `em tìm thấy ${productCount} sản phẩm có size ${sizeText} cho anh/chị ạ. `;
-      } else if (colors.length > 0) {
-        // Chỉ có màu
-        const colorText = colors.join(", ");
-        response += `em tìm thấy ${productCount} sản phẩm có màu ${colorText} cho anh/chị ạ. `;
-      }
-
-      // Thêm thông tin về sản phẩm nổi bật
-      if (products.length > 0) {
-        const topProduct = products[0];
-        const topProductPrice = this.formatPrice(
-          topProduct.variants?.[0]?.price || 0
-        );
-
-        // Lấy thông tin thuộc tính của sản phẩm
-        let attributeDetails = "";
-        if (topProduct.variants && topProduct.variants.length > 0) {
-          const variant = topProduct.variants[0];
-          const attributes = [];
-
-          if (variant.attributeId1 && this.chatbotData.attributes) {
-            const attr1 = this.chatbotData.attributes.find(
-              (attr) => attr._id === variant.attributeId1
-            );
-            if (attr1) attributes.push(attr1.name);
-          }
-
-          if (variant.attributeId2 && this.chatbotData.attributes) {
-            const attr2 = this.chatbotData.attributes.find(
-              (attr) => attr._id === variant.attributeId2
-            );
-            if (attr2) attributes.push(attr2.name);
-          }
-
-          if (attributes.length > 0) {
-            attributeDetails = ` (${attributes.join(", ")})`;
-          }
-        }
-
-        response += `Sản phẩm nổi bật nhất là "${topProduct.name}"${attributeDetails} với giá ${topProductPrice}. `;
-      }
-
-      response += "Anh/chị xem qua các sản phẩm bên dưới nhé!";
-
-      return response;
-    },
-    isProductRelatedQuestion(message) {
-      const productKeywords = [
-        "áo",
-        "quần",
-        "váy",
-        "giày",
-        "sản phẩm",
-        "mũ",
-        "đầm",
-        "áo sơ mi",
-        "áo thun",
-        "áo khoác",
-        "size",
-        "màu",
-        "giá",
-        "khuyến mãi",
-        "giảm giá",
-        "voucher",
-        "phụ kiện",
-        "bán chạy",
-      ];
-      return productKeywords.some((keyword) =>
-        message.toLowerCase().includes(keyword)
-      );
-    },
-=======
->>>>>>> 5806659d9d5fe102838c6d1275152ea9610526e1
   },
 };
 </script>
