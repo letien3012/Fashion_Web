@@ -1170,3 +1170,146 @@ exports.downloadTemplate = async (req, res) => {
     });
   }
 };
+
+// Toggle product publish status
+exports.togglePublish = async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(id);
+    
+    const product = await Product.findById(id);
+    if (!product) {
+      return res.status(404).json({
+        message: "Sản phẩm không tồn tại",
+      });
+    }
+
+    console.log(product);
+    // Toggle the publish status
+    const newPublishStatus = !product.publish;
+    
+    // Use findByIdAndUpdate instead of save to avoid duplicate key error
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { 
+        publish: newPublishStatus,
+        updatedAt: new Date()
+      },
+      { new: true }
+    );
+
+    res.status(200).json({
+      message: `Sản phẩm đã được ${updatedProduct.publish ? 'hiển thị' : 'ẩn'} thành công`,
+      data: {
+        _id: updatedProduct._id,
+        name: updatedProduct.name,
+        publish: updatedProduct.publish,
+      },
+    });
+  } catch (error) {
+    console.error("Error toggling product publish status:", error);
+    res.status(500).json({
+      message: "Lỗi khi thay đổi trạng thái sản phẩm",
+      error: error.message,
+    });
+  }
+};
+
+// Bulk toggle product publish status
+exports.bulkTogglePublish = async (req, res) => {
+  try {
+    const { productIds } = req.body;
+    
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({
+        message: "Danh sách sản phẩm không hợp lệ",
+      });
+    }
+
+    const products = await Product.find({ _id: { $in: productIds } });
+    if (products.length === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy sản phẩm nào",
+      });
+    }
+
+    // Toggle publish status for all products
+    const updatePromises = products.map(product => {
+      const newPublishStatus = !product.publish;
+      return Product.findByIdAndUpdate(
+        product._id,
+        { 
+          publish: newPublishStatus,
+          updatedAt: new Date()
+        },
+        { new: true }
+      );
+    });
+
+    const updatedProducts = await Promise.all(updatePromises);
+
+    res.status(200).json({
+      message: `Đã thay đổi trạng thái ${updatedProducts.length} sản phẩm thành công`,
+      data: updatedProducts.map(p => ({
+        _id: p._id,
+        name: p.name,
+        publish: p.publish,
+      })),
+    });
+  } catch (error) {
+    console.error("Error bulk toggling product publish status:", error);
+    res.status(500).json({
+      message: "Lỗi khi thay đổi trạng thái sản phẩm",
+      error: error.message,
+    });
+  }
+};
+
+// Bulk delete products
+exports.bulkDelete = async (req, res) => {
+  try {
+    const { productIds } = req.body;
+    
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({
+        message: "Danh sách sản phẩm không hợp lệ",
+      });
+    }
+
+    const products = await Product.find({ _id: { $in: productIds } });
+    if (products.length === 0) {
+      return res.status(404).json({
+        message: "Không tìm thấy sản phẩm nào",
+      });
+    }
+
+    // Soft delete all products
+    const deletePromises = products.map(product => 
+      Product.findByIdAndUpdate(
+        product._id,
+        { 
+          deletedAt: new Date(),
+          updatedAt: new Date()
+        },
+        { new: true }
+      )
+    );
+
+    const deletedProducts = await Promise.all(deletePromises);
+
+    res.status(200).json({
+      message: `Đã xóa ${deletedProducts.length} sản phẩm thành công`,
+      data: deletedProducts.map(p => ({
+        _id: p._id,
+        name: p.name,
+        deletedAt: p.deletedAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error bulk deleting products:", error);
+    res.status(500).json({
+      message: "Lỗi khi xóa sản phẩm",
+      error: error.message,
+    });
+  }
+};

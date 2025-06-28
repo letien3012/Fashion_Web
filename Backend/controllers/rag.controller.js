@@ -55,7 +55,7 @@ ragController.retrieve = async (req, res) => {
       score: cosineSimilarity(embedding, e.embedding)
     }));
     // Lọc theo ngưỡng cosine >= 0.6
-    const filtered = scored.filter(s => s.score >= 0.6);
+    const filtered = scored.filter(s => s.score >= 0.5);
     filtered.sort((a, b) => b.score - a.score);
     const products = filtered.slice(0, 5).map(s => s.product);
     console.log(products);
