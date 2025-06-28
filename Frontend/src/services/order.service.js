@@ -115,4 +115,44 @@ export const orderService = {
       throw error;
     }
   },
+
+  async updateOrderOnlineDetail(orderCode, detail) {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Vui lòng đăng nhập");
+      const response = await axios.put(
+        `http://localhost:3005/api/orders/${orderCode}/online-detail`,
+        { online_method_detail: detail },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+
+  async updateOrderStatusByCode(orderCode, status) {
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) throw new Error("Vui lòng đăng nhập");
+      const response = await axios.put(
+        `http://localhost:3005/api/orders/${orderCode}/status-by-code`,
+        { status },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 };

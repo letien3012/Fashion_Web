@@ -226,6 +226,9 @@ export default {
     filteredProducts() {
       let result = [...this.products];
 
+      // Lọc sản phẩm đã duyệt
+      result = result.filter((p) => p.publish === true);
+
       // Lọc theo danh mục được chọn từ URL
       if (this.currentCategory) {
         // Tìm danh mục hiện tại và lấy tất cả ID của danh mục con
@@ -336,6 +339,9 @@ export default {
       return {
         background: `linear-gradient(to right, #f0f0f0 ${percent}%, #ff6b6b ${percent}%)`,
       };
+    },
+    publishedCount() {
+      return this.filteredProducts.filter((p) => p.publish === true).length;
     },
   },
   methods: {

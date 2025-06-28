@@ -74,11 +74,11 @@
       <div class="col-12">
         <div class="card shadow-sm">
           <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-              <h5 class="card-title mb-0">Thống kê doanh thu</h5>
-              <div class="d-flex gap-2">
+            <div class="dashboard-toolbar">
+              <h5 class="toolbar-title">Thống kê doanh thu</h5>
+              <div class="toolbar-filters">
                 <select
-                  class="form-select form-select-sm"
+                  class="toolbar-select"
                   v-model="timeFilter"
                   @change="updateChart"
                 >
@@ -86,22 +86,19 @@
                   <option value="month">Theo tháng</option>
                   <option value="custom">Tùy chọn</option>
                 </select>
-
-                <div v-if="timeFilter === 'year'" class="year-select">
+                <select
+                  v-if="timeFilter === 'year'"
+                  class="toolbar-select"
+                  v-model="selectedYear"
+                  @change="updateChart"
+                >
+                  <option v-for="year in years" :key="year" :value="year">
+                    {{ year }}
+                  </option>
+                </select>
+                <div v-if="timeFilter === 'month'" class="toolbar-row">
                   <select
-                    class="form-select form-select-sm"
-                    v-model="selectedYear"
-                    @change="updateChart"
-                  >
-                    <option v-for="year in years" :key="year" :value="year">
-                      {{ year }}
-                    </option>
-                  </select>
-                </div>
-
-                <div v-if="timeFilter === 'month'" class="d-flex gap-2">
-                  <select
-                    class="form-select form-select-sm"
+                    class="toolbar-select"
                     v-model="selectedMonth"
                     @change="updateChart"
                   >
@@ -114,7 +111,7 @@
                     </option>
                   </select>
                   <select
-                    class="form-select form-select-sm"
+                    class="toolbar-select"
                     v-model="selectedYear"
                     @change="updateChart"
                   >
@@ -123,26 +120,25 @@
                     </option>
                   </select>
                 </div>
-
-                <div
-                  v-if="timeFilter === 'custom'"
-                  class="d-flex gap-2 align-items-center"
-                >
+                <div v-if="timeFilter === 'custom'" class="toolbar-row">
                   <input
                     type="date"
-                    class="form-control form-control-sm"
+                    class="toolbar-select"
                     v-model="startDate"
                     @change="updateChart"
                   />
-                  <span class="text-muted">đến</span>
+                  <span class="toolbar-between">đến</span>
                   <input
                     type="date"
-                    class="form-control form-control-sm"
+                    class="toolbar-select"
                     v-model="endDate"
                     @change="updateChart"
                   />
                 </div>
               </div>
+              <button class="toolbar-btn" @click="exportPDF">
+                <i class="bi bi-file-earmark-pdf-fill"></i> Xuất PDF
+              </button>
             </div>
             <div style="height: 400px">
               <canvas ref="salesChart"></canvas>
@@ -158,17 +154,6 @@
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-4">
               <h5 class="card-title mb-0">Top sản phẩm bán chạy</h5>
-              <div class="d-flex gap-2">
-                <select
-                  class="form-select form-select-sm"
-                  v-model="productTimeFilter"
-                  @change="updateProductChart"
-                >
-                  <option value="week">Tuần này</option>
-                  <option value="month">Tháng này</option>
-                  <option value="year">Năm nay</option>
-                </select>
-              </div>
             </div>
 
             <div class="row mb-4">
@@ -314,6 +299,28 @@
       </div>
     </div>
   </div>
+
+  <!-- Export PDF Component (hidden) -->
+  <div style="position: absolute; left: -9999px; top: -9999px">
+    <ExportPDF
+      ref="exportPDFRef"
+      :time-filter="timeFilter"
+      :selected-year="selectedYear"
+      :selected-month="selectedMonth"
+      :start-date="startDate"
+      :end-date="endDate"
+      :sales-data="salesDataForPDF"
+      :top-products="topProducts"
+      :top-products-summary="
+        topProductsSummary || {
+          totalProductsSold: 0,
+          totalRevenue: 0,
+          averagePrice: 0,
+        }
+      "
+      :employee-name="employeeName"
+    />
+  </div>
 </template>
 
 <script>
@@ -321,19 +328,21 @@ import Chart from "chart.js/auto";
 import axios from "axios";
 import { toast } from "vue3-toastify";
 import "vue3-toastify/dist/index.css";
+import ExportPDF from "@/components/admin/ExportPDF.vue";
 
 export default {
   name: "AdminDashboard",
+  components: {
+    ExportPDF,
+  },
   data() {
-    // Lấy ngày hiện tại (today) và ngày tiếp theo (tomorrow) (ngày hôm nay + 1)
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
     const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1; // (getMonth() trả về 0–11)
-    const currentDate = today.toISOString().split("T")[0]; // (format: YYYY–MM–DD)
-    const nextDate = tomorrow.toISOString().split("T")[0]; // (format: YYYY–MM–DD)
-
+    const currentMonth = today.getMonth() + 1;
+    const currentDate = today.toISOString().split("T")[0];
+    const nextDate = new Date(today.setDate(today.getDate() + 1))
+      .toISOString()
+      .split("T")[0];
     return {
       backendUrl: "http://localhost:3005",
       employeeName: "",
@@ -361,7 +370,6 @@ export default {
         "Tháng 11",
         "Tháng 12",
       ],
-      productTimeFilter: "week",
       // Data for overview cards
       totalOrders: null,
       totalCustomers: null,
@@ -422,6 +430,17 @@ export default {
         "Tháng 11",
         "Tháng 12",
       ];
+    },
+    salesDataForPDF() {
+      return this.salesData.labels.map((label, index) => ({
+        label: label,
+        revenue: this.salesData.datasets[0]?.data[index] || 0,
+        profit: this.salesData.datasets[1]?.data[index] || 0,
+        orders: this.salesData.datasets[2]?.data[index] || 0,
+      }));
+    },
+    employeeName() {
+      return localStorage.getItem("employee-name") || "Admin";
     },
   },
   async mounted() {
@@ -682,6 +701,14 @@ export default {
       // Gọi fetchSalesData để lấy dữ liệu mới (dựa trên filter) và cập nhật biểu đồ
       this.fetchSalesData().then(() => {
         this.renderSalesChart();
+        // Sau khi cập nhật doanh thu, cập nhật luôn top sản phẩm theo cùng filter
+        this.fetchTopProducts({
+          timeFilter: this.timeFilter,
+          year: this.selectedYear,
+          month: this.selectedMonth,
+          startDate: this.startDate,
+          endDate: this.endDate,
+        });
       });
     },
     updateProductChart() {
@@ -1048,7 +1075,7 @@ export default {
         });
       }
     },
-    async fetchTopProducts() {
+    async fetchTopProducts(filterParams) {
       try {
         const token = localStorage.getItem("token-admin");
         if (!token) {
@@ -1056,7 +1083,18 @@ export default {
           return;
         }
         const headers = { Authorization: `Bearer ${token}` };
-        const params = { timeFilter: this.productTimeFilter };
+        let params = {};
+        if (filterParams) {
+          params = { ...filterParams };
+        } else {
+          params = {
+            timeFilter: this.timeFilter,
+            year: this.selectedYear,
+            month: this.selectedMonth,
+            startDate: this.startDate,
+            endDate: this.endDate,
+          };
+        }
         const response = await axios.get(
           `${this.backendUrl}/api/orders/top-products`,
           { headers, params }
@@ -1068,7 +1106,6 @@ export default {
           totalRevenue: 0,
           averagePrice: 0,
         };
-
         // Update the products chart with new data
         this.$nextTick(() => {
           this.initProductsChart();
@@ -1302,6 +1339,18 @@ export default {
         });
       }
     },
+    async exportPDF() {
+      try {
+        if (this.$refs.exportPDFRef) {
+          this.$refs.exportPDFRef.exportPDF();
+        } else {
+          toast.error("Không thể tạo báo cáo PDF");
+        }
+      } catch (error) {
+        console.error("Lỗi khi xuất PDF:", error);
+        toast.error("Lỗi khi xuất PDF");
+      }
+    },
   },
 };
 </script>
@@ -1324,16 +1373,23 @@ export default {
   padding: 1.5rem;
 }
 
+.d-flex.gap-2 {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 12px !important;
+  align-items: center;
+}
 .form-select-sm,
 .form-control-sm {
-  min-width: 120px;
+  min-width: 100px;
+  max-width: 180px;
   border: none;
   background-color: #f8f9fa;
   border-radius: 8px;
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
 }
-
 .form-select-sm:focus,
 .form-control-sm:focus {
   box-shadow: none;
@@ -1432,22 +1488,48 @@ export default {
   border-radius: 10px;
 }
 
-/* Responsive */
+/* Filter & Export PDF button group */
+.btn.btn-outline-primary {
+  min-width: 140px;
+  max-width: 200px;
+  margin-left: 8px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border-width: 2px;
+  transition: background 0.2s, color 0.2s;
+  box-shadow: 0 2px 8px rgba(13, 110, 253, 0.05);
+}
+.btn.btn-outline-primary:hover {
+  background: #0d6efd;
+  color: #fff;
+  border-color: #0d6efd;
+}
+
 @media (max-width: 768px) {
+  .d-flex.gap-2 {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px !important;
+  }
+  .btn.btn-outline-primary {
+    width: 100%;
+    margin-left: 0;
+  }
   .form-select-sm,
   .form-control-sm {
     min-width: 100%;
+    max-width: 100%;
   }
-
   .border.rounded {
     margin-bottom: 1rem;
   }
-
   .table th,
   .table td {
     padding: 0.75rem;
   }
-
   .table img {
     width: 32px;
     height: 32px;
@@ -1488,5 +1570,81 @@ export default {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #a8a8a8;
+}
+
+.dashboard-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 16px 16px 16px;
+  background: #fff;
+  border-radius: 16px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  flex-wrap: wrap;
+}
+.toolbar-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 24px 0 0;
+  color: #222;
+  white-space: nowrap;
+}
+.toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.toolbar-row {
+  display: flex;
+  gap: 12px;
+}
+.toolbar-select {
+  min-width: 120px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #eee;
+  background: #f8f9fa;
+  font-size: 1rem;
+  transition: border 0.2s;
+}
+.toolbar-select:focus {
+  border: 1.5px solid #0d6efd;
+  outline: none;
+  background: #fff;
+}
+.toolbar-between {
+  color: #888;
+  margin: 0 8px;
+}
+.toolbar-btn {
+  background: #dc3545;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(220, 53, 69, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toolbar-btn:hover {
+  background: #b02a37;
+}
+@media (max-width: 900px) {
+  .dashboard-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .toolbar-title {
+    margin-bottom: 8px;
+  }
 }
 </style>

@@ -6,6 +6,7 @@ const passport = require("passport");
 const path = require("path");
 const connectDB = require("./config/mongodb");
 const fs = require("fs");
+require("./config/orderAutoCancel.job");
 
 // Connect to MongoDB
 connectDB();
@@ -70,4 +71,5 @@ app.use(passport.session());
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
 module.exports = app;

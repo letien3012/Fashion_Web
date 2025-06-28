@@ -98,6 +98,25 @@
 
                     <!-- Product Selection for Product Type -->
                     <div v-if="formData.type === 'product'" class="mb-3">
+                      <label class="form-label">Chọn lô hàng</label>
+                      <select
+                        class="form-select"
+                        v-model="selectedConsignmentCode"
+                        @change="handleConsignmentChange"
+                      >
+                        <option value="">Chọn lô hàng</option>
+                        <option
+                          v-for="group in consignmentGroups"
+                          :key="group.code"
+                          :value="group.code"
+                        >
+                          {{ group.code }} ({{ group.items.length }} sản phẩm)
+                        </option>
+                      </select>
+                    </div>
+
+                    <!-- Product Selection for Product Type -->
+                    <div v-if="formData.type === 'product'" class="mb-3">
                       <label class="form-label required"
                         >Sản phẩm áp dụng</label
                       >
@@ -153,6 +172,12 @@
                                 <i class="fas fa-times"></i>
                               </button>
                             </div>
+                          </div>
+                          <div
+                            v-if="errors[`duplicate_${index}`]"
+                            class="invalid-feedback d-block"
+                          >
+                            {{ errors[`duplicate_${index}`] }}
                           </div>
                         </div>
                         <button
@@ -296,8 +321,9 @@
 </template>
 
 <script>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import axios from "axios";
+import { toast } from "vue3-toastify";
 
 const backendUrl = "http://localhost:3005";
 
@@ -334,6 +360,19 @@ export default {
 
     const errors = ref({});
     const products = ref([]);
+    const consignments = ref([]);
+    const selectedConsignmentCode = ref("");
+
+    // Group consignments by code prefix
+    const consignmentGroups = computed(() => {
+      const groups = {};
+      consignments.value.forEach((c) => {
+        const prefix = c.code.split("-")[0];
+        if (!groups[prefix]) groups[prefix] = { code: prefix, items: [] };
+        groups[prefix].items.push(c);
+      });
+      return Object.values(groups);
+    });
 
     const resetForm = () => {
       formData.value = {
@@ -353,6 +392,7 @@ export default {
         end_date: "",
       };
       errors.value = {};
+      selectedConsignmentCode.value = "";
     };
 
     const getProductVariants = (productId) => {
@@ -368,19 +408,44 @@ export default {
     };
 
     const handleProductChange = (index) => {
-      // Reset variantId when product changes
       formData.value.productId[index].variantId = "";
+      formData.value.productId[index].consignmentId = "";
     };
 
     const addProduct = () => {
       formData.value.productId.push({
         productId: "",
         variantId: "",
+        consignmentId: "",
       });
     };
 
     const removeProduct = (index) => {
       formData.value.productId.splice(index, 1);
+    };
+
+    const handleConsignmentChange = () => {
+      const group = consignmentGroups.value.find(
+        (g) => g.code === selectedConsignmentCode.value
+      );
+      if (group) {
+        const currentList = formData.value.productId;
+        const existSet = new Set(
+          currentList.map((item) => `${item.productId}_${item.variantId}`)
+        );
+        const toAdd = group.items.filter(
+          (item) => !existSet.has(`${item.productId}_${item.variantId}`)
+        );
+        const merged = [
+          ...currentList,
+          ...toAdd.map((item) => ({
+            productId: item.productId,
+            variantId: item.variantId,
+            consignmentId: item._id,
+          })),
+        ];
+        formData.value.productId = merged;
+      }
     };
 
     const handleImageUpload = async (event) => {
@@ -407,50 +472,34 @@ export default {
       if (!image) return "";
       if (image.startsWith("data:image")) return image;
       if (image.startsWith("http")) return image;
-
-      // Debug log to see the actual image path
-      console.log("Original image path:", image);
-
-      // Remove any leading slashes and 'images/' to prevent duplication
       const cleanPath = image.replace(/^\/?images\//, "");
-      console.log("Cleaned path:", cleanPath);
-
-      const finalUrl = `${backendUrl}/images/${cleanPath}`;
-      console.log("Final URL:", finalUrl);
-
-      return finalUrl;
+      return `${backendUrl}/images/${cleanPath}`;
     };
 
     const validateForm = () => {
       errors.value = {};
       let isValid = true;
-
       if (!formData.value.code) {
         errors.value.code = "Mã khuyến mãi là bắt buộc";
         isValid = false;
       }
-
       if (!formData.value.name) {
         errors.value.name = "Tên khuyến mãi là bắt buộc";
         isValid = false;
       }
-
       if (!formData.value.type) {
         errors.value.type = "Loại khuyến mãi là bắt buộc";
         isValid = false;
       }
-
       if (!formData.value.discount) {
         errors.value.discount = "Giảm giá là bắt buộc";
         isValid = false;
       }
-
       if (formData.value.type === "product") {
         if (formData.value.productId.length === 0) {
           errors.value.productId = "Vui lòng chọn ít nhất một sản phẩm";
           isValid = false;
         } else {
-          // Validate each product and variant
           formData.value.productId.forEach((item, index) => {
             if (!item.productId) {
               errors.value[`product_${index}`] = "Vui lòng chọn sản phẩm";
@@ -460,29 +509,41 @@ export default {
               errors.value[`variant_${index}`] = "Vui lòng chọn biến thể";
               isValid = false;
             }
+            if (
+              item.consignmentId &&
+              !item.consignmentId.toString().match(/^[a-fA-F0-9]{24}$/)
+            ) {
+              errors.value[`consignment_${index}`] = "ID lô hàng không hợp lệ";
+              isValid = false;
+            }
           });
         }
       }
-
       if (!formData.value.start_date) {
         errors.value.start_date = "Ngày bắt đầu là bắt buộc";
         isValid = false;
       }
-
       if (!formData.value.end_date) {
         errors.value.end_date = "Ngày kết thúc là bắt buộc";
         isValid = false;
       }
-
       return isValid;
     };
 
     const handleSubmit = async () => {
       if (!validateForm()) return;
-
       try {
         const data = { ...formData.value };
-        // If updating and no new image is selected, keep the old image
+        // Xử lý productId: loại bỏ consignmentId rỗng
+        if (Array.isArray(data.productId)) {
+          data.productId = data.productId.map((item) => {
+            const newItem = { ...item };
+            if (!newItem.consignmentId) {
+              delete newItem.consignmentId;
+            }
+            return newItem;
+          });
+        }
         if (props.promotion && !data.image) {
           data.image = props.promotion.image;
         }
@@ -491,8 +552,10 @@ export default {
             `${backendUrl}/api/promotions/${props.promotion._id}`,
             data
           );
+          toast.success("Cập nhật khuyến mãi thành công!");
         } else {
           await axios.post(`${backendUrl}/api/promotions`, data);
+          toast.success("Thêm khuyến mãi thành công!");
         }
         emit("saved");
         emit("close");
@@ -500,6 +563,9 @@ export default {
       } catch (error) {
         if (error.response?.data?.message) {
           errors.value = { submit: error.response.data.message };
+          toast.error(error.response.data.message);
+        } else {
+          toast.error("Có lỗi xảy ra. Vui lòng thử lại!");
         }
       }
     };
@@ -512,14 +578,23 @@ export default {
         console.error("Error fetching products:", error);
       }
     };
+    const fetchConsignments = async () => {
+      try {
+        const response = await axios.get(`${backendUrl}/api/consignments`);
+        consignments.value = response.data.data;
+      } catch (error) {
+        console.error("Error fetching consignments:", error);
+      }
+    };
 
     onMounted(() => {
       fetchProducts();
+      fetchConsignments();
     });
 
     watch(
-      [() => props.promotion, products],
-      ([newPromotion, productsVal]) => {
+      [() => props.promotion, products, consignments],
+      ([newPromotion, productsVal, consignmentsVal]) => {
         if (newPromotion && productsVal.length) {
           formData.value = {
             code: newPromotion.code || "",
@@ -539,6 +614,10 @@ export default {
                     typeof item.variantId === "object"
                       ? String(item.variantId._id)
                       : String(item.variantId),
+                  consignmentId:
+                    typeof item.consignmentId === "object"
+                      ? String(item.consignmentId._id)
+                      : item.consignmentId || "",
                 }))
               : [],
             voucher_condition: newPromotion.voucher_condition
@@ -547,11 +626,43 @@ export default {
             start_date: toDatetimeLocal(newPromotion.start_date),
             end_date: toDatetimeLocal(newPromotion.end_date),
           };
+          // Nếu tất cả productId đều cùng 1 consignment code thì set selectedConsignmentCode
+          if (
+            formData.value.productId.length > 0 &&
+            consignmentsVal.length > 0
+          ) {
+            const firstConsignment = consignmentsVal.find(
+              (c) => c._id === formData.value.productId[0].consignmentId
+            );
+            if (firstConsignment) {
+              const prefix = firstConsignment.code.split("-")[0];
+              selectedConsignmentCode.value = prefix;
+            }
+          }
         } else if (!newPromotion) {
           resetForm();
         }
       },
       { immediate: true }
+    );
+
+    // Kiểm tra trùng sản phẩm + biến thể (dù là từ lô hàng hay thủ công)
+    watch(
+      () => formData.value.productId,
+      (newList) => {
+        const seen = new Set();
+        for (let i = 0; i < newList.length; i++) {
+          const key = `${newList[i].productId}_${newList[i].variantId}`;
+          if (seen.has(key)) {
+            errors.value[`duplicate_${i}`] =
+              "Không được chọn trùng sản phẩm và biến thể";
+          } else {
+            delete errors.value[`duplicate_${i}`];
+            seen.add(key);
+          }
+        }
+      },
+      { deep: true }
     );
 
     function toDatetimeLocal(dateStr) {
@@ -566,11 +677,15 @@ export default {
       formData,
       errors,
       products,
+      consignments,
+      consignmentGroups,
+      selectedConsignmentCode,
       getProductVariants,
       getVariantLabel,
       handleProductChange,
       addProduct,
       removeProduct,
+      handleConsignmentChange,
       handleImageUpload,
       removeImage,
       getImageUrl,

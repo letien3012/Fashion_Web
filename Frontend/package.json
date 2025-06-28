@@ -26,6 +26,7 @@
     "html2pdf.js": "^0.10.3",
     "jsbarcode": "^3.11.6",
     "jspdf": "^3.0.1",
+    "jspdf-autotable": "^5.0.2",
     "ky": "^1.8.1",
     "leaflet": "^1.9.4",
     "passport": "^0.7.0",

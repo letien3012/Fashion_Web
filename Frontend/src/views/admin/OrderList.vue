@@ -5,15 +5,39 @@
     </div>
 
     <div class="filters-section">
-      <div class="status-filters">
-        <button
-          v-for="status in orderStatuses"
-          :key="status.value"
-          @click="statusFilter = status.value"
-          :class="['status-btn', { active: statusFilter === status.value }]"
-        >
-          {{ status.label }}
-        </button>
+      <div class="row">
+        <div class="col-lg-10">
+          <div class="status-filters">
+            <button
+              v-for="status in orderStatuses"
+              :key="status.value"
+              @click="statusFilter = status.value"
+              :class="['status-btn', { active: statusFilter === status.value }]"
+            >
+              {{ status.label }}
+            </button>
+          </div>
+        </div>
+        <div class="col-lg-2">
+          <div
+            style="
+              margin-bottom: 12px;
+              display: flex;
+              gap: 12px;
+              align-items: center;
+            "
+          >
+            <button
+              class="btn btn-primary"
+              :disabled="selectedOrderIds.length === 0"
+              @click="showBulkPrintModal = true"
+            >
+              <i class="fas fa-print"></i> In hàng loạt ({{
+                selectedOrderIds.length
+              }})
+            </button>
+          </div>
+        </div>
       </div>
 
       <div class="filter-group">
@@ -85,6 +109,9 @@
         :orders="paginatedOrders"
         :can-update-status="true"
         :can-delete="isAdmin"
+        :selected-order-ids="selectedOrderIds"
+        @select-order="handleSelectOrder"
+        @select-all-orders="handleSelectAllOrders"
         @view="viewOrder"
         @update-status="handleUpdateStatus"
         @delete="deleteOrder"
@@ -133,6 +160,38 @@
       :order="selectedOrder"
       @close="closeOrderDetail"
     />
+
+    <div v-if="showBulkPrintModal" class="modal-overlay" style="z-index: 2000">
+      <div class="bulk-print-modal">
+        <button
+          class="close-btn"
+          @click="closeBulkPrintModal"
+          style="position: absolute; top: 16px; right: 16px"
+        >
+          Đóng
+        </button>
+        <h3>In phiếu giao hàng ({{ selectedOrderIds.length }})</h3>
+        <div class="bulk-print-labels single-col">
+          <div
+            v-for="order in selectedOrdersForPrint"
+            :key="order._id"
+            class="bulk-print-label-row"
+          >
+            <ShippingLabel
+              :order="order"
+              :ref="(el) => setShippingLabelRef(order._id, el)"
+            />
+          </div>
+        </div>
+        <button
+          class="btn btn-primary"
+          @click="bulkExportPDF"
+          style="margin-top: 24px"
+        >
+          <i class="fas fa-file-pdf"></i> Xuất PDF tất cả
+        </button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -142,12 +201,14 @@ import OrderDetail from "../../components/admin/OrderDetail.vue";
 import OrderService from "../../services/admin/order.service";
 import { toast } from "vue3-toastify";
 import Swal from "sweetalert2";
+import ShippingLabel from "../../components/admin/ShippingLabel.vue";
 
 export default {
   name: "OrderList",
   components: {
     OrderTable,
     OrderDetail,
+    ShippingLabel,
   },
   data() {
     return {
@@ -180,6 +241,9 @@ export default {
         { value: "approved", label: "Đã duyệt" },
         { value: "rejected", label: "Đã từ chối" },
       ],
+      selectedOrderIds: [],
+      showBulkPrintModal: false,
+      shippingLabelRefs: {},
     };
   },
   computed: {
@@ -296,6 +360,11 @@ export default {
       }
 
       return pages;
+    },
+    selectedOrdersForPrint() {
+      return this.filteredOrders.filter((order) =>
+        this.selectedOrderIds.includes(order._id)
+      );
     },
   },
   async created() {
@@ -516,6 +585,50 @@ export default {
         rejected: "status-cancelled",
       };
       return statusMap[status] || "";
+    },
+    handleSelectOrder(orderId, checked) {
+      if (checked) {
+        if (!this.selectedOrderIds.includes(orderId))
+          this.selectedOrderIds.push(orderId);
+      } else {
+        this.selectedOrderIds = this.selectedOrderIds.filter(
+          (id) => id !== orderId
+        );
+      }
+    },
+    handleSelectAllOrders(checked) {
+      if (checked) {
+        const ids = this.paginatedOrders.map((order) => order._id);
+        this.selectedOrderIds = Array.from(
+          new Set([...this.selectedOrderIds, ...ids])
+        );
+      } else {
+        const ids = this.paginatedOrders.map((order) => order._id);
+        this.selectedOrderIds = this.selectedOrderIds.filter(
+          (id) => !ids.includes(id)
+        );
+      }
+    },
+    setShippingLabelRef(orderId, el) {
+      if (el) this.shippingLabelRefs[orderId] = el.$el || el;
+    },
+    closeBulkPrintModal() {
+      this.showBulkPrintModal = false;
+      this.shippingLabelRefs = {};
+    },
+    async bulkExportPDF() {
+      const html2pdf = (await import("html2pdf.js")).default;
+      for (const order of this.selectedOrdersForPrint) {
+        const el = this.shippingLabelRefs[order._id];
+        if (!el) continue;
+        await html2pdf()
+          .from(el)
+          .set({
+            margin: 5,
+            jsPDF: { unit: "mm", format: [170, 190], orientation: "landscape" },
+          })
+          .save(`shipping_${order.code || order._id}.pdf`);
+      }
     },
   },
 };
@@ -767,5 +880,98 @@ export default {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bulk-print-modal {
+  background: #fff;
+  padding: 32px 24px 24px 24px;
+  border-radius: 14px;
+  max-width: 1200px;
+  width: 95vw;
+  max-height: 90vh;
+  margin: 40px auto;
+  position: relative;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+}
+
+.bulk-print-modal h3 {
+  margin-top: 0;
+  margin-bottom: 24px;
+  font-size: 2rem;
+  font-weight: 600;
+  text-align: left;
+}
+
+.bulk-print-labels {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  overflow-y: auto;
+  padding-bottom: 12px;
+  max-height: 60vh;
+}
+
+.bulk-print-labels.single-col {
+  flex-direction: column;
+  align-items: center;
+}
+
+.bulk-print-label-row {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-bottom: 16px;
+}
+
+.bulk-print-modal .close-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1.1rem;
+  color: #333;
+  cursor: pointer;
+  box-shadow: 0 2px 8px #0001;
+  transition: background 0.2s;
+}
+
+.bulk-print-modal .close-btn:hover {
+  background: #e0e0e0;
+}
+
+.bulk-print-modal .btn.btn-primary {
+  margin-top: 18px;
+  min-width: 180px;
+  font-size: 1.1rem;
+}
+
+@media (max-width: 900px) {
+  .bulk-print-modal {
+    max-width: 99vw;
+    padding: 16px 4px 16px 4px;
+  }
+  .bulk-print-labels {
+    gap: 12px;
+  }
 }
 </style>

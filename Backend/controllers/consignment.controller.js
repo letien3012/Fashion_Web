@@ -61,7 +61,7 @@ exports.addConsignment = async (req, res) => {
       price,
       quantity,
       current_quantity,
-      publish: publish || false,
+      publish: publish || true,
     });
 
     await consignment.save();

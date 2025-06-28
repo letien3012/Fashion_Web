@@ -220,6 +220,8 @@ export default {
         console.error("Error fetching promotions:", error);
         if (error.response?.status === 401) {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+        } else if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
         } else {
           toast.error("Không thể tải danh sách khuyến mãi");
         }
@@ -258,6 +260,8 @@ export default {
         console.error("Error deleting promotion:", error);
         if (error.response?.status === 401) {
           toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+        } else if (error.response?.data?.message) {
+          toast.error(error.response.data.message);
         } else {
           toast.error("Không thể xóa khuyến mãi");
         }
