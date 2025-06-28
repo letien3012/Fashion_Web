@@ -1,6 +1,7 @@
 const Product = require("../models/product.model");
 const ProductCatalogue = require("../models/productCatalogue.model");
 const ImageModel = require("../models/image.model");
+const ProductEmbedding = require("../models/productEmbedding.model");
 const fs = require("fs");
 const path = require("path");
 const axios = require("axios");
@@ -14,7 +15,6 @@ const downloadAndProcessImage = async (
   productId = null
 ) => {
   try {
-    console.log(imageUrl);
     if (!imageUrl) return "";
     // Check if URL is valid
     if (!imageUrl.startsWith("http")) return imageUrl;
@@ -106,6 +106,24 @@ const downloadMultipleAndConvertToBase64 = async (imageUrls) => {
   return Promise.all(downloadPromises);
 };
 
+// Hàm gọi YOLO service để tạo embedding
+const createTextEmbedding = async (text) => {
+  try {
+    const response = await axios.post('http://localhost:9000/vectorize-text', {
+      text: text
+    });
+    
+    if (response.data && response.data.embedding) {
+      return response.data.embedding;
+    } else {
+      throw new Error('Invalid response from YOLO service');
+    }
+  } catch (error) {
+    console.error('Error calling YOLO service for text embedding:', error.message);
+    throw new Error(`Failed to create text embedding: ${error.message}`);
+  }
+};
+
 // Thêm sản phẩm mới
 exports.add = async (req, res) => {
   try {
@@ -121,7 +139,6 @@ exports.add = async (req, res) => {
       variants,
     } = req.body;
 
-    console.log(req.body);
 
     // Kiểm tra các trường bắt buộc
     if (!code || !name || !catalogueId) {
@@ -170,9 +187,37 @@ exports.add = async (req, res) => {
           v.attributeId2 || v.attributeId2 === "" ? v.attributeId2 : undefined,
       }));
     }
-
+    
     const product = new Product(req.body);
     const id = await product.save();
+    
+    // Tạo chuỗi thông tin sản phẩm để embedding
+    try {
+      const embeddingText = await Product.getEmbeddingText(id);
+      
+      // Gọi YOLO service để tạo embedding
+      try {
+        const textEmbedding = await createTextEmbedding(embeddingText);
+        
+        // Lưu embedding vector vào database
+        await ProductEmbedding.findOneAndUpdate(
+          { product: id },
+          {
+            product: id,
+            embedding: textEmbedding,
+            sourceText: embeddingText
+          },
+          { upsert: true, new: true }
+        );
+        
+      } catch (embeddingError) {
+        console.error("❌ Lỗi khi tạo embedding vector:", embeddingError.message);
+      }
+      
+    } catch (embeddingError) {
+      console.error("Lỗi khi tạo chuỗi embedding:", embeddingError.message);
+    }
+    
     res.status(201).json({
       message: "Product added successfully",
       id,
@@ -306,6 +351,34 @@ exports.update = async (req, res) => {
 
     // Cập nhật thông tin sản phẩm (xử lý ảnh được thực hiện trong model)
     await Product.update(req.params.id, req.body);
+    
+    // Tạo chuỗi thông tin sản phẩm để embedding sau khi cập nhật
+    try {
+      const embeddingText = await Product.getEmbeddingText(req.params.id);
+      
+      // Gọi YOLO service để tạo embedding
+      try {
+        const textEmbedding = await createTextEmbedding(embeddingText);
+        
+        // Lưu embedding vector vào database
+        await ProductEmbedding.findOneAndUpdate(
+          { product: req.params.id },
+          {
+            product: req.params.id,
+            embedding: textEmbedding,
+            sourceText: embeddingText
+          },
+          { upsert: true, new: true }
+        );
+        
+      } catch (embeddingError) {
+        console.error("❌ Lỗi khi tạo embedding vector:", embeddingError.message);
+      }
+      
+    } catch (embeddingError) {
+      console.error("Lỗi khi tạo chuỗi embedding sau cập nhật:", embeddingError.message);
+    }
+    
     res.status(200).json({ message: "Product updated successfully" });
   } catch (error) {
     console.error("Error updating product:", error);
@@ -768,6 +841,29 @@ exports.importFromExcel = async (req, res) => {
           });
 
           await newProduct.save();
+
+          // Tạo embedding cho sản phẩm vừa import
+          try {
+            const embeddingText = await Product.getEmbeddingText(newProduct._id);
+            
+            // Gọi YOLO service để tạo embedding
+            const textEmbedding = await createTextEmbedding(embeddingText);
+            
+            // Lưu embedding vector vào database
+            await ProductEmbedding.findOneAndUpdate(
+              { product: newProduct._id },
+              {
+                product: newProduct._id,
+                embedding: textEmbedding,
+                sourceText: embeddingText
+              },
+              { upsert: true, new: true }
+            );
+            
+          } catch (embeddingError) {
+            console.error(`❌ Lỗi khi tạo embedding cho sản phẩm ${product.code}:`, embeddingError.message);
+            // Không dừng quá trình import, chỉ log lỗi
+          }
 
           results.success.push({
             row: startRow,

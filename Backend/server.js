@@ -30,6 +30,7 @@ const routes = {
   banner: require("./routes/banner.route"),
   review: require("./routes/review.route"),
   location: require("./routes/location.routes"),
+  rag: require("./routes/rag.route"),
 };
 
 // Đăng ký các route API
@@ -52,6 +53,7 @@ app.use("/api/imageService", routes.imageService);
 app.use("/api/banners", routes.banner);
 app.use("/api/reviews", routes.review);
 app.use("/api/location", routes.location);
+app.use("/api/rag", routes.rag);
 
 // Middleware xử lý lỗi
 app.use((err, req, res, next) => {
