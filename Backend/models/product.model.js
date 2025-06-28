@@ -2,6 +2,7 @@ const mongoose = require("mongoose");
 const ImageModel = require("./image.model");
 const { extractAndSaveFeatures } = require("../imageService/imageService");
 const axios = require("axios");
+const { decode } = require('html-entities');
 
 const productSchema = new mongoose.Schema({
   code: { type: String, required: true },
@@ -715,6 +716,209 @@ Product.search = async function (keyword) {
     return products;
   } catch (error) {
     throw new Error(`Error searching products: ${error.message}`);
+  }
+};
+
+// Phương thức tạo chuỗi thông tin sản phẩm để embedding
+Product.getEmbeddingText = async function (productId) {
+  try {
+    const product = await this.findById(productId)
+      .populate('catalogueId')
+      .populate('attributeCatalogueIds')
+      .populate('variants.attributeId1')
+      .populate('variants.attributeId2')
+      .populate('variants.attributeId1.attributeCatalogueId')
+      .populate('variants.attributeId2.attributeCatalogueId');
+    
+    if (!product) {
+      throw new Error("Product not found");
+    }
+
+    // Hàm xử lý HTML tags và entities
+    const stripHtmlTags = (html) => {
+      if (!html) return "";
+      
+      // Decode HTML entities trước
+      let decodedText = decode(html);
+      
+      // Loại bỏ HTML tags và normalize spaces
+      return decodedText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    };
+
+    let embeddingText = "";
+    
+    // Thêm tên sản phẩm
+    if (product.name) {
+      embeddingText += `Sản phẩm: ${product.name}. `;
+    }
+    
+    // Thêm mô tả
+    if (product.description) {
+      embeddingText += `Mô tả: ${product.description}. `;
+    }
+    
+    // Thêm nội dung (đã xử lý HTML)
+    if (product.content) {
+      const cleanContent = stripHtmlTags(product.content);
+      if (cleanContent) {
+        embeddingText += `Thông tin chi tiết: ${cleanContent}. `;
+      }
+    }
+    
+    // Thêm tên catalogue
+    if (product.catalogueId && product.catalogueId.name) {
+      embeddingText += `Danh mục: ${product.catalogueId.name}. `;
+    }
+    
+    // Thêm thông tin các biến thể
+    if (product.variants && product.variants.length > 0) {
+      embeddingText += `Các biến thể sản phẩm: `;
+      for (let i = 0; i < product.variants.length; i++) {
+        const variant = product.variants[i];
+        let variantInfo = "";
+        
+        // Thêm thuộc tính 1 với tên catalogue
+        if (variant.attributeId1 && variant.attributeId1.name) {
+          
+          // Thử lấy tên catalogue từ attributeCatalogueIds của product
+          let catalogueName1 = '';
+          if (product.attributeCatalogueIds && product.attributeCatalogueIds.length > 0) {
+            const attr1 = await mongoose.model('Attribute').findById(variant.attributeId1._id).populate('attributeCatalogueId');
+            catalogueName1 = attr1?.attributeCatalogueId?.name || '';
+          }
+          
+          variantInfo += catalogueName1 ? `${catalogueName1} ${variant.attributeId1.name}` : variant.attributeId1.name;
+        }
+        
+        // Thêm thuộc tính 2 với tên catalogue
+        if (variant.attributeId2 && variant.attributeId2.name) {
+          if (variantInfo) variantInfo += ` `;        
+          // Thử lấy tên catalogue từ attributeCatalogueIds của product
+          let catalogueName2 = '';
+          if (product.attributeCatalogueIds && product.attributeCatalogueIds.length > 0) {
+            const attr2 = await mongoose.model('Attribute').findById(variant.attributeId2._id).populate('attributeCatalogueId');
+            catalogueName2 = attr2?.attributeCatalogueId?.name || '';
+          }
+          
+          variantInfo += catalogueName2 ? `${catalogueName2}${variant.attributeId2.name}` : variant.attributeId2.name;
+        }
+        
+        // Thêm giá
+        if (variant.price) {
+          if (variantInfo) variantInfo += ` `;
+          variantInfo += `giá ${variant.price.toLocaleString('vi-VN')} VNĐ`;
+        }
+        
+        if (variantInfo) {
+          embeddingText += variantInfo;
+          if (i < product.variants.length - 1) {
+            embeddingText += "; ";
+          } else {
+            embeddingText += ". ";
+          }
+        }
+      }
+    }
+    
+    return embeddingText.trim();
+  } catch (error) {
+    throw new Error(`Error getting embedding text: ${error.message}`);
+  }
+};
+
+// Phương thức tạo chuỗi thông tin sản phẩm cho nhiều sản phẩm
+Product.getMultipleEmbeddingTexts = async function (productIds) {
+  try {
+    const products = await this.find({ _id: { $in: productIds } })
+      .populate('catalogueId')
+      .populate('attributeCatalogueIds')
+      .populate('variants.attributeId1')
+      .populate('variants.attributeId2')
+      .populate('variants.attributeId1.attributeCatalogueId')
+      .populate('variants.attributeId2.attributeCatalogueId');
+    
+    // Hàm xử lý HTML tags và entities
+    const stripHtmlTags = (html) => {
+      if (!html) return "";
+      
+      // Decode HTML entities trước
+      let decodedText = decode(html);
+      
+      // Loại bỏ HTML tags và normalize spaces
+      return decodedText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+    };
+
+    const embeddingTexts = {};
+    
+    for (const product of products) {
+      let embeddingText = "";
+      
+      // Thêm tên sản phẩm
+      if (product.name) {
+        embeddingText += `Sản phẩm: ${product.name}. `;
+      }
+      
+      // Thêm mô tả
+      if (product.description) {
+        embeddingText += `Mô tả: ${product.description}. `;
+      }
+      
+      // Thêm nội dung (đã xử lý HTML)
+      if (product.content) {
+        const cleanContent = stripHtmlTags(product.content);
+        if (cleanContent) {
+          embeddingText += `Thông tin chi tiết: ${cleanContent}. `;
+        }
+      }
+      
+      // Thêm tên catalogue
+      if (product.catalogueId && product.catalogueId.name) {
+        embeddingText += `Danh mục: ${product.catalogueId.name}. `;
+      }
+      
+      // Thêm thông tin các biến thể
+      if (product.variants && product.variants.length > 0) {
+        embeddingText += `Các biến thể sản phẩm: `;
+        for (let i = 0; i < product.variants.length; i++) {
+          const variant = product.variants[i];
+          let variantInfo = "";
+  
+          // Thêm thuộc tính 1 với tên catalogue
+          if (variant.attributeId1 && variant.attributeId1.name) {
+            const catalogueName1 = variant.attributeId1.attributeCatalogueId?.name || '';
+            variantInfo += catalogueName1 ? `${catalogueName1} ${variant.attributeId1.name}` : variant.attributeId1.name;
+          }
+          
+          // Thêm thuộc tính 2 với tên catalogue
+          if (variant.attributeId2 && variant.attributeId2.name) {
+            if (variantInfo) variantInfo += ` `;
+            const catalogueName2 = variant.attributeId2.attributeCatalogueId?.name || '';
+            variantInfo += catalogueName2 ? `${catalogueName2} ${variant.attributeId2.name}` : variant.attributeId2.name;
+          }
+          
+          // Thêm giá
+          if (variant.price) {
+            if (variantInfo) variantInfo += ` `;
+            variantInfo += `giá ${variant.price.toLocaleString('vi-VN')} VNĐ`;
+          }
+          
+          if (variantInfo) {
+            embeddingText += variantInfo;
+            if (i < product.variants.length - 1) {
+              embeddingText += "; ";
+            } else {
+              embeddingText += ". ";
+            }
+          }
+        }
+      }
+      
+      embeddingTexts[product._id.toString()] = embeddingText.trim();
+    }
+    
+    return embeddingTexts;
+  } catch (error) {
+    throw new Error(`Error getting multiple embedding texts: ${error.message}`);
   }
 };
 

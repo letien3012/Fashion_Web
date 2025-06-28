@@ -12,6 +12,7 @@ from torchvision import transforms
 from efficientnet_pytorch import EfficientNet
 from typing import List, Dict, Any
 from urllib.parse import urlparse
+from sentence_transformers import SentenceTransformer
 
 # Cấu hình logging
 logging.basicConfig(
@@ -25,6 +26,10 @@ model = YOLO("best.pt")
 # Load EfficientNet-B0 model
 efficientnet_model = EfficientNet.from_pretrained('efficientnet-b0')
 efficientnet_model.eval()  # Set to evaluation mode
+
+# Load Sentence-BERT model
+bert_model = SentenceTransformer("./bge-m3")
+
 
 # Define image preprocessing
 preprocess = transforms.Compose([
@@ -183,4 +188,19 @@ async def extract_features(data: Dict[str, str] = Body(...)):
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logging.error(f"Error in extract-features endpoint: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/vectorize-text")
+async def vectorize_text(data: Dict[str, str] = Body(...)):
+    try:
+        text = data.get("text")
+        if not text:
+            raise HTTPException(status_code=400, detail="text is required")
+            
+        # Vectorize the text
+        embedding = bert_model.encode(text)
+        
+        return {"embedding": embedding.tolist()}
+    except Exception as e:
+        logging.error(f"Error in vectorize-text endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
