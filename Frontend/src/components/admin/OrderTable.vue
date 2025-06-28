@@ -32,11 +32,16 @@
           <td>
             <div class="customer-info">
               <span>{{
-                order.customer?.fullname || order.customerId?.fullname
+                order.fullname ||
+                order.customer?.fullname ||
+                order.customerId?.fullname
               }}</span>
-              <small>{{
-                order.customer?.email || order.customerId?.email
-              }}</small>
+              <small>
+                <template v-if="order.customerId">{{
+                  order.customerId.email
+                }}</template>
+                <template v-else></template>
+              </small>
             </div>
           </td>
           <td>{{ formatPrice(order.total_price) }}</td>

@@ -7,6 +7,7 @@ router.get("/", productCatalogueController.getAll);
 router.get("/tree", productCatalogueController.getTree);
 router.get("/:id", productCatalogueController.getById);
 router.get("/:id/children", productCatalogueController.getChildren);
+router.get("/:id/can-delete", productCatalogueController.canDelete);
 router.put("/update/:id", productCatalogueController.update);
 router.delete("/delete/:id", productCatalogueController.delete);
 

@@ -194,6 +194,34 @@ export default {
         const response = await AdminProductCatalogueService.getAll();
         if (response.data && response.data.data) {
           this.catalogues = response.data.data;
+
+          // Check delete status for all catalogues
+          const cataloguesWithDeleteStatus = await Promise.all(
+            this.catalogues.map(async (catalogue) => {
+              try {
+                const canDeleteResponse =
+                  await AdminProductCatalogueService.canDelete(catalogue._id);
+                const canDeleteData = canDeleteResponse.data.data;
+                return {
+                  ...catalogue,
+                  canDelete: canDeleteData.canDelete,
+                  deleteReason: canDeleteData.reason,
+                };
+              } catch (error) {
+                console.error(
+                  `Error checking delete status for catalogue ${catalogue._id}:`,
+                  error
+                );
+                return {
+                  ...catalogue,
+                  canDelete: false,
+                  deleteReason: "Lỗi khi kiểm tra khả năng xóa",
+                };
+              }
+            })
+          );
+
+          this.catalogues = cataloguesWithDeleteStatus;
           this.filteredCatalogues = [...this.catalogues];
         } else {
           this.error = "Dữ liệu trả về không đúng định dạng";
@@ -241,19 +269,43 @@ export default {
     },
 
     async confirmDelete(catalogue) {
-      const result = await Swal.fire({
-        title: "Xác nhận xóa?",
-        text: `Bạn có chắc chắn muốn xóa danh mục "${catalogue.name}"?`,
-        icon: "warning",
-        showCancelButton: true,
-        confirmButtonColor: "#ff4d4f",
-        cancelButtonColor: "#d9d9d9",
-        confirmButtonText: "Xóa",
-        cancelButtonText: "Hủy",
-      });
+      try {
+        // Check if catalogue can be deleted first
+        const canDeleteResponse = await AdminProductCatalogueService.canDelete(
+          catalogue._id
+        );
+        const canDeleteData = canDeleteResponse.data.data;
 
-      if (result.isConfirmed) {
-        this.handleDelete(catalogue);
+        if (!canDeleteData.canDelete) {
+          // Show error message if cannot delete
+          await Swal.fire({
+            title: "Không thể xóa danh mục",
+            text: canDeleteData.reason,
+            icon: "warning",
+            confirmButtonColor: "#1890ff",
+            confirmButtonText: "Đóng",
+          });
+          return;
+        }
+
+        // If can delete, show confirmation dialog
+        const result = await Swal.fire({
+          title: "Xác nhận xóa?",
+          text: `Bạn có chắc chắn muốn xóa danh mục "${catalogue.name}"?`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#ff4d4f",
+          cancelButtonColor: "#d9d9d9",
+          confirmButtonText: "Xóa",
+          cancelButtonText: "Hủy",
+        });
+
+        if (result.isConfirmed) {
+          this.handleDelete(catalogue);
+        }
+      } catch (error) {
+        console.error("Check can delete error:", error);
+        toast.error("Có lỗi xảy ra khi kiểm tra khả năng xóa danh mục");
       }
     },
 

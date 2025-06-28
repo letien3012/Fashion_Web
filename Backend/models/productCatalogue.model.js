@@ -168,6 +168,99 @@ productCatalogueSchema.statics.getAllWithProductCount = async function () {
   }
 };
 
+// Static method to soft delete catalogue
+productCatalogueSchema.statics.softDelete = async function (id) {
+  try {
+    const catalogue = await this.findById(id);
+    if (!catalogue) {
+      throw new Error("ProductCatalogue not found");
+    }
+    if (catalogue.deletedAt) {
+      throw new Error("ProductCatalogue has already been deleted");
+    }
+
+    // Check if catalogue has children (other catalogues using this as parentId)
+    const childrenCount = await this.countDocuments({
+      parentId: id,
+      deletedAt: null,
+    });
+    if (childrenCount > 0) {
+      throw new Error("Cannot delete catalogue that has child catalogues");
+    }
+
+    // Check if catalogue has products
+    const Product = mongoose.model("Product");
+    const productCount = await Product.countDocuments({
+      catalogueId: id,
+      deletedAt: null,
+    });
+    if (productCount > 0) {
+      throw new Error("Cannot delete catalogue that has products");
+    }
+
+    catalogue.deletedAt = new Date();
+    catalogue.updatedAt = new Date();
+    await catalogue.save();
+    return catalogue;
+  } catch (error) {
+    throw new Error(`Error soft deleting productCatalogue: ${error.message}`);
+  }
+};
+
+// Static method to check if catalogue can be deleted
+productCatalogueSchema.statics.canDelete = async function (id) {
+  try {
+    const catalogue = await this.findById(id);
+    if (!catalogue) {
+      throw new Error("ProductCatalogue not found");
+    }
+    if (catalogue.deletedAt) {
+      return {
+        canDelete: false,
+        reason: "Danh mục đã được xóa trước đó",
+      };
+    }
+
+    // Check if catalogue has children
+    const childrenCount = await this.countDocuments({
+      parentId: id,
+      deletedAt: null,
+    });
+
+    // Check if catalogue has products
+    const Product = mongoose.model("Product");
+    const productCount = await Product.countDocuments({
+      catalogueId: id,
+      deletedAt: null,
+    });
+
+    if (childrenCount > 0) {
+      return {
+        canDelete: false,
+        reason: `Danh mục có ${childrenCount} danh mục con. Vui lòng xóa các danh mục con trước.`,
+        childrenCount,
+      };
+    }
+
+    if (productCount > 0) {
+      return {
+        canDelete: false,
+        reason: `Danh mục có ${productCount} sản phẩm. Vui lòng xóa hoặc di chuyển các sản phẩm trước.`,
+        productCount,
+      };
+    }
+
+    return {
+      canDelete: true,
+      reason: "Có thể xóa danh mục",
+    };
+  } catch (error) {
+    throw new Error(
+      `Error checking if catalogue can be deleted: ${error.message}`
+    );
+  }
+};
+
 const ProductCatalogue = mongoose.model(
   "ProductCatalogue",
   productCatalogueSchema

@@ -92,11 +92,9 @@
                   <span class="label">Họ tên:</span>
                   <span class="value">{{ order.fullname || "N/A" }}</span>
                 </div>
-                <div class="info-item">
+                <div class="info-item" v-if="order.customerId">
                   <span class="label">Email:</span>
-                  <span class="value">{{
-                    order.customerId?.email || "N/A"
-                  }}</span>
+                  <span class="value">{{ order.customerId.email }}</span>
                 </div>
                 <div class="info-item">
                   <span class="label">Số điện thoại:</span>

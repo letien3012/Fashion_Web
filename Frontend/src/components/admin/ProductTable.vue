@@ -54,7 +54,7 @@
       </thead>
       <tbody>
         <tr v-if="loading">
-          <td colspan="8" class="text-center">
+          <td colspan="6" class="text-center">
             <div class="loading-spinner">
               <i class="fas fa-spinner fa-spin"></i>
               <span>Đang tải...</span>
@@ -62,7 +62,7 @@
           </td>
         </tr>
         <tr v-else-if="products.length === 0">
-          <td colspan="8" class="text-center empty-state">
+          <td colspan="6" class="text-center empty-state">
             <i class="fas fa-box-open"></i>
             <p>Không có sản phẩm nào</p>
           </td>
@@ -176,12 +176,6 @@ export default {
         return catalogueIdStr === cIdStr;
       });
       return catalogue ? catalogue.name : "N/A";
-    },
-    formatPrice(price) {
-      return new Intl.NumberFormat("vi-VN", {
-        style: "currency",
-        currency: "VND",
-      }).format(price);
     },
     confirmDelete(id) {
       this.$emit("delete", id);

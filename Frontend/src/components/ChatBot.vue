@@ -118,22 +118,6 @@
       </div>
 
       <div class="chat-input">
-        <div class="input-actions">
-          <input
-            type="file"
-            ref="fileInput"
-            accept="image/*"
-            @change="handleImageSelect"
-            style="display: none"
-          />
-          <button
-            class="action-btn"
-            @click="triggerFileInput"
-            title="Tìm kiếm bằng hình ảnh"
-          >
-            <i class="fas fa-camera"></i>
-          </button>
-        </div>
         <input
           type="text"
           placeholder="Nhập tin nhắn của bạn..."
@@ -223,11 +207,14 @@ export default {
       this.isLoading = true;
       try {
         // Lấy embedding cho câu hỏi từ backend
-        const embeddingRes = await fetch("http://localhost:3005/api/rag/embedding", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: userMessage })
-        });
+        const embeddingRes = await fetch(
+          "http://localhost:3005/api/rag/embedding",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ question: userMessage }),
+          }
+        );
         const embeddingData = await embeddingRes.json();
         if (embeddingData.embedding) {
           this.userQuestionEmbedding = embeddingData.embedding;
@@ -235,11 +222,14 @@ export default {
         // Lấy sản phẩm liên quan nhất từ backend (tối đa 5)
         let relatedProducts = [];
         try {
-          const retrieveRes = await fetch("http://localhost:3005/api/rag/retrieve", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ embedding: this.userQuestionEmbedding })
-          });
+          const retrieveRes = await fetch(
+            "http://localhost:3005/api/rag/retrieve",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ embedding: this.userQuestionEmbedding }),
+            }
+          );
           const retrieveData = await retrieveRes.json();
           if (Array.isArray(retrieveData.products)) {
             relatedProducts = retrieveData.products.slice(0, 5);
@@ -257,7 +247,7 @@ export default {
         }
         // 3. Tạo prompt RAG
         const ragPrompt = this.generateRAGPrompt(userMessage, retrievedData);
-        console.log(ragPrompt)
+        console.log(ragPrompt);
         // 4. Gọi LLM sinh câu trả lời
         const botResponse = await this.callLLM(ragPrompt);
         // 5. Hiển thị kết quả
@@ -297,10 +287,20 @@ export default {
       }
       if (msg.match(/\d+(k|tr|nghìn|triệu|vnd|₫)/) || msg.includes("giá")) {
         // Có giá trị giá
-        return { intent: "search_product_by_price", entity: { priceInfo: this.extractPriceInfo(msg) } };
+        return {
+          intent: "search_product_by_price",
+          entity: { priceInfo: this.extractPriceInfo(msg) },
+        };
       }
-      if (msg.includes("size") || msg.includes("màu") || msg.includes("màu sắc")) {
-        return { intent: "search_product_by_attribute", entity: { attributeInfo: this.extractAttributeInfo(msg) } };
+      if (
+        msg.includes("size") ||
+        msg.includes("màu") ||
+        msg.includes("màu sắc")
+      ) {
+        return {
+          intent: "search_product_by_attribute",
+          entity: { attributeInfo: this.extractAttributeInfo(msg) },
+        };
       }
       // Mặc định: tìm sản phẩm theo từ khóa
       return { intent: "search_product", entity: { keyword: msg } };
@@ -318,39 +318,56 @@ export default {
       let context = "";
       // Thông tin sản phẩm liên quan
       if (retrievedData.products && retrievedData.products.length > 0) {
-        context += retrievedData.products.map(product => {
-          let desc = product.name ? `Sản phẩm: ${product.name}. ` : "";
-          if (product.description) desc += `Mô tả: ${product.description}. `;
-          if (product.content) desc += `Thông tin chi tiết: ${product.content}. `;
-          if (product.catalogueId && product.catalogueId.name) desc += `Danh mục: ${product.catalogueId.name}. `;
-          if (product.variants && product.variants.length > 0) {
-            desc += `Các biến thể sản phẩm: `;
-            desc += product.variants.map(variant => {
-              let variantInfo = "";
-              if (variant.attributeId1 && variant.attributeId1.name) variantInfo += variant.attributeId1.name;
-              if (variant.attributeId2 && variant.attributeId2.name) variantInfo += ` ${variant.attributeId2.name}`;
-              if (variant.price) variantInfo += ` giá ${variant.price.toLocaleString('vi-VN')} VNĐ`;
-              return variantInfo.trim();
-            }).filter(Boolean).join('; ') + ". ";
-          }
-          return desc.trim();
-        }).join('\n');
+        context += retrievedData.products
+          .map((product) => {
+            let desc = product.name ? `Sản phẩm: ${product.name}. ` : "";
+            if (product.description) desc += `Mô tả: ${product.description}. `;
+            if (product.content)
+              desc += `Thông tin chi tiết: ${product.content}. `;
+            if (product.catalogueId && product.catalogueId.name)
+              desc += `Danh mục: ${product.catalogueId.name}. `;
+            if (product.variants && product.variants.length > 0) {
+              desc += `Các biến thể sản phẩm: `;
+              desc +=
+                product.variants
+                  .map((variant) => {
+                    let variantInfo = "";
+                    if (variant.attributeId1 && variant.attributeId1.name)
+                      variantInfo += variant.attributeId1.name;
+                    if (variant.attributeId2 && variant.attributeId2.name)
+                      variantInfo += ` ${variant.attributeId2.name}`;
+                    if (variant.price)
+                      variantInfo += ` giá ${variant.price.toLocaleString(
+                        "vi-VN"
+                      )} VNĐ`;
+                    return variantInfo.trim();
+                  })
+                  .filter(Boolean)
+                  .join("; ") + ". ";
+            }
+            return desc.trim();
+          })
+          .join("\n");
       }
       // Thông tin khuyến mãi
       if (retrievedData.promotions && retrievedData.promotions.length > 0) {
-        if (context) context += '\n';
-        context += retrievedData.promotions.map(promo => {
-          let promoDesc = promo.name ? `Khuyến mãi: ${promo.name}. ` : "";
-          if (promo.description) promoDesc += `Mô tả: ${promo.description}. `;
-          if (promo.discount) promoDesc += `Giảm giá: ${promo.discount}. `;
-          if (promo.voucher_condition) {
-            if (promo.voucher_condition.min_order_value) promoDesc += `Đơn tối thiểu: ${promo.voucher_condition.min_order_value}. `;
-            if (promo.voucher_condition.max_discount) promoDesc += `Giảm tối đa: ${promo.voucher_condition.max_discount}. `;
-          }
-          if (promo.start_date) promoDesc += `Bắt đầu: ${promo.start_date}. `;
-          if (promo.end_date) promoDesc += `Kết thúc: ${promo.end_date}. `;
-          return promoDesc.trim();
-        }).join('\n');
+        if (context) context += "\n";
+        context += retrievedData.promotions
+          .map((promo) => {
+            let promoDesc = promo.name ? `Khuyến mãi: ${promo.name}. ` : "";
+            if (promo.description) promoDesc += `Mô tả: ${promo.description}. `;
+            if (promo.discount) promoDesc += `Giảm giá: ${promo.discount}. `;
+            if (promo.voucher_condition) {
+              if (promo.voucher_condition.min_order_value)
+                promoDesc += `Đơn tối thiểu: ${promo.voucher_condition.min_order_value}. `;
+              if (promo.voucher_condition.max_discount)
+                promoDesc += `Giảm tối đa: ${promo.voucher_condition.max_discount}. `;
+            }
+            if (promo.start_date) promoDesc += `Bắt đầu: ${promo.start_date}. `;
+            if (promo.end_date) promoDesc += `Kết thúc: ${promo.end_date}. `;
+            return promoDesc.trim();
+          })
+          .join("\n");
       }
       return `Bạn là một trợ lý bán hàng chuyên nghiệp, thân thiện và nhiệt tình.\nDưới đây là danh sách sản phẩm và khuyến mãi có thể liên quan đến câu hỏi của khách hàng:\n${context}\n\nCâu hỏi của khách hàng: "${userMessage}"\n\nHãy làm theo hướng dẫn sau:\n- Nếu không có thông tin sản phẩm và khuyến mãi thì trả lời là không có thông tin.\n- Nếu câu hỏi liên quan đến sản phẩm, khuyến mãi hãy trả lời tự nhiên và thân thiện trước, giống như đang nói chuyện với khách.\n- Nếu câu hỏi không liên quan đến sản phẩm, khuyến mãi hãy trả lời hợp lý và tự nhiên nhất có thể.\nLuôn ưu tiên trải nghiệm thân thiện và dễ hiểu cho khách hàng.`;
     },

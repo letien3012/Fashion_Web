@@ -1,12 +1,15 @@
 <template>
   <div class="order-list">
-    <div class="page-header">
+    <div
+      class="page-header"
+      style="display: flex; align-items: center; justify-content: space-between"
+    >
       <h1>Quản lý đơn hàng</h1>
     </div>
 
     <div class="filters-section">
       <div class="row">
-        <div class="col-lg-10">
+        <div class="col-lg-8">
           <div class="status-filters">
             <button
               v-for="status in orderStatuses"
@@ -15,6 +18,13 @@
               :class="['status-btn', { active: statusFilter === status.value }]"
             >
               {{ status.label }}
+            </button>
+          </div>
+        </div>
+        <div class="col-lg-2">
+          <div>
+            <button class="btn btn-primary" @click="showOrderAddModal = true">
+              Thêm đơn hàng mới
             </button>
           </div>
         </div>
@@ -161,6 +171,12 @@
       @close="closeOrderDetail"
     />
 
+    <OrderAdd
+      :show="showOrderAddModal"
+      @close="showOrderAddModal = false"
+      @order-added="loadOrders"
+    />
+
     <div v-if="showBulkPrintModal" class="modal-overlay" style="z-index: 2000">
       <div class="bulk-print-modal">
         <button
@@ -202,6 +218,7 @@ import OrderService from "../../services/admin/order.service";
 import { toast } from "vue3-toastify";
 import Swal from "sweetalert2";
 import ShippingLabel from "../../components/admin/ShippingLabel.vue";
+import OrderAdd from "../../components/admin/OrderAdd.vue";
 
 export default {
   name: "OrderList",
@@ -209,6 +226,7 @@ export default {
     OrderTable,
     OrderDetail,
     ShippingLabel,
+    OrderAdd,
   },
   data() {
     return {
@@ -244,6 +262,7 @@ export default {
       selectedOrderIds: [],
       showBulkPrintModal: false,
       shippingLabelRefs: {},
+      showOrderAddModal: false,
     };
   },
   computed: {

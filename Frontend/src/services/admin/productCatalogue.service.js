@@ -39,6 +39,13 @@ const AdminProductCatalogueService = {
       getAuthHeaders()
     );
   },
+
+  async canDelete(id) {
+    return axios.get(
+      `${backendUrl}/api/productCatalogues/${id}/can-delete`,
+      getAuthHeaders()
+    );
+  },
 };
 
 export default AdminProductCatalogueService;
