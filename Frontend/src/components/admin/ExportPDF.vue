@@ -1,14 +1,37 @@
 <template>
   <div ref="reportContent" class="report-container">
-    <!-- Header -->
+    <!-- Header with Logo and Meta -->
     <div class="report-header">
-      <div class="company-info">
-        <h2 class="company-name">FASHION STORE</h2>
-        <p class="company-details">Báo cáo doanh thu và thống kê sản phẩm</p>
+      <div class="header-left">
+        <!-- Nếu có file logo thì dùng, nếu không thì dùng text JUNO -->
+        <!-- <img src="/src/assets/images/juno-logo.png" alt="JUNO Logo" class="company-logo" /> -->
+        <div class="company-logo company-logo-text">JUNO</div>
+        <div class="company-info">
+          <h1 class="company-name">JUNO SHOP</h1>
+          <p class="company-details">Báo cáo doanh thu & thống kê sản phẩm</p>
+        </div>
       </div>
-      <div class="report-meta">
-        <p><strong>Ngày tạo:</strong> {{ currentDate }}</p>
-        <p><strong>Thời gian báo cáo:</strong> {{ timeRangeText }}</p>
+      <div class="header-right">
+        <div class="report-meta">
+          <p><strong>Ngày tạo:</strong> {{ currentDate }}</p>
+          <p><strong>Thời gian báo cáo:</strong> {{ timeRangeText }}</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Box -->
+    <div class="summary-box">
+      <div class="summary-item">
+        <span class="summary-label">Tổng doanh thu</span>
+        <span class="summary-value">{{ formatCurrency(totalRevenue) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Tổng lợi nhuận</span>
+        <span class="summary-value">{{ formatCurrency(totalProfit) }}</span>
+      </div>
+      <div class="summary-item">
+        <span class="summary-label">Tổng số đơn hàng</span>
+        <span class="summary-value">{{ totalOrders }}</span>
       </div>
     </div>
 
@@ -62,7 +85,6 @@
           </div>
         </div>
       </div>
-
       <div class="products-table">
         <table class="data-table">
           <thead>
@@ -105,14 +127,19 @@
       </div>
     </div>
 
-    <!-- Footer -->
-    <div class="report-footer">
-      <p>
-        <strong>Ghi chú:</strong> Báo cáo được tạo tự động từ hệ thống quản lý
-        Fashion Store
-      </p>
-      <p><strong>Người tạo:</strong> {{ employeeName }}</p>
+    <!-- Signature & Footer -->
+    <div class="signature-section">
+      <div class="signature-block">
+        <p><strong>Người lập báo cáo:</strong></p>
+        <div class="signature-line"></div>
+        <div class="signature-info">
+          <div><strong>Họ tên:</strong> {{ employeeInfo.fullname }}</div>
+          <div><strong>SĐT:</strong> {{ employeeInfo.phone }}</div>
+          <div><strong>Vai trò:</strong> {{ employeeInfo.role }}</div>
+        </div>
+      </div>
     </div>
+    <div class="watermark-footer">JUNO SHOP - www.juno.vn</div>
   </div>
 </template>
 
@@ -122,50 +149,19 @@ import html2pdf from "html2pdf.js";
 import { toast } from "vue3-toastify";
 
 const props = defineProps({
-  reportName: {
-    type: String,
-    default: "Báo cáo doanh thu",
-  },
-  timeFilter: {
-    type: String,
-    default: "month",
-  },
-  selectedYear: {
-    type: Number,
-    default: new Date().getFullYear(),
-  },
-  selectedMonth: {
-    type: Number,
-    default: new Date().getMonth() + 1,
-  },
-  startDate: {
-    type: String,
-    default: "",
-  },
-  endDate: {
-    type: String,
-    default: "",
-  },
-  salesData: {
-    type: Array,
-    default: () => [],
-  },
-  topProducts: {
-    type: Array,
-    default: () => [],
-  },
+  reportName: { type: String, default: "Báo cáo doanh thu" },
+  timeFilter: { type: String, default: "month" },
+  selectedYear: { type: Number, default: new Date().getFullYear() },
+  selectedMonth: { type: Number, default: new Date().getMonth() + 1 },
+  startDate: { type: String, default: "" },
+  endDate: { type: String, default: "" },
+  salesData: { type: Array, default: () => [] },
+  topProducts: { type: Array, default: () => [] },
   topProductsSummary: {
     type: Object,
-    default: () => ({
-      totalProductsSold: 0,
-      totalRevenue: 0,
-      averagePrice: 0,
-    }),
+    default: () => ({ totalProductsSold: 0, totalRevenue: 0, averagePrice: 0 }),
   },
-  employeeName: {
-    type: String,
-    default: "Admin",
-  },
+  employeeName: { type: String, default: "Admin" },
 });
 
 const reportContent = ref(null);
@@ -194,7 +190,6 @@ const timeRangeText = computed(() => {
     "Tháng 11",
     "Tháng 12",
   ];
-
   switch (props.timeFilter) {
     case "year":
       return `Năm ${props.selectedYear}`;
@@ -209,26 +204,49 @@ const timeRangeText = computed(() => {
   }
 });
 
+// Summary values for the summary box
+const totalRevenue = computed(() =>
+  props.salesData.reduce((sum, item) => sum + (item.revenue || 0), 0)
+);
+const totalProfit = computed(() =>
+  props.salesData.reduce((sum, item) => sum + (item.profit || 0), 0)
+);
+const totalOrders = computed(() =>
+  props.salesData.reduce((sum, item) => sum + (item.orders || 0), 0)
+);
+
+// Get employee info from localStorage
+const employeeInfo = computed(() => {
+  let emp = localStorage.getItem("employee");
+  if (!emp) return { fullname: "Admin", phone: "", role: "" };
+  try {
+    emp = JSON.parse(emp);
+    return {
+      fullname: emp.fullname || "Admin",
+      phone: emp.phone || "",
+      role: emp.role || "",
+    };
+  } catch {
+    return { fullname: "Admin", phone: "", role: "" };
+  }
+});
+
 // Methods
 const formatCurrency = (value) => {
   if (value === null || value === undefined) return "0 ₫";
   return value.toLocaleString("vi-VN") + " ₫";
 };
-
 const formatDate = (dateString) => {
   if (!dateString) return "";
   const date = new Date(dateString);
   return date.toLocaleDateString("vi-VN");
 };
-
 const calculatePercentage = (value, total) => {
   if (!total || total === 0) return 0;
   return Math.round((value / total) * 100);
 };
-
 const exportPDF = () => {
   const filename = `bao-cao-doanh-thu-${props.timeFilter}-${Date.now()}.pdf`;
-
   html2pdf()
     .from(reportContent.value)
     .set({
@@ -241,11 +259,7 @@ const exportPDF = () => {
         allowTaint: true,
         backgroundColor: "#ffffff",
       },
-      jsPDF: {
-        unit: "mm",
-        format: "a4",
-        orientation: "portrait",
-      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
     })
     .save()
     .then(() => {
@@ -256,114 +270,192 @@ const exportPDF = () => {
       toast.error("Lỗi khi tạo báo cáo PDF");
     });
 };
-
-// Cho phép gọi exportPDF từ component cha
 defineExpose({ exportPDF });
 </script>
 
 <style scoped>
 .report-container {
-  background: white;
-  padding: 20px;
+  background: #fff;
+  padding: 32px 32px 60px 32px;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08);
+  border-radius: 16px;
+  position: relative;
 }
-
 .report-header {
-  text-align: center;
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 2px solid #e9ecef;
-}
-
-.company-name {
-  color: #2c3e50;
-  margin-bottom: 5px;
-  font-size: 24px;
-  font-weight: bold;
-}
-
-.company-details {
-  color: #6c757d;
-  margin-bottom: 15px;
-  font-size: 14px;
-}
-
-.report-meta {
   display: flex;
   justify-content: space-between;
-  font-size: 12px;
-  color: #6c757d;
+  align-items: flex-start;
+  border-bottom: 2px solid #e9ecef;
+  padding-bottom: 18px;
+  margin-bottom: 28px;
 }
-
-.section {
-  margin-bottom: 30px;
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
 }
-
-.section-title {
-  color: #2c3e50;
-  font-size: 18px;
+.company-logo {
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #f8f9fa;
+  border: 1px solid #eee;
+  font-size: 2.1rem;
   font-weight: bold;
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid #dee2e6;
+  color: #e53935;
+  letter-spacing: 2px;
 }
-
+.company-logo-text {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(90deg, #e53935 60%, #fff 100%);
+  color: #fff;
+  text-shadow: 1px 1px 2px #e53935, 0 0 2px #fff;
+}
+.company-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.company-name {
+  color: #e53935;
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 0;
+  letter-spacing: 1px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  text-transform: none;
+}
+.company-details {
+  color: #6c757d;
+  font-size: 1rem;
+  margin: 0;
+}
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.report-meta {
+  font-size: 0.98rem;
+  color: #495057;
+  text-align: right;
+}
+.summary-box {
+  display: flex;
+  justify-content: space-between;
+  background: #f8f9fa;
+  border: 1.5px solid #dee2e6;
+  border-radius: 10px;
+  padding: 18px 24px;
+  margin-bottom: 32px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.summary-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.summary-label {
+  color: #6c757d;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.summary-value {
+  color: #2c3e50;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+.section {
+  margin-bottom: 32px;
+}
+.section-title {
+  color: #0d6efd;
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-bottom: 16px;
+  border-left: 4px solid #0d6efd;
+  padding-left: 12px;
+  background: #f4f8ff;
+  border-radius: 4px;
+}
 .data-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin-bottom: 20px;
-  font-size: 12px;
+  font-size: 0.98rem;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+  border-radius: 8px;
+  overflow: hidden;
 }
-
 .data-table th,
 .data-table td {
   border: 1px solid #dee2e6;
-  padding: 8px 12px;
+  padding: 10px 14px;
   text-align: left;
 }
-
 .data-table th {
   background-color: #f8f9fa;
   font-weight: bold;
   color: #495057;
+  font-size: 1rem;
 }
-
 .data-table tr:nth-child(even) {
-  background-color: #f8f9fa;
+  background-color: #f4f8ff;
 }
-
+.data-table tr:nth-child(odd) {
+  background-color: #fff;
+}
 .products-summary {
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
-
 .summary-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.summary-item {
   display: flex;
-  justify-content: space-between;
-  padding: 10px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  border: 1px solid #dee2e6;
+  gap: 18px;
+  margin-bottom: 10px;
 }
-
-.summary-item .label {
-  font-weight: 500;
-  color: #495057;
+.signature-section {
+  margin-top: 48px;
+  display: flex;
+  justify-content: flex-end;
 }
-
-.summary-item .value {
+.signature-block {
+  text-align: right;
+}
+.signature-line {
+  width: 180px;
+  height: 1.5px;
+  background: #495057;
+  margin: 18px 0 6px 0;
+  border-radius: 2px;
+}
+.signature-name {
   font-weight: bold;
   color: #2c3e50;
+  font-size: 1.1rem;
 }
-
+.watermark-footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 12px;
+  text-align: center;
+  color: #e0e0e0;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+  user-select: none;
+  pointer-events: none;
+}
 .report-footer {
   margin-top: 40px;
   padding-top: 20px;
@@ -372,33 +464,33 @@ defineExpose({ exportPDF });
   color: #6c757d;
   text-align: center;
 }
-
 .report-footer p {
   margin: 5px 0;
 }
-
-/* Responsive design */
 @media (max-width: 768px) {
   .report-container {
-    padding: 15px;
+    padding: 12px;
   }
-
-  .summary-stats {
-    grid-template-columns: 1fr;
-  }
-
-  .report-meta {
+  .summary-box {
     flex-direction: column;
-    gap: 5px;
+    gap: 12px;
+    padding: 12px;
   }
-
-  .data-table {
-    font-size: 11px;
+  .summary-stats {
+    flex-direction: column;
+    gap: 8px;
   }
-
-  .data-table th,
-  .data-table td {
-    padding: 6px 8px;
+  .report-header {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .header-left {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  .header-right {
+    align-items: flex-start;
   }
 }
 </style>

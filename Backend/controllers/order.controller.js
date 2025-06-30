@@ -2,6 +2,8 @@ const Order = require("../models/order.model");
 const Customer = require("../models/customer.model");
 const Consignment = require("../models/consignment.model");
 const ImageModel = require("../models/image.model");
+const sendOrderMail = require("../mailer/sendOrderMail");
+const sendOrderCancelMail = require("../mailer/sendOrderCancelMail");
 
 // Generate unique order code
 const generateOrderCode = () => {
@@ -104,6 +106,26 @@ exports.create = async (req, res) => {
     }
 
     const savedOrder = await order.save();
+
+    // Send order confirmation email
+    try {
+      // Get customer email
+      const customer = await Customer.findById(customerInfo.customerId);
+      if (customer && customer.email) {
+        // Populate product information for email
+        const populatedOrder = await Order.findById(savedOrder._id).populate(
+          "order_detail.productId",
+          "name image"
+        );
+
+        await sendOrderMail(populatedOrder, customer.email);
+        console.log(`Order confirmation email sent to ${customer.email}`);
+      }
+    } catch (emailError) {
+      console.error("Error sending order confirmation email:", emailError);
+      // Don't fail the order creation if email fails
+    }
+
     res.status(201).json({
       message: "Order created successfully",
       order: savedOrder,
@@ -141,7 +163,43 @@ exports.updateStatus = async (req, res) => {
     const { status } = req.body;
     const { employeeId } = req.body; // Get employeeId from request body
 
+    // Get the order before updating to check if it's being cancelled
+    const orderBeforeUpdate = await Order.findById(req.params.id).populate(
+      "customerId",
+      "email fullname"
+    );
+    const isBeingCancelled =
+      orderBeforeUpdate.status !== "cancelled" && status === "cancelled";
+
     await Order.updateStatusByEmployee(req.params.id, employeeId, status);
+
+    // Send cancellation email if order is being cancelled
+    if (
+      isBeingCancelled &&
+      orderBeforeUpdate.customerId &&
+      orderBeforeUpdate.customerId.email
+    ) {
+      try {
+        // Populate product information for email
+        const populatedOrder = await Order.findById(req.params.id).populate(
+          "order_detail.productId",
+          "name image"
+        );
+
+        await sendOrderCancelMail(
+          populatedOrder,
+          orderBeforeUpdate.customerId.email,
+          "Đơn hàng đã được hủy bởi nhân viên"
+        );
+        console.log(
+          `Order cancellation email sent to ${orderBeforeUpdate.customerId.email}`
+        );
+      } catch (emailError) {
+        console.error("Error sending order cancellation email:", emailError);
+        // Don't fail the status update if email fails
+      }
+    }
+
     res.status(200).json({ message: "Order status updated successfully" });
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -797,6 +855,7 @@ exports.createByAdmin = async (req, res) => {
       });
     }
     const savedOrder = await order.save();
+
     res.status(201).json({
       message: "Order created successfully (admin)",
       order: savedOrder,
