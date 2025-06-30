@@ -32,6 +32,23 @@ const AdminProductService = {
   async delete(id) {
     return axios.delete(`${backendUrl}/api/products/${id}`, getAuthHeaders());
   },
+
+  async togglePublish(id) {
+    return axios.put(`${backendUrl}/api/products/${id}/toggle-publish`, {}, getAuthHeaders());
+  },
+
+  async bulkTogglePublish(products) {
+    const productIds = products.map(p => p._id);
+    return axios.put(`${backendUrl}/api/products/bulk-toggle-publish`, { productIds }, getAuthHeaders());
+  },
+
+  async bulkDelete(products) {
+    const productIds = products.map(p => p._id);
+    return axios.delete(`${backendUrl}/api/products/bulk-delete`, { 
+      data: { productIds },
+      ...getAuthHeaders()
+    });
+  },
 };
 
 export default AdminProductService;

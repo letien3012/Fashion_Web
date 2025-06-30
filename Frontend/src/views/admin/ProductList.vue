@@ -65,6 +65,10 @@
       :loading="loading"
       @edit="handleEdit"
       @delete="handleDelete"
+      @togglePublish="handleTogglePublish"
+      @bulkTogglePublish="handleBulkTogglePublish"
+      @bulkDelete="handleBulkDelete"
+      ref="productTable"
     />
 
     <div v-if="filteredProducts.length > 0" class="pagination-info">
@@ -638,6 +642,99 @@ export default {
           this.$router.push("/admin/login");
         } else {
           toast.error("Không thể tải template. Vui lòng thử lại sau.");
+        }
+      }
+    },
+
+    async handleTogglePublish(product) {
+      try {
+        const result = await Swal.fire({
+          title: "Xác nhận thay đổi trạng thái",
+          text: `Bạn có chắc chắn muốn thay đổi trạng thái của sản phẩm "${product.name}"?`,
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#3085d6",
+          confirmButtonText: "Đồng ý",
+          cancelButtonText: "Hủy",
+        });
+
+        if (result.isConfirmed) {
+          await AdminProductService.togglePublish(product._id);
+          toast.success("Thay đổi trạng thái thành công");
+          await this.fetchProducts();
+          // Clear selection after successful operation
+          this.$refs.productTable.clearSelection();
+        }
+      } catch (error) {
+        console.error("Error toggling product publish status:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else {
+          toast.error("Không thể thay đổi trạng thái sản phẩm. Vui lòng thử lại sau.");
+        }
+      }
+    },
+
+    async handleBulkTogglePublish(productIds) {
+      try {
+        const result = await Swal.fire({
+          title: "Xác nhận thay đổi trạng thái",
+          text: "Bạn có chắc chắn muốn thay đổi trạng thái của các sản phẩm đã chọn?",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#3085d6",
+          confirmButtonText: "Đồng ý",
+          cancelButtonText: "Hủy",
+        });
+
+        if (result.isConfirmed) {
+          await AdminProductService.bulkTogglePublish(productIds);
+          toast.success("Thay đổi trạng thái thành công");
+          await this.fetchProducts();
+          // Clear selection after successful operation
+          this.$refs.productTable.clearSelection();
+        }
+      } catch (error) {
+        console.error("Error bulk toggling product publish status:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else {
+          toast.error("Không thể thay đổi trạng thái sản phẩm. Vui lòng thử lại sau.");
+        }
+      }
+    },
+
+    async handleBulkDelete(productIds) {
+      try {
+        const result = await Swal.fire({
+          title: "Xác nhận xóa",
+          text: "Bạn có chắc chắn muốn xóa các sản phẩm đã chọn? Sản phẩm sẽ được ẩn khỏi danh sách.",
+          icon: "warning",
+          showCancelButton: true,
+          confirmButtonColor: "#d33",
+          cancelButtonColor: "#3085d6",
+          confirmButtonText: "Xóa",
+          cancelButtonText: "Hủy",
+        });
+
+        if (result.isConfirmed) {
+          await AdminProductService.bulkDelete(productIds);
+          toast.success("Xóa sản phẩm thành công");
+          await this.fetchProducts();
+          // Clear selection after successful operation
+          this.$refs.productTable.clearSelection();
+        }
+      } catch (error) {
+        console.error("Error bulk deleting products:", error);
+        if (error.response?.status === 401) {
+          toast.error("Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại");
+          this.$router.push("/admin/login");
+        } else {
+          toast.error("Không thể xóa sản phẩm. Vui lòng thử lại sau.");
         }
       }
     },
