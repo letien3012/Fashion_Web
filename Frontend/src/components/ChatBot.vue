@@ -256,14 +256,21 @@ export default {
           content: botResponse,
           time: this.getCurrentTime(),
         });
-        // Nếu có sản phẩm, show danh sách
+
+        // Nếu có sản phẩm, lọc và chỉ show những sản phẩm được LLM nhắc đến
         if (retrievedData.products?.length) {
-          this.messages.push({
-            type: "product-list",
-            products: retrievedData.products,
-            query: userMessage,
-            time: this.getCurrentTime(),
-          });
+          const filteredProducts = this.filterProductsByLLMResponse(
+            retrievedData.products,
+            botResponse
+          );
+          if (filteredProducts.length > 0) {
+            this.messages.push({
+              type: "product-list",
+              products: filteredProducts,
+              query: userMessage,
+              time: this.getCurrentTime(),
+            });
+          }
         }
       } catch (error) {
         console.error("RAG ChatBot error:", error);
@@ -369,7 +376,7 @@ export default {
           })
           .join("\n");
       }
-      return `Bạn là một trợ lý bán hàng chuyên nghiệp, thân thiện và nhiệt tình.\nDưới đây là danh sách sản phẩm và khuyến mãi có thể liên quan đến câu hỏi của khách hàng:\n${context}\n\nCâu hỏi của khách hàng: "${userMessage}"\n\nHãy làm theo hướng dẫn sau:\n- Nếu không có thông tin sản phẩm và khuyến mãi thì trả lời là không có thông tin.\n- Nếu câu hỏi liên quan đến sản phẩm, khuyến mãi hãy trả lời tự nhiên và thân thiện trước, giống như đang nói chuyện với khách.\n- Nếu câu hỏi không liên quan đến sản phẩm, khuyến mãi hãy trả lời hợp lý và tự nhiên nhất có thể.\nLuôn ưu tiên trải nghiệm thân thiện và dễ hiểu cho khách hàng.`;
+      return `Bạn là một trợ lý bán hàng chuyên nghiệp, thân thiện và nhiệt tình.\nDưới đây là danh sách sản phẩm và khuyến mãi có thể liên quan đến câu hỏi của khách hàng:\n${context}\n\nCâu hỏi của khách hàng: "${userMessage}"\n\nHãy làm theo hướng dẫn sau:\n- Nếu không có thông tin sản phẩm và khuyến mãi thì trả lời là không có thông tin.\n- Nếu câu hỏi liên quan đến sản phẩm, khuyến mãi hãy trả lời tự nhiên và thân thiện trước, giống như đang nói chuyện với khách.\n- Khi đề cập đến một sản phẩm, hãy sử dụng chính xác tên sản phẩm đó.\n- Nếu câu hỏi không liên quan đến sản phẩm, khuyến mãi hãy trả lời hợp lý và tự nhiên nhất có thể.\nLuôn ưu tiên trải nghiệm thân thiện và dễ hiểu cho khách hàng.`;
     },
     async callLLM(prompt) {
       const response = await fetch(
@@ -636,6 +643,15 @@ export default {
       });
 
       return score;
+    },
+    filterProductsByLLMResponse(products, llmResponse) {
+      if (!llmResponse) {
+        return [];
+      }
+      const lowercasedResponse = llmResponse.toLowerCase();
+      return products.filter((product) =>
+        lowercasedResponse.includes(product.name.toLowerCase())
+      );
     },
   },
 };
