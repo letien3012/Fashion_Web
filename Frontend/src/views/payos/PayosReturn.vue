@@ -113,6 +113,9 @@ const processPaymentReturn = async () => {
           "processing"
         );
         console.log("Kết quả cập nhật trạng thái:", statusRes);
+
+        // Email đã được gửi tự động từ backend khi tạo đơn hàng
+        // Không cần gửi email ở đây nữa
       } catch (e) {
         // Nếu cập nhật thất bại, vẫn giữ trạng thái pending
         console.error("Không thể cập nhật trạng thái đơn hàng:", e);

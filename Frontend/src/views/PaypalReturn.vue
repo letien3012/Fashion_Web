@@ -45,11 +45,15 @@ onMounted(async () => {
       toast.success("Thanh toán PayPal thành công!");
       // Lưu đơn hàng thành công
       if (orderData) {
-        await orderService.create({
+        const orderResponse = await orderService.create({
           ...orderData,
           paypalOrderId: orderId,
           paypalStatus: "success",
         });
+
+        // Email đã được gửi tự động từ backend khi tạo đơn hàng
+        // Không cần gửi email ở đây nữa
+
         localStorage.removeItem("pendingPaypalOrder");
       }
       setTimeout(() => router.push("/"), 2000);

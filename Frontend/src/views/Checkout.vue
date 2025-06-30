@@ -848,6 +848,9 @@ const submitOrder = async () => {
         status: "pending",
       });
       if (response) {
+        // Email đã được gửi tự động từ backend khi tạo đơn hàng
+        // Không cần gửi email ở đây nữa
+
         // Xóa cart localStorage
         localStorage.removeItem("checkoutItems");
         localStorage.removeItem("appliedVoucher");
