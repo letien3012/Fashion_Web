@@ -36,11 +36,12 @@ class OrderService {
   }
 
   // Cập nhật trạng thái đơn hàng
-  async updateOrderStatus(orderId, status, employeeId) {
+  async updateOrderStatus(orderId, status, employeeId, note) {
     try {
       const response = await axios.put(`${API_URL}/orders/${orderId}/status`, {
         status,
         employeeId,
+        note,
       });
       return response.data;
     } catch (error) {
