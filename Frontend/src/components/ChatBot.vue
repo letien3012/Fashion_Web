@@ -18,6 +18,48 @@
         </button>
       </div>
 
+      <div v-if="imagePreviewUrl">
+        <!-- Ảnh THU NHỎ: floating fixed ở góc phải dưới chat window, chỉ hiện nút phóng to -->
+        <div v-if="isImageMinimized" class="chatbot-uploaded-float-minimized">
+          <img :src="imagePreviewUrl" class="chatbot-uploaded-image minimized" @click="isImageMinimized = false" />
+          <button class="expand-btn floating" @click="isImageMinimized = false">
+            <i class="fas fa-expand"></i>
+          </button>
+        </div>
+        <!-- Ảnh PHÓNG TO: như cũ, phía trên input chat -->
+        <div v-else class="chatbot-uploaded-bottom">
+          <div class="image-message">
+            <div class="image-preview-container" ref="imagePreviewContainerRef" :key="overlayUpdateKey">
+              <img
+                :src="imagePreviewUrl"
+                ref="imagePreviewImgRef"
+                class="chatbot-uploaded-image"
+                @load="onImagePreviewLoad"
+              />
+              <template v-if="imageBoxes && imageBoxes.length > 0">
+                <div v-for="(box, i) in imageBoxes" :key="i">
+                  <div
+                    class="dot"
+                    :style="dotStyle(box, true)"
+                    @click="onDotClick(box, i)"
+                  ></div>
+                  <div
+                    v-if="selectedBoxIndex === i"
+                    class="highlight-box"
+                    :style="boxStyle(box, true)"
+                  ></div>
+                </div>
+              </template>
+              <button class="minimize-btn" @click="isImageMinimized = true">
+                <i class="fas fa-compress"></i>
+              </button>
+            </div>
+            <div v-if="imageSearchLoading" class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tìm kiếm...</div>
+            <div v-if="imageSearchError" class="error"><i class="fas fa-exclamation-circle"></i> {{ imageSearchError }}</div>
+            <button v-if="!imageSearchLoading" class="search-again-btn" @click="resetImageSearch">Chọn ảnh khác</button>
+          </div>
+        </div>
+      </div>
       <div class="chat-messages" ref="chatMessages">
         <div class="message bot">
           <div class="message-content">
@@ -33,6 +75,9 @@
           :key="index"
           :class="['message', msg.type]"
         >
+          <template v-if="msg.type === 'image'">
+            <!-- Ẩn message ảnh trong lịch sử, chỉ show ảnh mới nhất ở trên -->
+          </template>
           <template v-if="msg.type === 'user' || msg.type === 'bot'">
             <div class="message-content">
               <p>{{ msg.content }}</p>
@@ -124,15 +169,28 @@
           v-model="message"
           @keyup.enter="sendMessage"
         />
+        <!-- Image search button -->
+        <button class="image-search-btn" @click="triggerImageFileInput" title="Tìm kiếm bằng hình ảnh">
+          <i class="fas fa-image"></i>
+        </button>
         <button class="send-btn" @click="sendMessage">
           <i class="fas fa-paper-plane"></i>
         </button>
+        <input
+          ref="imageFileInput"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="onImageFileChange"
+        />
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { nextTick } from "vue";
+
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // API endpoints
@@ -161,6 +219,9 @@ async function getChatbotData() {
   };
 }
 
+import { imageSearchService } from "../services/imageSearch.service";
+import { productService } from "../services/product.service";
+
 export default {
   name: "ChatBot",
   data() {
@@ -177,6 +238,16 @@ export default {
       foundProducts: [],
       foundProductsHistory: [],
       userQuestionEmbedding: null,
+      showImageSearchModal: false,
+      imagePreviewUrl: null,
+      imagePath: "",
+      imageSearchLoading: false,
+      imageSearchError: null,
+      imageBoxes: [],
+      imageSearchProducts: [],
+      selectedBoxIndex: null,
+      isImageMinimized: false,
+      overlayUpdateKey: 0,
     };
   },
   async created() {
@@ -653,6 +724,244 @@ export default {
         lowercasedResponse.includes(product.name.toLowerCase())
       );
     },
+    triggerImageFileInput() {
+      this.$refs.imageFileInput.click();
+    },
+    async onImageFileChange(e) {
+      const file = e.target.files[0];
+      if (!file || !file.type.startsWith("image/")) {
+        this.imageSearchError = "Vui lòng chọn file ảnh.";
+        return;
+      }
+      this.imageSearchLoading = true;
+      this.imageSearchError = null;
+      this.imagePreviewUrl = URL.createObjectURL(file);
+      this.selectedBoxIndex = null;
+      // Đẩy ảnh preview vào chat như một message kiểu 'image'
+      this.messages.push({
+        type: 'image',
+        src: this.imagePreviewUrl,
+        time: this.getCurrentTime(),
+      });
+      try {
+        // Convert file to base64
+        const base64Image = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(file);
+        });
+        // Upload image
+        const uploadRes = await imageSearchService.uploadImage(base64Image);
+        const uploadedImagePath = uploadRes.imagePath;
+        this.imagePath = uploadedImagePath;
+        // Detect objects
+        const detectRes = await imageSearchService.detectObjects(uploadedImagePath);
+        const tempBoxes = detectRes.boxes;
+        this.imageBoxes = tempBoxes || [];
+        // Chọn box lớn nhất mặc định
+        if (this.imageBoxes.length > 0) {
+          const sortedBoxes = [...this.imageBoxes].sort((a, b) => (b.width * b.height) - (a.width * a.height));
+          this.selectedBoxIndex = this.imageBoxes.indexOf(sortedBoxes[0]);
+          await this.searchFromBox(sortedBoxes[0], this.selectedBoxIndex);
+        } else {
+          this.imageSearchLoading = false;
+          this.imageSearchError = "Không tìm thấy vật thể nào trong ảnh.";
+          this.pushImageSearchResultToChat([]);
+          return;
+        }
+      } catch (error) {
+        this.imageSearchLoading = false;
+        this.imageSearchError = "Không thể tải ảnh hoặc xử lý detection.";
+        this.pushImageSearchResultToChat([]);
+      }
+    },
+    async searchFromBox(box, index = null) {
+      if (typeof index === 'number') this.selectedBoxIndex = index;
+      try {
+        // Crop the image
+        const cropPayload = {
+          x: Math.round(box.x),
+          y: Math.round(box.y),
+          width: Math.round(box.width),
+          height: Math.round(box.height),
+          imagePath: this.imagePath,
+        };
+        const cropRes = await imageSearchService.cropImage(cropPayload);
+        // Find similar images
+        const searchRes = await imageSearchService.findSimilarImages(cropRes.image_base64, 8);
+        if (searchRes.success && searchRes.products && searchRes.products.length > 0) {
+          // Process products (get promotions, etc.)
+          const processedProducts = await Promise.all(
+            searchRes.products.map(async (product) => {
+              const defaultVariant = product.variants?.[0] || {};
+              let salePrice = null;
+              let discountPercentage = null;
+              if (defaultVariant._id) {
+                const promotions = await productService.getProductPromotions(product._id, defaultVariant._id);
+                if (promotions && promotions.length > 0) {
+                  const bestPromotion = promotions.reduce((max, p) => p.discount > max.discount ? p : max);
+                  discountPercentage = bestPromotion.discount;
+                  salePrice = Math.round((defaultVariant.price - (defaultVariant.price * bestPromotion.discount) / 100) * 100) / 100;
+                }
+              }
+              return {
+                _id: product._id || "",
+                name: product.name || "",
+                image: `http://localhost:3005${product.similarImagePath}`,
+                album: (product.album || []).map((img) => this.getImageUrl(img)),
+                price: defaultVariant.price || 0,
+                salePrice,
+                discountPercentage,
+                favorite_count: product.favorite_count || 0,
+                variants: product.variants || [],
+                catalogueId: product.catalogueId || null,
+                publish: product.publish || false,
+                description: product.description || "",
+                content: product.content || "",
+                view_count: product.view_count || 0,
+                similarity: product.similarity || 0,
+                similarityPercentage: product.similarityPercentage || "0%"
+              };
+            })
+          );
+          this.imageSearchProducts = processedProducts;
+          this.imageSearchLoading = false;
+          this.pushImageSearchResultToChat(processedProducts);
+        } else {
+          this.imageSearchLoading = false;
+          this.imageSearchError = "Không tìm thấy sản phẩm tương tự.";
+          this.pushImageSearchResultToChat([]);
+        }
+      } catch (err) {
+        this.imageSearchLoading = false;
+        this.imageSearchError = "Không thể xử lý ảnh hoặc tìm kiếm. Hãy thử lại.";
+        this.pushImageSearchResultToChat([]);
+      }
+    },
+    onDotClick(box, index) {
+      if (this.imageSearchLoading) return; // Đang loading thì không cho chọn
+      this.selectedBoxIndex = index;
+      this.imageSearchLoading = true;
+      this.searchFromBox(box, index);
+    },
+    onImagePreviewLoad() {
+      // No-op, but needed for @load to trigger reactivity
+    },
+    getImageFitContainInfo(isChatImage = false) {
+      // Nếu là ảnh trong chat, dùng ref của ảnh/chat container mới nhất
+      let img, container;
+      if (isChatImage && this.$refs.imagePreviewImgRef && this.$refs.imagePreviewContainerRef) {
+        img = Array.isArray(this.$refs.imagePreviewImgRef) ? this.$refs.imagePreviewImgRef.slice(-1)[0] : this.$refs.imagePreviewImgRef;
+        container = Array.isArray(this.$refs.imagePreviewContainerRef) ? this.$refs.imagePreviewContainerRef.slice(-1)[0] : this.$refs.imagePreviewContainerRef;
+      } else {
+        img = this.$refs.imagePreviewImgRef;
+        container = this.$refs.imagePreviewContainerRef;
+      }
+      if (!img || !container) return null;
+      const containerW = container.clientWidth;
+      const containerH = container.clientHeight;
+      const imgW = img.naturalWidth;
+      const imgH = img.naturalHeight;
+      const scale = Math.min(containerW / imgW, containerH / imgH);
+      const displayW = imgW * scale;
+      const displayH = imgH * scale;
+      const offsetLeft = (containerW - displayW) / 2;
+      const offsetTop = (containerH - displayH) / 2;
+      return { scale, displayW, displayH, offsetLeft, offsetTop };
+    },
+    boxStyle(box, isChatImage = false) {
+      const info = this.getImageFitContainInfo(isChatImage);
+      if (!info) return {};
+      // Clamp box to stay inside image
+      let left = box.x * info.scale + info.offsetLeft;
+      let top = box.y * info.scale + info.offsetTop;
+      let width = box.width * info.scale;
+      let height = box.height * info.scale;
+      // Clamp left/top
+      left = Math.max(left, info.offsetLeft);
+      top = Math.max(top, info.offsetTop);
+      // Clamp width/height so box doesn't overflow
+      if (left + width > info.offsetLeft + info.displayW) width = info.offsetLeft + info.displayW - left;
+      if (top + height > info.offsetTop + info.displayH) height = info.offsetTop + info.displayH - top;
+      return {
+        position: "absolute",
+        left: `${left}px`,
+        top: `${top}px`,
+        width: `${width}px`,
+        height: `${height}px`,
+        outline: "2px solid #4ea1ff",
+        boxSizing: "border-box",
+        zIndex: 11,
+        pointerEvents: "none",
+        borderRadius: '4px',
+      };
+    },
+    dotStyle(box, isChatImage = false) {
+      const info = this.getImageFitContainInfo(isChatImage);
+      if (!info) return {};
+      const cx = (box.x + box.width / 2) * info.scale + info.offsetLeft;
+      const cy = (box.y + box.height / 2) * info.scale + info.offsetTop;
+      const size = 10; // nhỏ hơn cho chatbot
+      // Clamp dot to stay inside image
+      let dotLeft = Math.min(Math.max(cx - size / 2, info.offsetLeft), info.offsetLeft + info.displayW - size);
+      let dotTop = Math.min(Math.max(cy - size / 2, info.offsetTop), info.offsetTop + info.displayH - size);
+      return {
+        position: "absolute",
+        left: `${dotLeft}px`,
+        top: `${dotTop}px`,
+        width: `${size}px`,
+        height: `${size}px`,
+        borderRadius: "50%",
+        backgroundColor: "#fff",
+        border: "2px solid #4ea1ff",
+        zIndex: 20,
+        pointerEvents: "auto",
+        cursor: "pointer",
+        boxShadow: "0 0 0 2px #4ea1ff55, 0 2px 8px rgba(0,0,0,0.10)",
+        transition: "box-shadow 0.2s, transform 0.15s"
+      };
+    },
+    resetImageSearch() {
+      this.imagePreviewUrl = null;
+      this.imagePath = "";
+      this.imageSearchLoading = false;
+      this.imageSearchError = null;
+      this.imageBoxes = [];
+      this.imageSearchProducts = [];
+      this.selectedBoxIndex = null;
+      this.isImageMinimized = false;
+    },
+    pushImageSearchResultToChat(products) {
+      // Sau khi tìm kiếm xong, tự động thu nhỏ ảnh
+      this.isImageMinimized = true;
+      this.messages.push({
+        type: "bot",
+        content: products.length > 0 ? `Tìm thấy ${products.length} sản phẩm tương tự từ vùng bạn chọn:` : "Không tìm thấy sản phẩm tương tự từ vùng bạn chọn.",
+        time: this.getCurrentTime(),
+      });
+      if (products.length > 0) {
+        this.messages.push({
+          type: "product-list",
+          products,
+          query: "Tìm kiếm bằng hình ảnh",
+          time: this.getCurrentTime(),
+        });
+      }
+      this.$nextTick(() => {
+        const chatMessages = this.$refs.chatMessages;
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+      });
+    },
+  },
+  watch: {
+    isImageMinimized(val) {
+      if (!val) {
+        // Khi phóng to, chờ DOM cập nhật rồi tăng key để force re-render overlay
+        nextTick(() => {
+          this.overlayUpdateKey++;
+        });
+      }
+    }
   },
 };
 </script>
@@ -721,6 +1030,7 @@ export default {
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s ease;
+  overflow: hidden;
 }
 
 .chat-window.chat-open {
@@ -775,6 +1085,7 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  margin-bottom: 0;
 }
 
 .message {
@@ -1207,5 +1518,268 @@ export default {
 .related-view-details:hover {
   background: linear-gradient(135deg, #ff4d5a, #e63946);
   transform: translateY(-2px) scale(1.05);
+}
+
+.image-search-btn {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4ea1ff, #4ea1ffcc);
+  border: none;
+  color: white;
+  margin-right: 8px;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.image-search-btn:hover {
+  background: linear-gradient(135deg, #ff4d5a, #e63946);
+  transform: scale(1.08);
+}
+
+.chatbot-image-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.chatbot-image-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+  padding: 24px 20px 20px 20px;
+  min-width: 320px;
+  max-width: 95vw;
+  min-height: 180px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+}
+.chatbot-image-modal .modal-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.chatbot-image-modal .close-button {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #666;
+  transition: color 0.2s;
+}
+.chatbot-image-modal .close-button:hover {
+  color: #ff0000;
+}
+.chatbot-image-modal .modal-body {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.drop-area {
+  border: 2px dashed #4ea1ff;
+  border-radius: 12px;
+  padding: 32px 12px 24px 12px;
+  text-align: center;
+  background: #f8f9fa;
+  color: #6c757d;
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  position: relative;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+.drop-area:hover {
+  border-color: #ff0000;
+  background: #e9ecef;
+}
+.image-preview-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+.image-preview-container {
+  position: relative;
+  display: inline-block;
+  width: 220px;
+  height: 220px;
+  max-width: 100%;
+  max-height: 220px;
+  aspect-ratio: 1/1;
+  background: #fff;
+}
+.highlight-box {
+  border-radius: 4px;
+  outline: 2px solid #4ea1ff;
+  box-shadow: 0 0 0 1.5px #fff, 0 2px 8px rgba(0,0,0,0.10);
+}
+.dot {
+  width: 10px !important;
+  height: 10px !important;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #4ea1ff;
+  box-shadow: 0 0 0 2px #4ea1ff55, 0 2px 8px rgba(0,0,0,0.10);
+  z-index: 20;
+}
+.loading {
+  color: #4ea1ff;
+  font-size: 16px;
+  margin-top: 10px;
+}
+.error {
+  color: #dc3545;
+  font-size: 15px;
+  margin-top: 10px;
+}
+.search-again-btn {
+  margin-top: 10px;
+  background: #4ea1ff;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 18px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.search-again-btn:hover {
+  background: #e63946;
+}
+.image-message {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.chatbot-uploaded-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 2px;
+  border: 1.5px solid #eee;
+  background: #fff;
+}
+.chatbot-uploaded-bottom {
+  width: 100%;
+  background: #fff;
+  border-top: 1px solid #eee;
+  padding: 12px 0 8px 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+}
+.image-message.minimized .image-preview-container {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
+  max-width: 80px;
+  max-height: 80px;
+  aspect-ratio: 1/1;
+  position: relative;
+}
+.chatbot-uploaded-image.minimized {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+}
+.expand-btn, .minimize-btn {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid #eee;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #4ea1ff;
+  cursor: pointer;
+  z-index: 30;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background 0.2s;
+}
+.expand-btn:hover, .minimize-btn:hover {
+  background: #e6f0ff;
+  color: #e63946;
+}
+.chatbot-uploaded-float-minimized {
+  position: fixed;
+  right: 30px;
+  bottom: 110px;
+  z-index: 2002;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  box-shadow: none;
+  aspect-ratio: 1/1;
+}
+.chatbot-uploaded-float-minimized .chatbot-uploaded-image.minimized {
+  width: 80px;
+  height: 80px;
+  min-width: 80px;
+  min-height: 80px;
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+}
+.expand-btn.floating {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  background: rgba(255,255,255,0.85);
+  border: 1px solid #eee;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #4ea1ff;
+  cursor: pointer;
+  z-index: 30;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transition: background 0.2s;
+}
+.expand-btn.floating:hover {
+  background: #e6f0ff;
+  color: #e63946;
 }
 </style>
