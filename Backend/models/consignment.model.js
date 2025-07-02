@@ -187,14 +187,18 @@ consignmentSchema.statics.getByProduct = async function (productId) {
 };
 
 // Static method to get stock quantity for a variant
-consignmentSchema.statics.getVariantStock = async function (productId) {
+consignmentSchema.statics.getVariantStock = async function (
+  productId,
+  variantId
+) {
   try {
     const consignments = await this.find({
       productId,
+      variantId,
       publish: true,
     }).select("current_quantity");
 
-    // Tính tổng current_quantity
+    // Tính tổng current_quantity cho đúng variant
     const totalStock = consignments.reduce(
       (sum, consignment) => sum + consignment.current_quantity,
       0

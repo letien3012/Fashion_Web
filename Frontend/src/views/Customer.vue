@@ -144,6 +144,13 @@
                     <span v-if="!isRetrying">Thanh toán lại</span>
                     <span v-else>Đang chuyển hướng...</span>
                   </button>
+                  <button
+                    v-if="order.canReview"
+                    class="action-btn primary"
+                    @click="reviewOrder(order.id)"
+                  >
+                    Đánh giá đơn hàng
+                  </button>
                 </div>
               </div>
             </div>
@@ -535,7 +542,8 @@ onMounted(async () => {
           method: order.method,
           online_method_detail: online_method_detail,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
         };
       })
     );
@@ -660,7 +668,8 @@ const confirmCancelOrder = async () => {
           total_ship_fee: order.total_ship_fee,
           method: order.method,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
         };
       })
     );
@@ -827,7 +836,8 @@ const handleReviewSubmitted = async () => {
           total_ship_fee: order.total_ship_fee,
           method: order.method,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
         };
       })
     );
@@ -948,7 +958,8 @@ const submitReturnRequest = async () => {
           total_ship_fee: order.total_ship_fee,
           method: order.method,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
         };
       })
     );
