@@ -11,7 +11,7 @@ __pycache__/
 *.pyd
 
 # Bỏ qua file model lớn
-*.pt
+# *.pt
 
 # Bỏ qua file tạm khác
 *.log
