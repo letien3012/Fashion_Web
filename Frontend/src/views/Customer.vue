@@ -144,6 +144,23 @@
                     <span v-if="!isRetrying">Thanh toán lại</span>
                     <span v-else>Đang chuyển hướng...</span>
                   </button>
+                  <button
+                    v-if="order.canReview"
+                    class="action-btn primary"
+                    @click="reviewOrder(order.id)"
+                  >
+                    Đánh giá đơn hàng
+                  </button>
+                  <button
+                    class="action-btn warning"
+                    v-if="
+                      order.status === 'delivered' &&
+                      isWithinReturnPeriod(order.updatedAt)
+                    "
+                    @click="requestReturn(order.id)"
+                  >
+                    Yêu cầu trả hàng
+                  </button>
                 </div>
               </div>
             </div>
@@ -294,6 +311,12 @@
                 </button>
               </div>
               <div class="modal-body">
+                <div
+                  v-if="returnError"
+                  style="color: #ff4d4f; margin-bottom: 12px; font-weight: 500"
+                >
+                  {{ returnError }}
+                </div>
                 <div class="form-group">
                   <label for="returnNote">Lý do trả hàng:</label>
                   <textarea
@@ -535,7 +558,9 @@ onMounted(async () => {
           method: order.method,
           online_method_detail: online_method_detail,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
+          updatedAt: order.updatedAt,
         };
       })
     );
@@ -660,7 +685,9 @@ const confirmCancelOrder = async () => {
           total_ship_fee: order.total_ship_fee,
           method: order.method,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
+          updatedAt: order.updatedAt,
         };
       })
     );
@@ -827,7 +854,9 @@ const handleReviewSubmitted = async () => {
           total_ship_fee: order.total_ship_fee,
           method: order.method,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
+          updatedAt: order.updatedAt,
         };
       })
     );
@@ -844,10 +873,12 @@ const showReturnModal = ref(false);
 const returnNote = ref("");
 const returnImages = ref([]);
 const selectedOrderId = ref(null);
+const returnError = ref("");
 
 const requestReturn = (orderId) => {
   selectedOrderId.value = orderId;
   showReturnModal.value = true;
+  returnError.value = "";
 };
 
 const closeReturnModal = () => {
@@ -855,6 +886,7 @@ const closeReturnModal = () => {
   returnNote.value = "";
   returnImages.value = [];
   selectedOrderId.value = null;
+  returnError.value = "";
 };
 
 const handleFileUpload = (event) => {
@@ -866,13 +898,23 @@ const handleFileUpload = (event) => {
     };
     reader.readAsDataURL(file);
   }
+  returnError.value = "";
 };
 
 const removeImage = (index) => {
   returnImages.value.splice(index, 1);
+  returnError.value = "";
 };
 
 const submitReturnRequest = async () => {
+  if (!returnNote.value) {
+    returnError.value = "Vui lòng nhập lý do trả hàng.";
+    return;
+  }
+  if (returnImages.value.length === 0) {
+    returnError.value = "Vui lòng chọn ít nhất một ảnh sản phẩm.";
+    return;
+  }
   try {
     await orderService.requestReturn(selectedOrderId.value, {
       images: returnImages.value,
@@ -948,10 +990,13 @@ const submitReturnRequest = async () => {
           total_ship_fee: order.total_ship_fee,
           method: order.method,
           order_detail: orderDetails,
-          canReview: order.status === "completed",
+          canReview:
+            order.status === "completed" || order.status === "delivered",
+          updatedAt: order.updatedAt,
         };
       })
     );
+    returnError.value = "";
   } catch (error) {
     console.error("Error submitting return request:", error);
     toast.error(

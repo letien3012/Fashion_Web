@@ -52,10 +52,7 @@ const adminRoutes = [
         path: "suppliers",
         name: "admin-suppliers",
         component: () => import("../views/admin/SupplierList.vue"),
-        meta: {
-          requiresAuth: true,
-          title: "Quản lý nhà cung cấp",
-        },
+        meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
         path: "import-receipts",
@@ -100,9 +97,7 @@ const adminRoutes = [
         path: "banners",
         name: "AdminBannerList",
         component: BannerList,
-        meta: {
-          requiresAdmin: true,
-        },
+        meta: { requiresAuth: true, requiresAdmin: true },
       },
       {
         path: "Customers",

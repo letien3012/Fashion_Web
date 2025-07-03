@@ -68,10 +68,10 @@ function generateOrderEmailTemplate({
         <tbody>
           <tr style="height: 0;">
             <td>
-              <img alt="JUNO SHOP" src="https://junoshop.com/logo.png" height="30px" />
+              <span style="font-size: 24px; font-weight: 700; color: #1f1f1f; letter-spacing: 2px;">JUNO SHOP</span>
             </td>
             <td style="text-align: right;">
-              <span style="font-size: 16px; line-height: 30px; color: #ffffff;">${new Date().toLocaleDateString(
+              <span style="font-size: 16px; line-height: 30px; color:rgb(0, 0, 0);">${new Date().toLocaleDateString(
                 "vi-VN"
               )}</span>
             </td>
@@ -99,7 +99,7 @@ function generateOrderEmailTemplate({
         <div style="background: #f8fafc; padding: 20px; border-radius: 10px; margin-bottom: 25px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
             <span style="font-weight: 500; color: #4b5563; font-size: 15px;">Mã đơn hàng: </span>
-            <span style="font-weight: 700; color: #3b82f6; font-size: 18px; background: #eff6ff; padding: 8px 12px; border-radius: 8px; border: 2px solid #dbeafe;">${orderCode}</span>
+            <span style="font-weight: 700; color: #3b82f6; font-size: 18px;">${orderCode}</span>
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
             <span style="font-weight: 500; color: #4b5563; font-size: 15px;">Ngày đặt: </span>
@@ -181,9 +181,7 @@ function generateOrderEmailTemplate({
           }
           <div style="display: flex; justify-content: space-between; padding-top: 15px; border-top: 2px solid #e2e8f0; font-size: 18px; font-weight: 700; color: #2c3e50; align-items: center;">
             <span>Tổng thanh toán: </span>
-            <span style="color: #ef4444; background: #fef2f2; padding: 8px 12px; border-radius: 8px;">₫${formatPrice(
-              totalPrice
-            )}</span>
+            <span style="color: #ef4444;">₫${formatPrice(totalPrice)}</span>
           </div>
         </div>
       </div>
@@ -192,42 +190,20 @@ function generateOrderEmailTemplate({
       <div style="background: #ffffff; border-radius: 15px; padding: 30px; margin: 20px 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);">
         <h3 style="margin: 0 0 20px 0; color: #2c3e50; font-size: 18px; font-weight: 600;">Bước tiếp theo</h3>
         <div style="display: flex; align-items: center; margin-bottom: 15px;">
-          <div style="width: 30px; height: 30px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; flex-shrink: 0;">
-            <span style="color: white; font-weight: 600; font-size: 14px;">1</span>
-          </div>
+          <div style="margin-right: 15px; font-weight: 600; font-size: 14px; color: #3b82f6;">1.</div>
           <span style="color: #4b5563; font-size: 15px;">Đơn hàng của bạn sẽ được xử lý trong vòng 24 giờ</span>
         </div>
-        <div style="display: flex; align-items: center; margin-bottom: 15px;">
-          <div style="width: 30px; height: 30px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; flex-shrink: 0;">
-            <span style="color: white; font-weight: 600; font-size: 14px;">2</span>
-          </div>
-          <span style="color: #4b5563; font-size: 15px;">Bạn sẽ nhận được email cập nhật khi đơn hàng được giao</span>
-        </div>
         <div style="display: flex; align-items: center;">
-          <div style="width: 30px; height: 30px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; flex-shrink: 0;">
-            <span style="color: white; font-weight: 600; font-size: 14px;">3</span>
-          </div>
+          <div style="margin-right: 15px; font-weight: 600; font-size: 14px; color: #3b82f6;">2.</div>
           <span style="color: #4b5563; font-size: 15px;">Nếu có thắc mắc, vui lòng liên hệ với chúng tôi</span>
         </div>
       </div>
 
-      <p style="max-width: 400px; margin: 0 auto; margin-top: 90px; text-align: center; font-weight: 500; color: #8c8c8c; font-size: 15px;">
-        Cần trợ giúp? Liên hệ
-        <a href="mailto:support@junoshop.com" style="color: #499fb6; text-decoration: none;">support@junoshop.com</a>
-        hoặc truy cập
-        <a href="https://junoshop.com/help" style="color: #499fb6; text-decoration: none;">Trung tâm trợ giúp</a>
-      </p>
     </main>
 
     <footer style="width: 100%; max-width: 490px; margin: 20px auto 0; text-align: center; border-top: 1px solid #e6ebf1;">
       <p style="margin: 0; margin-top: 40px; font-size: 16px; font-weight: 600; color: #434343;">JUNO SHOP</p>
       <p style="margin: 0; margin-top: 8px; color: #434343;">Quận Ninh Kiều, Cần Thơ, Việt Nam</p>
-      <div style="margin-top: 16px;">
-        <a href="#"><img width="36px" alt="Facebook" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661502815169_682499/email-template-icon-facebook" /></a>
-        <a href="#" style="margin-left: 8px;"><img width="36px" alt="Instagram" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661504218208_684135/email-template-icon-instagram" /></a>
-        <a href="#" style="margin-left: 8px;"><img width="36px" alt="Twitter" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661503043040_372004/email-template-icon-twitter" /></a>
-        <a href="#" style="margin-left: 8px;"><img width="36px" alt="Youtube" src="https://archisketch-resources.s3.ap-northeast-2.amazonaws.com/vrstyler/1661503195931_210869/email-template-icon-youtube" /></a>
-      </div>
       <p style="margin-top: 16px; color: #434343;">Copyright © 2025 JUNO SHOP. All rights reserved.</p>
     </footer>
   </div>

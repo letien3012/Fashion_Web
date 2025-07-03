@@ -21,7 +21,11 @@
       <div v-if="imagePreviewUrl">
         <!-- Ảnh THU NHỎ: floating fixed ở góc phải dưới chat window, chỉ hiện nút phóng to -->
         <div v-if="isImageMinimized" class="chatbot-uploaded-float-minimized">
-          <img :src="imagePreviewUrl" class="chatbot-uploaded-image minimized" @click="isImageMinimized = false" />
+          <img
+            :src="imagePreviewUrl"
+            class="chatbot-uploaded-image minimized"
+            @click="isImageMinimized = false"
+          />
           <button class="expand-btn floating" @click="isImageMinimized = false">
             <i class="fas fa-expand"></i>
           </button>
@@ -29,7 +33,11 @@
         <!-- Ảnh PHÓNG TO: như cũ, phía trên input chat -->
         <div v-else class="chatbot-uploaded-bottom">
           <div class="image-message">
-            <div class="image-preview-container" ref="imagePreviewContainerRef" :key="overlayUpdateKey">
+            <div
+              class="image-preview-container"
+              ref="imagePreviewContainerRef"
+              :key="overlayUpdateKey"
+            >
               <img
                 :src="imagePreviewUrl"
                 ref="imagePreviewImgRef"
@@ -54,9 +62,19 @@
                 <i class="fas fa-compress"></i>
               </button>
             </div>
-            <div v-if="imageSearchLoading" class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tìm kiếm...</div>
-            <div v-if="imageSearchError" class="error"><i class="fas fa-exclamation-circle"></i> {{ imageSearchError }}</div>
-            <button v-if="!imageSearchLoading" class="search-again-btn" @click="resetImageSearch">Chọn ảnh khác</button>
+            <div v-if="imageSearchLoading" class="loading">
+              <i class="fas fa-spinner fa-spin"></i> Đang tìm kiếm...
+            </div>
+            <div v-if="imageSearchError" class="error">
+              <i class="fas fa-exclamation-circle"></i> {{ imageSearchError }}
+            </div>
+            <button
+              v-if="!imageSearchLoading"
+              class="search-again-btn"
+              @click="resetImageSearch"
+            >
+              Chọn ảnh khác
+            </button>
           </div>
         </div>
       </div>
@@ -128,7 +146,9 @@
 
         <div v-if="isLoading" class="message bot">
           <div class="message-content">
-            <p>Đang xử lý...</p>
+            <div class="dot-loader">
+              <span></span><span></span><span></span>
+            </div>
           </div>
           <div class="message-time">{{ getCurrentTime() }}</div>
         </div>
@@ -170,7 +190,11 @@
           @keyup.enter="sendMessage"
         />
         <!-- Image search button -->
-        <button class="image-search-btn" @click="triggerImageFileInput" title="Tìm kiếm bằng hình ảnh">
+        <button
+          class="image-search-btn"
+          @click="triggerImageFileInput"
+          title="Tìm kiếm bằng hình ảnh"
+        >
           <i class="fas fa-image"></i>
         </button>
         <button class="send-btn" @click="sendMessage">
@@ -739,7 +763,7 @@ export default {
       this.selectedBoxIndex = null;
       // Đẩy ảnh preview vào chat như một message kiểu 'image'
       this.messages.push({
-        type: 'image',
+        type: "image",
         src: this.imagePreviewUrl,
         time: this.getCurrentTime(),
       });
@@ -755,12 +779,16 @@ export default {
         const uploadedImagePath = uploadRes.imagePath;
         this.imagePath = uploadedImagePath;
         // Detect objects
-        const detectRes = await imageSearchService.detectObjects(uploadedImagePath);
+        const detectRes = await imageSearchService.detectObjects(
+          uploadedImagePath
+        );
         const tempBoxes = detectRes.boxes;
         this.imageBoxes = tempBoxes || [];
         // Chọn box lớn nhất mặc định
         if (this.imageBoxes.length > 0) {
-          const sortedBoxes = [...this.imageBoxes].sort((a, b) => (b.width * b.height) - (a.width * a.height));
+          const sortedBoxes = [...this.imageBoxes].sort(
+            (a, b) => b.width * b.height - a.width * a.height
+          );
           this.selectedBoxIndex = this.imageBoxes.indexOf(sortedBoxes[0]);
           await this.searchFromBox(sortedBoxes[0], this.selectedBoxIndex);
         } else {
@@ -776,7 +804,7 @@ export default {
       }
     },
     async searchFromBox(box, index = null) {
-      if (typeof index === 'number') this.selectedBoxIndex = index;
+      if (typeof index === "number") this.selectedBoxIndex = index;
       try {
         // Crop the image
         const cropPayload = {
@@ -788,8 +816,15 @@ export default {
         };
         const cropRes = await imageSearchService.cropImage(cropPayload);
         // Find similar images
-        const searchRes = await imageSearchService.findSimilarImages(cropRes.image_base64, 8);
-        if (searchRes.success && searchRes.products && searchRes.products.length > 0) {
+        const searchRes = await imageSearchService.findSimilarImages(
+          cropRes.image_base64,
+          8
+        );
+        if (
+          searchRes.success &&
+          searchRes.products &&
+          searchRes.products.length > 0
+        ) {
           // Process products (get promotions, etc.)
           const processedProducts = await Promise.all(
             searchRes.products.map(async (product) => {
@@ -797,18 +832,30 @@ export default {
               let salePrice = null;
               let discountPercentage = null;
               if (defaultVariant._id) {
-                const promotions = await productService.getProductPromotions(product._id, defaultVariant._id);
+                const promotions = await productService.getProductPromotions(
+                  product._id,
+                  defaultVariant._id
+                );
                 if (promotions && promotions.length > 0) {
-                  const bestPromotion = promotions.reduce((max, p) => p.discount > max.discount ? p : max);
+                  const bestPromotion = promotions.reduce((max, p) =>
+                    p.discount > max.discount ? p : max
+                  );
                   discountPercentage = bestPromotion.discount;
-                  salePrice = Math.round((defaultVariant.price - (defaultVariant.price * bestPromotion.discount) / 100) * 100) / 100;
+                  salePrice =
+                    Math.round(
+                      (defaultVariant.price -
+                        (defaultVariant.price * bestPromotion.discount) / 100) *
+                        100
+                    ) / 100;
                 }
               }
               return {
                 _id: product._id || "",
                 name: product.name || "",
                 image: `http://localhost:3005${product.similarImagePath}`,
-                album: (product.album || []).map((img) => this.getImageUrl(img)),
+                album: (product.album || []).map((img) =>
+                  this.getImageUrl(img)
+                ),
                 price: defaultVariant.price || 0,
                 salePrice,
                 discountPercentage,
@@ -820,7 +867,7 @@ export default {
                 content: product.content || "",
                 view_count: product.view_count || 0,
                 similarity: product.similarity || 0,
-                similarityPercentage: product.similarityPercentage || "0%"
+                similarityPercentage: product.similarityPercentage || "0%",
               };
             })
           );
@@ -834,7 +881,8 @@ export default {
         }
       } catch (err) {
         this.imageSearchLoading = false;
-        this.imageSearchError = "Không thể xử lý ảnh hoặc tìm kiếm. Hãy thử lại.";
+        this.imageSearchError =
+          "Không thể xử lý ảnh hoặc tìm kiếm. Hãy thử lại.";
         this.pushImageSearchResultToChat([]);
       }
     },
@@ -850,9 +898,17 @@ export default {
     getImageFitContainInfo(isChatImage = false) {
       // Nếu là ảnh trong chat, dùng ref của ảnh/chat container mới nhất
       let img, container;
-      if (isChatImage && this.$refs.imagePreviewImgRef && this.$refs.imagePreviewContainerRef) {
-        img = Array.isArray(this.$refs.imagePreviewImgRef) ? this.$refs.imagePreviewImgRef.slice(-1)[0] : this.$refs.imagePreviewImgRef;
-        container = Array.isArray(this.$refs.imagePreviewContainerRef) ? this.$refs.imagePreviewContainerRef.slice(-1)[0] : this.$refs.imagePreviewContainerRef;
+      if (
+        isChatImage &&
+        this.$refs.imagePreviewImgRef &&
+        this.$refs.imagePreviewContainerRef
+      ) {
+        img = Array.isArray(this.$refs.imagePreviewImgRef)
+          ? this.$refs.imagePreviewImgRef.slice(-1)[0]
+          : this.$refs.imagePreviewImgRef;
+        container = Array.isArray(this.$refs.imagePreviewContainerRef)
+          ? this.$refs.imagePreviewContainerRef.slice(-1)[0]
+          : this.$refs.imagePreviewContainerRef;
       } else {
         img = this.$refs.imagePreviewImgRef;
         container = this.$refs.imagePreviewContainerRef;
@@ -881,8 +937,10 @@ export default {
       left = Math.max(left, info.offsetLeft);
       top = Math.max(top, info.offsetTop);
       // Clamp width/height so box doesn't overflow
-      if (left + width > info.offsetLeft + info.displayW) width = info.offsetLeft + info.displayW - left;
-      if (top + height > info.offsetTop + info.displayH) height = info.offsetTop + info.displayH - top;
+      if (left + width > info.offsetLeft + info.displayW)
+        width = info.offsetLeft + info.displayW - left;
+      if (top + height > info.offsetTop + info.displayH)
+        height = info.offsetTop + info.displayH - top;
       return {
         position: "absolute",
         left: `${left}px`,
@@ -893,7 +951,7 @@ export default {
         boxSizing: "border-box",
         zIndex: 11,
         pointerEvents: "none",
-        borderRadius: '4px',
+        borderRadius: "4px",
       };
     },
     dotStyle(box, isChatImage = false) {
@@ -903,8 +961,14 @@ export default {
       const cy = (box.y + box.height / 2) * info.scale + info.offsetTop;
       const size = 10; // nhỏ hơn cho chatbot
       // Clamp dot to stay inside image
-      let dotLeft = Math.min(Math.max(cx - size / 2, info.offsetLeft), info.offsetLeft + info.displayW - size);
-      let dotTop = Math.min(Math.max(cy - size / 2, info.offsetTop), info.offsetTop + info.displayH - size);
+      let dotLeft = Math.min(
+        Math.max(cx - size / 2, info.offsetLeft),
+        info.offsetLeft + info.displayW - size
+      );
+      let dotTop = Math.min(
+        Math.max(cy - size / 2, info.offsetTop),
+        info.offsetTop + info.displayH - size
+      );
       return {
         position: "absolute",
         left: `${dotLeft}px`,
@@ -918,7 +982,7 @@ export default {
         pointerEvents: "auto",
         cursor: "pointer",
         boxShadow: "0 0 0 2px #4ea1ff55, 0 2px 8px rgba(0,0,0,0.10)",
-        transition: "box-shadow 0.2s, transform 0.15s"
+        transition: "box-shadow 0.2s, transform 0.15s",
       };
     },
     resetImageSearch() {
@@ -936,7 +1000,10 @@ export default {
       this.isImageMinimized = true;
       this.messages.push({
         type: "bot",
-        content: products.length > 0 ? `Tìm thấy ${products.length} sản phẩm tương tự từ vùng bạn chọn:` : "Không tìm thấy sản phẩm tương tự từ vùng bạn chọn.",
+        content:
+          products.length > 0
+            ? `Tìm thấy ${products.length} sản phẩm tương tự từ vùng bạn chọn:`
+            : "Không tìm thấy sản phẩm tương tự từ vùng bạn chọn.",
         time: this.getCurrentTime(),
       });
       if (products.length > 0) {
@@ -961,7 +1028,7 @@ export default {
           this.overlayUpdateKey++;
         });
       }
-    }
+    },
   },
 };
 </script>
@@ -1547,7 +1614,7 @@ export default {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0, 0, 0, 0.35);
   z-index: 2000;
   display: flex;
   align-items: center;
@@ -1556,7 +1623,7 @@ export default {
 .chatbot-image-modal {
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.18);
   padding: 24px 20px 20px 20px;
   min-width: 320px;
   max-width: 95vw;
@@ -1627,7 +1694,7 @@ export default {
 .highlight-box {
   border-radius: 4px;
   outline: 2px solid #4ea1ff;
-  box-shadow: 0 0 0 1.5px #fff, 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: 0 0 0 1.5px #fff, 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 .dot {
   width: 10px !important;
@@ -1635,7 +1702,7 @@ export default {
   border-radius: 50%;
   background: #fff;
   border: 2px solid #4ea1ff;
-  box-shadow: 0 0 0 2px #4ea1ff55, 0 2px 8px rgba(0,0,0,0.10);
+  box-shadow: 0 0 0 2px #4ea1ff55, 0 2px 8px rgba(0, 0, 0, 0.1);
   z-index: 20;
 }
 .loading {
@@ -1675,7 +1742,7 @@ export default {
   height: 100%;
   object-fit: contain;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   margin-bottom: 2px;
   border: 1.5px solid #eee;
   background: #fff;
@@ -1688,7 +1755,7 @@ export default {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  box-shadow: 0 -2px 8px rgba(0,0,0,0.04);
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.04);
 }
 .image-message.minimized .image-preview-container {
   width: 80px;
@@ -1711,11 +1778,12 @@ export default {
   border-radius: 8px;
   background: #fff;
 }
-.expand-btn, .minimize-btn {
+.expand-btn,
+.minimize-btn {
   position: absolute;
   right: 4px;
   bottom: 4px;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid #eee;
   border-radius: 50%;
   width: 28px;
@@ -1727,10 +1795,11 @@ export default {
   color: #4ea1ff;
   cursor: pointer;
   z-index: 30;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: background 0.2s;
 }
-.expand-btn:hover, .minimize-btn:hover {
+.expand-btn:hover,
+.minimize-btn:hover {
   background: #e6f0ff;
   color: #e63946;
 }
@@ -1763,7 +1832,7 @@ export default {
   position: absolute;
   right: 4px;
   bottom: 4px;
-  background: rgba(255,255,255,0.85);
+  background: rgba(255, 255, 255, 0.85);
   border: 1px solid #eee;
   border-radius: 50%;
   width: 28px;
@@ -1775,11 +1844,52 @@ export default {
   color: #4ea1ff;
   cursor: pointer;
   z-index: 30;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: background 0.2s;
 }
 .expand-btn.floating:hover {
   background: #e6f0ff;
   color: #e63946;
+}
+.dot-loader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 32px;
+  justify-content: flex-start;
+  margin: 0 0 0 2px;
+}
+.dot-loader span {
+  display: block;
+  border-radius: 50%;
+  background: #888;
+  opacity: 0.7;
+  animation: dot-bounce 1.2s infinite;
+}
+.dot-loader span:nth-child(1) {
+  width: 5px;
+  height: 5px;
+  animation-delay: 0s;
+}
+.dot-loader span:nth-child(2) {
+  width: 8px;
+  height: 8px;
+  animation-delay: 0.18s;
+}
+.dot-loader span:nth-child(3) {
+  width: 4px;
+  height: 4px;
+  animation-delay: 0.36s;
+}
+@keyframes dot-bounce {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-12px);
+    opacity: 1;
+  }
 }
 </style>

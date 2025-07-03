@@ -227,6 +227,18 @@
                     class="card-header d-flex justify-content-between align-items-center"
                   >
                     <h6 class="mb-0">Biến thể sản phẩm</h6>
+                    <!-- Hướng dẫn thêm sản phẩm -->
+                    <div>
+                      <button
+                        type="button"
+                        class="btn btn-info btn-sm me-2"
+                        @click="showGuideModal = true"
+                        title="Hướng dẫn thêm sản phẩm"
+                      >
+                        <i class="fas fa-question-circle"></i> Hướng dẫn thêm
+                        sản phẩm
+                      </button>
+                    </div>
                     <button
                       type="button"
                       class="btn btn-primary btn-sm"
@@ -485,6 +497,42 @@
                       @click="addAttributeType"
                     >
                       Thêm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Guide Modal for Add Product -->
+            <div
+              v-if="showGuideModal"
+              class="modal fade show d-block"
+              tabindex="-1"
+            >
+              <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Hướng dẫn thêm sản phẩm</h5>
+                    <button
+                      type="button"
+                      class="btn-close"
+                      @click="showGuideModal = false"
+                    ></button>
+                  </div>
+                  <div class="modal-body text-center">
+                    <img
+                      :src="guideImage"
+                      alt="Hướng dẫn thêm sản phẩm"
+                      style="max-width: 100%; height: auto"
+                    />
+                  </div>
+                  <div class="modal-footer">
+                    <button
+                      type="button"
+                      class="btn btn-secondary"
+                      @click="showGuideModal = false"
+                    >
+                      Đóng
                     </button>
                   </div>
                 </div>
@@ -1511,6 +1559,12 @@ export default {
       { deep: true }
     );
 
+    const showGuideModal = ref(false);
+    const guideImage = new URL(
+      "../../assets/images/template_addproduct.png",
+      import.meta.url
+    ).href;
+
     return {
       formData,
       errors,
@@ -1548,6 +1602,8 @@ export default {
       isInitializing,
       bulkPrice,
       applyBulkPrice,
+      showGuideModal,
+      guideImage,
     };
   },
 };

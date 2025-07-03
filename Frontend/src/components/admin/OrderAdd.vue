@@ -171,8 +171,8 @@
 
         <div class="form-section mt-4">
           <h5>Phương thức thanh toán</h5>
-          <select class="form-select" v-model="paymentMethod" disabled>
-            <option value="COD">Thanh toán khi nhận hàng (COD)</option>
+          <select class="form-select" v-model="paymentMethod">
+            <option value="STORE">Thanh toán tại cửa hàng</option>
           </select>
         </div>
 
@@ -217,7 +217,7 @@ const customerInfo = reactive({
 
 const selectedItems = ref([]);
 const newItem = reactive({ productId: "", variantId: "", quantity: 1 });
-const paymentMethod = ref("COD");
+const paymentMethod = ref("STORE");
 const productSearch = ref("");
 const showProductSuggestions = ref(false);
 const productInputRef = ref(null);

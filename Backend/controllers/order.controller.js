@@ -160,10 +160,10 @@ exports.update = async (req, res) => {
 // Update order status by employee
 exports.updateStatus = async (req, res) => {
   try {
-    const { status } = req.body;
-    const { employeeId } = req.body; // Get employeeId from request body
+    const { status, employeeId, note } = req.body;
+    console.log("REQ.BODY", req.body);
 
-    // Get the order before updating to check if it's being cancelled
+    // Lấy đơn hàng trước khi cập nhật để kiểm tra trạng thái
     const orderBeforeUpdate = await Order.findById(req.params.id).populate(
       "customerId",
       "email fullname"
@@ -171,36 +171,39 @@ exports.updateStatus = async (req, res) => {
     const isBeingCancelled =
       orderBeforeUpdate.status !== "cancelled" && status === "cancelled";
 
-    await Order.updateStatusByEmployee(req.params.id, employeeId, status);
-
-    // Send cancellation email if order is being cancelled
-    if (
-      isBeingCancelled &&
-      orderBeforeUpdate.customerId &&
-      orderBeforeUpdate.customerId.email
-    ) {
-      try {
-        // Populate product information for email
-        const populatedOrder = await Order.findById(req.params.id).populate(
-          "order_detail.productId",
-          "name image"
-        );
-
-        await sendOrderCancelMail(
-          populatedOrder,
-          orderBeforeUpdate.customerId.email,
-          "Đơn hàng đã được hủy bởi nhân viên"
-        );
-        console.log(
-          `Order cancellation email sent to ${orderBeforeUpdate.customerId.email}`
-        );
-      } catch (emailError) {
-        console.error("Error sending order cancellation email:", emailError);
-        // Don't fail the status update if email fails
+    let order;
+    if (isBeingCancelled) {
+      // Nếu là hủy đơn, lưu lý do vào actionDetail và gửi mail
+      order = await Order.cancelOrderByEmployee(
+        req.params.id,
+        employeeId,
+        note
+      );
+      // Gửi email cho khách
+      if (orderBeforeUpdate.customerId && orderBeforeUpdate.customerId.email) {
+        try {
+          const populatedOrder = await Order.findById(req.params.id).populate(
+            "order_detail.productId",
+            "name image"
+          );
+          await sendOrderCancelMail(
+            populatedOrder,
+            orderBeforeUpdate.customerId.email,
+            `Nhân viên hủy đơn vì: ${note}. Xin bạn thông cảm!`
+          );
+        } catch (emailError) {
+          console.error("Error sending order cancellation email:", emailError);
+        }
       }
+    } else {
+      // Các trạng thái khác giữ nguyên logic cũ
+      await Order.updateStatusByEmployee(req.params.id, employeeId, status);
+      order = await Order.findById(req.params.id);
     }
 
-    res.status(200).json({ message: "Order status updated successfully" });
+    res
+      .status(200)
+      .json({ message: "Order status updated successfully", order });
   } catch (error) {
     res.status(400).json({ message: error.message });
   }

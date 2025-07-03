@@ -55,7 +55,7 @@
               />
             </template>
             <template v-else>
-              <span>{{ order.method }}</span>
+              <span>{{ formatPaymentMethod(order.method) }}</span>
             </template>
           </td>
           <td>
@@ -173,6 +173,40 @@
         </div>
       </div>
     </div>
+
+    <!-- Modal nhập lý do hủy đơn -->
+    <div v-if="showCancelModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Hủy đơn hàng</h3>
+          <button class="close-btn" @click="closeCancelModal">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="cancelReason">Lý do hủy đơn hàng:</label>
+            <textarea
+              id="cancelReason"
+              v-model="cancelReason"
+              class="form-control"
+              rows="4"
+              placeholder="Nhập lý do hủy đơn hàng"
+            />
+          </div>
+          <div class="modal-footer">
+            <button class="btn" @click="closeCancelModal">Hủy</button>
+            <button
+              class="btn btn-approve"
+              @click="confirmCancelOrder"
+              :disabled="!cancelReason.trim()"
+            >
+              <i class="fas fa-check"></i> Xác nhận hủy đơn
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -203,6 +237,9 @@ export default {
     return {
       showReturnModal: false,
       selectedOrder: null,
+      showCancelModal: false,
+      orderToCancel: null,
+      cancelReason: "",
     };
   },
   computed: {
@@ -257,6 +294,7 @@ export default {
       const methodMap = {
         COD: "Thanh toán khi nhận hàng",
         ONLINE: "Thanh toán online",
+        STORE: "Thanh toán tại cửa hàng",
       };
       return methodMap[method] || method;
     },
@@ -284,7 +322,11 @@ export default {
     },
     async handleStatusChange(event, orderId) {
       const newStatus = event.target.value;
-
+      if (newStatus === "cancelled") {
+        this.orderToCancel = orderId;
+        this.showCancelModal = true;
+        return;
+      }
       const result = await Swal.fire({
         title: "Xác nhận thay đổi trạng thái?",
         text: `Bạn có chắc chắn muốn chuyển trạng thái đơn hàng sang "${this.formatStatusDisplay(
@@ -350,31 +392,40 @@ export default {
       }
     },
     getPaymentMethodIcon(method) {
-      try {
-        switch ((method || "").toUpperCase()) {
-          case "COD":
-            return new URL("../../assets/images/COD_LOGO.png", import.meta.url)
-              .href;
-          case "PAYOS":
-            return new URL("../../assets/images/payos.png", import.meta.url)
-              .href;
-          case "PAYPAL":
-            return new URL(
-              "../../assets/images/PAYPAL_LOGO.png",
-              import.meta.url
-            ).href;
-          case "VNPAY":
-            return new URL("../../assets/images/vnpay.webp", import.meta.url)
-              .href;
-          default:
-            return "";
-        }
-      } catch (e) {
-        return "";
+      switch ((method || "").toUpperCase()) {
+        case "COD":
+          return new URL("../../assets/images/COD_LOGO.png", import.meta.url)
+            .href;
+        case "PAYOS":
+          return new URL("../../assets/images/payos.png", import.meta.url).href;
+        case "PAYPAL":
+          return new URL("../../assets/images/PAYPAL_LOGO.png", import.meta.url)
+            .href;
+        case "VNPAY":
+          return new URL("../../assets/images/vnpay.webp", import.meta.url)
+            .href;
+        case "STORE":
+          return ""; // Không có icon cho STORE
+        default:
+          return "";
       }
     },
     onImgError(e) {
       e.target.style.display = "none";
+    },
+    closeCancelModal() {
+      this.showCancelModal = false;
+      this.orderToCancel = null;
+      this.cancelReason = "";
+    },
+    async confirmCancelOrder() {
+      const note = this.cancelReason.trim();
+      this.$emit("update-status", {
+        orderId: this.orderToCancel,
+        newStatus: "cancelled",
+        note,
+      });
+      this.closeCancelModal();
     },
   },
 };
@@ -565,54 +616,159 @@ tr:hover {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.45);
   display: flex;
-  justify-content: center;
   align-items: center;
-  z-index: 1000;
+  justify-content: center;
+  z-index: 2000;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
-  width: 90%;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+  width: 95%;
   max-width: 600px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 0;
+  overflow: hidden;
+  animation: modalFadeIn 0.25s;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .modal-header {
-  padding: 16px 24px;
-  border-bottom: 1px solid #f0f0f0;
+  background: linear-gradient(90deg, #1890ff 0%, #40a9ff 100%);
+  color: #fff;
+  padding: 18px 24px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
 .modal-header h3 {
   margin: 0;
-  font-size: 18px;
+  font-size: 1.18rem;
   font-weight: 600;
-  color: #262626;
 }
 
 .close-btn {
   background: none;
   border: none;
-  font-size: 20px;
-  color: #8c8c8c;
+  color: #fff;
+  font-size: 22px;
   cursor: pointer;
-  padding: 4px;
-  transition: all 0.3s ease;
+  transition: color 0.2s;
 }
 
 .close-btn:hover {
-  color: #262626;
+  color: #f5222d;
 }
 
 .modal-body {
-  padding: 24px;
+  padding: 22px 24px 10px 24px;
+}
+
+.form-group {
+  margin-bottom: 18px;
+}
+
+.form-group label {
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 7px;
+  display: block;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border 0.2s;
+  background: #fafcff;
+  margin-top: 4px;
+}
+
+.form-control:focus {
+  border-color: #1890ff;
+  outline: none;
+  background: #fff;
+}
+
+textarea.form-control {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 18px 24px;
+  border-top: 1px solid #f0f0f0;
+  background: #fafcff;
+}
+
+.btn {
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.btn-approve {
+  background: linear-gradient(90deg, #52c41a 0%, #73d13d 100%);
+  color: #fff;
+}
+
+.btn-approve:disabled {
+  background: #e0e0e0;
+  color: #aaa;
+  cursor: not-allowed;
+}
+
+.btn-approve:hover:not(:disabled) {
+  background: linear-gradient(90deg, #389e0d 0%, #52c41a 100%);
+}
+
+.btn {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.btn:hover {
+  background: #e6f7ff;
+  color: #1890ff;
+}
+
+@media (max-width: 600px) {
+  .modal-content {
+    max-width: 98vw;
+    padding: 0;
+  }
+  .modal-header,
+  .modal-body,
+  .modal-footer {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
 }
 
 .return-info {
@@ -680,37 +836,6 @@ tr:hover {
   gap: 12px;
   margin-top: 24px;
   justify-content: flex-end;
-}
-
-.btn {
-  padding: 8px 16px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.3s ease;
-  border: none;
-}
-
-.btn-approve {
-  background-color: #52c41a;
-  color: white;
-}
-
-.btn-approve:hover {
-  background-color: #73d13d;
-}
-
-.btn-reject {
-  background-color: #ff4d4f;
-  color: white;
-}
-
-.btn-reject:hover {
-  background-color: #ff7875;
 }
 
 .status-badge {

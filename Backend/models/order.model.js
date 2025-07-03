@@ -338,21 +338,16 @@ orderSchema.statics.cancelOrder = async function (orderId, note) {
     }
 
     // Update order status and add actionDetail for cancellation
-    const updatedOrder = await this.findByIdAndUpdate(
-      orderId,
-      {
-        status: "cancelled",
-        actionDetail: {
-          note: note || "Đơn hàng bị hủy bởi khách hàng",
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        updatedAt: new Date(),
-      },
-      { new: true }
-    );
-
-    return updatedOrder;
+    order.status = "cancelled";
+    order.actionDetail = {
+      note: note || "Đơn hàng bị hủy bởi khách hàng",
+      employeeId: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    order.updatedAt = new Date();
+    await order.save();
+    return order;
   } catch (error) {
     throw new Error(`Lỗi khi hủy đơn hàng: ${error.message}`);
   }
@@ -385,6 +380,8 @@ orderSchema.statics.requestReturn = async function (
       status: "requested",
       createdAt: new Date(),
     };
+    order.status = "returned";
+    order.updatedAt = new Date();
 
     return await order.save();
   } catch (error) {
@@ -440,6 +437,53 @@ orderSchema.statics.processReturnRequest = async function (
     return order;
   } catch (error) {
     throw error;
+  }
+};
+
+// Static method for employee to cancel order
+orderSchema.statics.cancelOrderByEmployee = async function (
+  orderId,
+  employeeId,
+  note
+) {
+  try {
+    const order = await this.findById(orderId);
+    if (!order) {
+      throw new Error("Không tìm thấy đơn hàng");
+    }
+    // Chỉ cho phép hủy nếu chưa bị hủy hoặc trả hàng
+    if (["cancelled", "returned"].includes(order.status)) {
+      throw new Error(
+        "Đơn hàng đã bị hủy hoặc trả hàng, không thể thao tác lại"
+      );
+    }
+    // Trả lại tồn kho nếu trạng thái là pending/processing/shipping
+    if (["pending", "processing", "shipping"].includes(order.status)) {
+      for (const item of order.order_detail) {
+        for (const variant of item.variants) {
+          for (const consignment of variant.consignments) {
+            await mongoose
+              .model("Consignment")
+              .findByIdAndUpdate(consignment.consignmentId, {
+                $inc: { current_quantity: consignment.quantity },
+              });
+          }
+        }
+      }
+    }
+    // Cập nhật trạng thái và actionDetail
+    order.status = "cancelled";
+    order.actionDetail = {
+      note: note || "Đơn hàng bị hủy bởi nhân viên",
+      employeeId: employeeId,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    order.updatedAt = new Date();
+    await order.save();
+    return order;
+  } catch (error) {
+    throw new Error(`Lỗi khi nhân viên hủy đơn: ${error.message}`);
   }
 };
 

@@ -484,7 +484,7 @@ export default {
       // Implement openCreateForm method
       console.log("Opening create form");
     },
-    async handleUpdateStatus({ orderId, newStatus }) {
+    async handleUpdateStatus({ orderId, newStatus, note }) {
       try {
         const userInfo = JSON.parse(localStorage.getItem("employee") || "{}");
         if (!userInfo._id) {
@@ -499,9 +499,15 @@ export default {
           orderId,
           newStatus,
           employeeId: userInfo._id,
+          note, // log ra để kiểm tra
         });
 
-        await OrderService.updateOrderStatus(orderId, newStatus, userInfo._id);
+        await OrderService.updateOrderStatus(
+          orderId,
+          newStatus,
+          userInfo._id,
+          note
+        );
 
         toast.success("Cập nhật trạng thái đơn hàng thành công!");
 

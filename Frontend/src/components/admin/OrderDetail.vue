@@ -443,6 +443,7 @@ export default {
       const methodMap = {
         COD: "Thanh toán khi nhận hàng (COD)",
         ONLINE: "Thanh toán online",
+        STORE: "Thanh toán tại cửa hàng",
       };
       return methodMap[method] || method;
     },

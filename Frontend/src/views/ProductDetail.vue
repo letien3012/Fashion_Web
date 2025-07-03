@@ -153,7 +153,7 @@
               </label>
               <div class="option-list">
                 <button
-                  v-for="attributeId in publishedAttributes2"
+                  v-for="attributeId in filteredAttributes2"
                   :key="attributeId"
                   :class="{ active: selectedAttribute2 === attributeId }"
                   @click="selectedAttribute2 = attributeId"
@@ -389,7 +389,6 @@ export default {
           this.selectedAttribute1
         );
       }
-
       // Nếu có hai thuộc tính, kiểm tra cả hai
       return (
         this.quantity > 0 &&
@@ -438,6 +437,29 @@ export default {
         new Set(
           (this.product.variants || [])
             .filter((v) => v.publish !== false && v.attributeId2)
+            .map((v) => v.attributeId2)
+        )
+      );
+    },
+    filteredAttributes2() {
+      // Nếu chưa chọn thuộc tính 1 hoặc không có thuộc tính 2 thì trả về tất cả publishedAttributes2
+      if (
+        !this.selectedAttribute1 ||
+        !this.product.attributes2 ||
+        this.product.attributes2.length === 0
+      ) {
+        return this.publishedAttributes2;
+      }
+      // Lọc các attribute2 có tồn tại variant publish với selectedAttribute1
+      return Array.from(
+        new Set(
+          (this.product.variants || [])
+            .filter(
+              (v) =>
+                v.publish !== false &&
+                v.attributeId1 === this.selectedAttribute1 &&
+                v.attributeId2
+            )
             .map((v) => v.attributeId2)
         )
       );
@@ -771,14 +793,14 @@ export default {
 
     findVariant(attribute1Id, attribute2Id) {
       if (!this.product.variants) return null;
-      // If there's only one attribute, only check attribute1Id
+      // Nếu chỉ có 1 thuộc tính
       if (!this.product.attributes2 || this.product.attributes2.length === 0) {
         return this.product.variants.find(
           (variant) =>
             variant.attributeId1 === attribute1Id && variant.publish !== false
         );
       }
-      // If there are two attributes, check both
+      // Nếu có 2 thuộc tính
       return this.product.variants.find(
         (variant) =>
           variant.attributeId1 === attribute1Id &&
@@ -789,7 +811,6 @@ export default {
 
     async loadVariantData() {
       if (!this.selectedAttribute1) return;
-
       // Nếu có thuộc tính thứ 2 thì yêu cầu chọn
       if (
         this.product.attributes2 &&
@@ -798,25 +819,21 @@ export default {
       ) {
         return;
       }
-
       try {
         const variant = this.findVariant(
           this.selectedAttribute1,
           this.selectedAttribute2
         );
-
         if (variant) {
           // Xử lý ảnh variant
           const variantImage = variant.image.startsWith("http")
             ? variant.image
             : `http://localhost:3005${variant.image}`;
-
           // Kết hợp ảnh variant với album ảnh
           const variantImages = [
             variantImage,
             ...this.product.images.filter((img) => img !== variantImage),
           ];
-
           // Lấy số lượng tồn kho từ consignment
           let stockQuantity = 0;
           try {
@@ -830,7 +847,6 @@ export default {
           } catch (error) {
             console.error("Error fetching stock quantity:", error);
           }
-
           this.currentVariant = {
             price: variant.price || 0,
             stock: stockQuantity,
@@ -841,7 +857,6 @@ export default {
             sku: variant.sku,
           };
           this.activeImage = 0; // Reset to first image when variant changes
-
           // Load promotions for this variant
           await this.loadPromotions();
         } else {

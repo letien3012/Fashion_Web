@@ -1,5 +1,8 @@
 const nodemailer = require("nodemailer");
 require("dotenv").config();
+const fs = require("fs");
+const path = require("path");
+const sharp = require("sharp");
 
 const transporter = nodemailer.createTransport({
   service: "gmail",
@@ -10,6 +13,29 @@ const transporter = nodemailer.createTransport({
 });
 
 const sendOrderCancelMail = async (order, customerEmail, cancelReason = "") => {
+  // Xử lý ảnh sản phẩm trước khi render template
+  const itemsHtml = await Promise.all(
+    order.order_detail.map(async (item) => {
+      return `
+      <div class="item">
+        <div class="item-details">
+          <div class="item-name">${item.productId?.name || "Sản phẩm"}</div>
+          ${item.variants
+            .map(
+              (variant) => `
+            <div class="item-variant">
+              ${variant.sku} - Số lượng: ${variant.quantity}
+            </div>
+          `
+            )
+            .join("")}
+          <div class="item-price">${item.price?.toLocaleString("vi-VN")}đ</div>
+        </div>
+      </div>
+    `;
+    })
+  );
+
   const mailOptions = {
     from: `"JUNO SHOP" <${process.env.MAIL_USER}>`,
     to: customerEmail,
@@ -300,38 +326,7 @@ const sendOrderCancelMail = async (order, customerEmail, cancelReason = "") => {
             
             <div class="order-details">
               <h3>📦 Chi tiết đơn hàng</h3>
-              ${order.order_detail
-                .map(
-                  (item) => `
-                <div class="item">
-                  <img src="${
-                    item.productId?.image?.startsWith("http")
-                      ? item.productId.image
-                      : `http://localhost:3005/${item.productId?.image || ""}`
-                  }" 
-                       alt="${item.productId?.name || "Sản phẩm"}" 
-                       class="item-image">
-                  <div class="item-details">
-                    <div class="item-name">${
-                      item.productId?.name || "Sản phẩm"
-                    }</div>
-                    ${item.variants
-                      .map(
-                        (variant) => `
-                      <div class="item-variant">
-                        ${variant.sku} - Số lượng: ${variant.quantity}
-                      </div>
-                    `
-                      )
-                      .join("")}
-                    <div class="item-price">${item.price?.toLocaleString(
-                      "vi-VN"
-                    )}đ</div>
-                  </div>
-                </div>
-              `
-                )
-                .join("")}
+              ${itemsHtml.join("")}
             </div>
             
             <div class="total-section">
@@ -356,23 +351,17 @@ const sendOrderCancelMail = async (order, customerEmail, cancelReason = "") => {
                 <span>${order.total_price?.toLocaleString("vi-VN")}đ</span>
               </div>
             </div>
-            
-            <div style="text-align: center; margin-top: 30px;">
-              <a href="http://localhost:3000" class="cta-button">
-                🛍️ Tiếp tục mua sắm
-              </a>
-            </div>
           </div>
           
           <div class="footer">
             <p>Nếu bạn có bất kỳ câu hỏi nào, vui lòng liên hệ với chúng tôi:</p>
             <p class="contact-info">
-              📧 Email: support@fashionstore.com<br>
-              📞 Hotline: 1900-xxxx<br>
+              📧 Email: cskh@juno.vn<br>
+              📞 Hotline: 1900 63 6988<br>
               💬 Chat: Trực tuyến 24/7
             </p>
             <p style="margin-top: 15px; font-size: 14px; color: #6c757d;">
-              Cảm ơn bạn đã tin tưởng Fashion Store!
+              Cảm ơn bạn đã tin tưởng JUNO SHOP!
             </p>
           </div>
         </div>
