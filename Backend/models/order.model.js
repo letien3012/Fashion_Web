@@ -380,6 +380,8 @@ orderSchema.statics.requestReturn = async function (
       status: "requested",
       createdAt: new Date(),
     };
+    order.status = "returned";
+    order.updatedAt = new Date();
 
     return await order.save();
   } catch (error) {
