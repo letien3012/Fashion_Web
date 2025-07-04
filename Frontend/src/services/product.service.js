@@ -276,7 +276,7 @@ const productService = {
   async addToWishlist(productId) {
     try {
       const response = await axios.post(
-        `${backendUrl}/api/customers/wishlist`,
+        `${BASE_URL}/api/customers/wishlist`,
         { productId },
         getAuthHeaders()
       );
@@ -290,7 +290,7 @@ const productService = {
   async removeFromWishlist(productId) {
     try {
       const response = await axios.delete(
-        `${backendUrl}/api/customers/wishlist/${productId}`,
+        `${BASE_URL}/api/customers/wishlist/${productId}`,
         getAuthHeaders()
       );
       return response.data;
@@ -307,7 +307,7 @@ const productService = {
         return { wishlist: [] };
       }
       const response = await axios.get(
-        `${backendUrl}/api/customers/wishlist`,
+        `${BASE_URL}/api/customers/wishlist`,
         getAuthHeaders()
       );
       return response.data;
@@ -325,7 +325,7 @@ const productService = {
 
 export const getVariantPrice = async (productId, variantId) => {
   const res = await axios.get(
-    `${backendUrl}/api/products/variant-price/${productId}/${variantId}`
+    `${BASE_URL}/api/products/variant-price/${productId}/${variantId}`
   );
   return res.data; // { price, priceSale }
 };
