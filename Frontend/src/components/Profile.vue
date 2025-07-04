@@ -24,7 +24,18 @@
                       v-model="userInfo.fullname"
                       placeholder="Nhập họ và tên"
                       class="form-control"
+                      :class="{
+                        'is-valid': isFullnameValid,
+                        'is-invalid': !isFullnameValid && userInfo.fullname,
+                      }"
                     />
+                    <div
+                      v-if="!isFullnameValid && userInfo.fullname"
+                      class="invalid-feedback"
+                      style="color: #e63946; font-size: 0.9em"
+                    >
+                      Họ và tên phải có ít nhất 2 ký tự.
+                    </div>
                   </div>
                   <div class="col-md-6">
                     <label>Số điện thoại</label>
@@ -33,7 +44,19 @@
                       v-model="userInfo.phone"
                       placeholder="Nhập số điện thoại"
                       class="form-control"
+                      :class="{
+                        'is-valid': isPhoneValid,
+                        'is-invalid': !isPhoneValid && userInfo.phone,
+                      }"
+                      maxlength="10"
                     />
+                    <div
+                      v-if="!isPhoneValid && userInfo.phone"
+                      class="invalid-feedback"
+                      style="color: #e63946; font-size: 0.9em"
+                    >
+                      Số điện thoại phải đủ 10 số và bắt đầu bằng số 0.
+                    </div>
                   </div>
                   <div class="col-12">
                     <label>Email</label>
@@ -51,7 +74,18 @@
                       v-model="userInfo.address"
                       placeholder="Địa chỉ (ví dụ: 103 Vạn Phúc, phường Vạn Phúc)"
                       class="form-control mb-2"
+                      :class="{
+                        'is-valid': isAddressValid,
+                        'is-invalid': !isAddressValid && userInfo.address,
+                      }"
                     />
+                    <div
+                      v-if="!isAddressValid && userInfo.address"
+                      class="invalid-feedback"
+                      style="color: #e63946; font-size: 0.9em"
+                    >
+                      Địa chỉ phải có ít nhất 4 ký tự.
+                    </div>
                     <div class="row g-2 mt-2">
                       <div class="col-md-12">
                         <LocationPicker
@@ -83,7 +117,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { toast } from "vue3-toastify";
 import Header from "./Header.vue";
@@ -104,6 +138,9 @@ const userInfo = ref({
   district_code: "",
   province_code: "",
 });
+const isFullnameValid = ref(true);
+const isPhoneValid = ref(true);
+const isAddressValid = ref(true);
 
 const updateLocation = (location) => {
   userInfo.value.ward_code = location.ward_code || "";
@@ -111,11 +148,38 @@ const updateLocation = (location) => {
   userInfo.value.province_code = location.province_code || "";
 };
 
+function validateFullname(name) {
+  return name && name.trim().length > 1;
+}
+function validatePhone(phone) {
+  return /^0\d{9}$/.test(phone);
+}
+function validateAddress(address) {
+  return address && address.trim().length > 3;
+}
+
+watch(
+  () => userInfo.value.fullname,
+  (newVal) => {
+    isFullnameValid.value = validateFullname(newVal);
+  }
+);
+watch(
+  () => userInfo.value.phone,
+  (newVal) => {
+    isPhoneValid.value = validatePhone(newVal);
+  }
+);
+watch(
+  () => userInfo.value.address,
+  (newVal) => {
+    isAddressValid.value = validateAddress(newVal);
+  }
+);
+
 onMounted(async () => {
   const userStr = localStorage.getItem("user");
   const token = localStorage.getItem("token");
-  console.log("USER ĐĂNG NHẬP TRONG PROFILE", userStr);
-
   if (!userStr || !token) {
     toast.warning("Vui lòng đăng nhập để xem thông tin cá nhân!");
     router.push("/login");
@@ -124,14 +188,18 @@ onMounted(async () => {
 
   try {
     const user = JSON.parse(userStr);
+    // Lấy userId từ user object (có thể là id hoặc _id tuỳ backend)
+    const userId = user.id || user._id;
+    // Gọi API lấy thông tin user từ CSDL
+    const userFromDB = await customerService.getCustomerInforById(userId);
     userInfo.value = {
-      fullname: user.fullname || "",
-      email: user.email || "",
-      phone: user.phone || "",
-      address: user.address || "",
-      ward_code: user.ward_code || "",
-      district_code: user.district_code || "",
-      province_code: user.province_code || "",
+      fullname: userFromDB.fullname || "",
+      email: userFromDB.email || "",
+      phone: userFromDB.phone || "",
+      address: userFromDB.address || "",
+      ward_code: userFromDB.ward_code || "",
+      district_code: userFromDB.district_code || "",
+      province_code: userFromDB.province_code || "",
     };
   } catch (error) {
     console.error("Error:", error);
@@ -150,7 +218,7 @@ const updateProfile = async () => {
   try {
     isUpdating.value = true;
     const response = await customerService.updateProfile({
-      fullname: userInfo.value.name,
+      fullname: userInfo.value.fullname,
       phone: userInfo.value.phone,
       address: userInfo.value.address,
       ward_code: userInfo.value.ward_code,
@@ -443,5 +511,14 @@ textarea {
     padding: 8px;
     font-size: 0.85rem;
   }
+}
+
+.is-valid {
+  border-color: #28a745 !important;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.1);
+}
+.is-invalid {
+  border-color: #e63946 !important;
+  box-shadow: 0 0 0 2px rgba(230, 57, 70, 0.1);
 }
 </style>

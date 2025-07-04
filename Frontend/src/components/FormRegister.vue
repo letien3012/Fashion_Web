@@ -46,6 +46,7 @@
 <script>
 import { toast } from "vue3-toastify";
 import { useRouter } from "vue-router";
+import axios from "axios";
 
 export default {
   setup() {
@@ -117,7 +118,7 @@ export default {
       }
     },
 
-    loginWithGoogle() {
+    async loginWithGoogle() {
       const googleAuthURL = `${this.baseUrl}/api/auth/google`;
 
       const popup = window.open(
@@ -127,26 +128,40 @@ export default {
       );
 
       // Nghe kết quả từ popup gửi về
-      window.addEventListener("message", (event) => {
+      window.addEventListener("message", async (event) => {
         if (event.origin !== this.baseUrl) return;
 
         const { token, user } = event.data;
-        console.log("Received data from Google login:", { token, user });
-
-        if (token) {
+        if (token && user) {
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(user));
+
+          // Gọi API tạo giỏ hàng trống
+          try {
+            await axios.post(
+              `${this.baseUrl}/api/carts/create`,
+              {
+                customerId: user._id || user.id,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+          } catch (cartErr) {
+            // Có thể bỏ qua lỗi tạo giỏ hàng nếu đã tồn tại
+          }
 
           toast.success("Đăng nhập thành công!");
           this.router.push("/");
         } else {
-          console.error("No token received from Google login");
           toast.error("Đăng nhập thất bại. Vui lòng thử lại!");
         }
       });
     },
 
-    loginWithFacebook() {
+    async loginWithFacebook() {
       const facebookAuthURL = `${this.baseUrl}/api/auth/facebook`;
 
       const popup = window.open(
@@ -156,17 +171,33 @@ export default {
       );
 
       // Nghe kết quả từ popup gửi về
-      window.addEventListener("message", (event) => {
+      window.addEventListener("message", async (event) => {
         if (event.origin !== this.baseUrl) return;
 
         const { token, user } = event.data;
-
-        if (token) {
+        if (token && user) {
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(user));
 
+          // Gọi API tạo giỏ hàng trống
+          try {
+            await axios.post(
+              `${this.baseUrl}/api/carts/create`,
+              {
+                customerId: user._id || user.id,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+          } catch (cartErr) {}
+
           toast.success("Đăng nhập bằng Facebook thành công!");
           this.router.push("/");
+        } else {
+          toast.error("Đăng nhập thất bại. Vui lòng thử lại!");
         }
       });
     },

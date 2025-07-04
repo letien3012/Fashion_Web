@@ -410,8 +410,8 @@ const fetchProductsAndStock = async () => {
   isLoadingProducts.value = true;
   try {
     const [productRes, consignmentRes] = await Promise.all([
-      axios.get(`${import.meta.env.VITE_API_URL}/api/products`),
-      axios.get(`${import.meta.env.VITE_API_URL}/api/consignments`),
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/products`),
+      axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/consignments`),
     ]);
     products.value = productRes.data.data || [];
     // Build consignment map

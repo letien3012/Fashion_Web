@@ -64,6 +64,7 @@
 <script>
 import axios from "axios";
 import { toast } from "vue3-toastify";
+import authService from "@/services/auth.service";
 
 export default {
   data() {
@@ -108,6 +109,37 @@ export default {
         });
 
         if (res.data.success) {
+          // Lưu user vào localStorage để tạo giỏ hàng
+          localStorage.setItem(
+            "user",
+            JSON.stringify({
+              id: res.data.user?._id || res.data.user?.id,
+              token: res.data.token || res.data.user?.token || "",
+            })
+          );
+
+          // Gọi API tạo giỏ hàng trống
+          try {
+            await axios.post(
+              `${baseUrl}/api/carts/create`,
+              {
+                customerId: res.data.user?._id || res.data.user?.id,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${
+                    res.data.token || res.data.user?.token || ""
+                  }`,
+                },
+              }
+            );
+          } catch (cartErr) {
+            // Có thể bỏ qua lỗi tạo giỏ hàng nếu đã tồn tại
+          }
+
+          // Xóa user khỏi localStorage sau khi tạo giỏ hàng
+          localStorage.removeItem("user");
+
           toast.success("Đăng ký thành công!");
           this.$router.push("/login");
         } else {
