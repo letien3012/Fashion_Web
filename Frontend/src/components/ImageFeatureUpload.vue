@@ -2,9 +2,9 @@
   <div class="image-feature-upload">
     <div class="upload-container">
       <h2>Upload Image and Extract Features</h2>
-      
+
       <!-- Upload Area -->
-      <div 
+      <div
         class="upload-area"
         @dragover.prevent
         @drop.prevent="handleDrop"
@@ -30,16 +30,16 @@
       <div v-if="previewUrl" class="preview-container">
         <img :src="previewUrl" alt="Preview" class="preview-image" />
         <div class="preview-actions">
-          <button 
-            @click="uploadImage" 
+          <button
+            @click="uploadImage"
             :disabled="isUploading"
             class="upload-button"
           >
             <span v-if="!isUploading">Extract & Save Features</span>
             <span v-else>Processing...</span>
           </button>
-          <button 
-            @click="clearPreview" 
+          <button
+            @click="clearPreview"
             class="clear-button"
             :disabled="isUploading"
           >
@@ -56,7 +56,7 @@
       <!-- Upload Progress -->
       <div v-if="isUploading" class="progress-container">
         <div class="progress-bar">
-          <div 
+          <div
             class="progress-fill"
             :style="{ width: uploadProgress + '%' }"
           ></div>
@@ -68,19 +68,20 @@
 </template>
 
 <script>
-import axios from 'axios';
+import axios from "axios";
 
 export default {
-  name: 'ImageFeatureUpload',
+  name: "ImageFeatureUpload",
   data() {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
     return {
       selectedFile: null,
       previewUrl: null,
       isDragging: false,
       isUploading: false,
       uploadProgress: 0,
-      statusMessage: '',
-      statusType: 'info', // 'info', 'success', 'error'
+      statusMessage: "",
+      statusType: "info", // 'info', 'success', 'error'
     };
   },
   methods: {
@@ -105,20 +106,23 @@ export default {
 
     processFile(file) {
       // Validate file type
-      if (!file.type.startsWith('image/')) {
-        this.showStatus('Please select an image file', 'error');
+      if (!file.type.startsWith("image/")) {
+        this.showStatus("Please select an image file", "error");
         return;
       }
 
       // Validate file size (5MB)
       if (file.size > 5 * 1024 * 1024) {
-        this.showStatus('File size must be less than 5MB', 'error');
+        this.showStatus("File size must be less than 5MB", "error");
         return;
       }
 
       this.selectedFile = file;
       this.createPreview(file);
-      this.showStatus('Image selected. Click "Extract & Save Features" to process', 'info');
+      this.showStatus(
+        'Image selected. Click "Extract & Save Features" to process',
+        "info"
+      );
     },
 
     createPreview(file) {
@@ -134,37 +138,44 @@ export default {
 
       this.isUploading = true;
       this.uploadProgress = 0;
-      this.showStatus('Uploading and processing image...', 'info');
+      this.showStatus("Uploading and processing image...", "info");
 
       const formData = new FormData();
-      formData.append('image', this.selectedFile);
+      formData.append("image", this.selectedFile);
 
       try {
-        const response = await axios.post('http://localhost:3005/api/imageService/extract-features', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          },
-          onUploadProgress: (progressEvent) => {
-            this.uploadProgress = Math.round(
-              (progressEvent.loaded * 100) / progressEvent.total
-            );
+        const response = await axios.post(
+          `${this.baseUrl}/api/imageService/extract-features`,
+          formData,
+          {
+            headers: {
+              "Content-Type": "multipart/form-data",
+            },
+            onUploadProgress: (progressEvent) => {
+              this.uploadProgress = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+            },
           }
-        });
+        );
         console.log(response);
         if (response.data.success) {
-          this.showStatus('Features extracted and saved successfully!', 'success');
+          this.showStatus(
+            "Features extracted and saved successfully!",
+            "success"
+          );
           // Emit event for parent component
-          this.$emit('features-saved', {
+          this.$emit("features-saved", {
             imagePath: response.data.imagePath,
-            featureId: response.data.featureId
+            featureId: response.data.featureId,
           });
         } else {
-          throw new Error(response.data.message || 'Upload failed');
+          throw new Error(response.data.message || "Upload failed");
         }
       } catch (error) {
         this.showStatus(
-          error.response?.data?.error || error.message || 'Upload failed',
-          'error'
+          error.response?.data?.error || error.message || "Upload failed",
+          "error"
         );
       } finally {
         this.isUploading = false;
@@ -175,15 +186,15 @@ export default {
       this.selectedFile = null;
       this.previewUrl = null;
       this.uploadProgress = 0;
-      this.statusMessage = '';
-      this.$refs.fileInput.value = '';
+      this.statusMessage = "";
+      this.$refs.fileInput.value = "";
     },
 
-    showStatus(message, type = 'info') {
+    showStatus(message, type = "info") {
       this.statusMessage = message;
       this.statusType = type;
-    }
-  }
+    },
+  },
 };
 </script>
 
@@ -219,7 +230,7 @@ h2 {
 
 .upload-area:hover,
 .upload-area.is-dragging {
-  border-color: #4CAF50;
+  border-color: #4caf50;
   background: #f0f9f0;
 }
 
@@ -229,7 +240,7 @@ h2 {
 
 .upload-content i {
   font-size: 48px;
-  color: #4CAF50;
+  color: #4caf50;
   margin-bottom: 10px;
 }
 
@@ -269,7 +280,7 @@ h2 {
 }
 
 .upload-button {
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
 }
 
@@ -326,7 +337,7 @@ button:disabled {
 
 .progress-fill {
   height: 100%;
-  background: #4CAF50;
+  background: #4caf50;
   transition: width 0.3s ease;
 }
 
@@ -337,4 +348,4 @@ button:disabled {
   font-size: 0.9em;
   color: #666;
 }
-</style> 
+</style>

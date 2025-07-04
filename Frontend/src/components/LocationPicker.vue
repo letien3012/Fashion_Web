@@ -61,7 +61,7 @@ import { ref, watch, onMounted } from "vue";
 import axios from "axios";
 
 const emit = defineEmits(["update:location"]);
-const API_URL = "http://localhost:3005/api/location";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/location`;
 
 const props = defineProps({
   provinceCode: String,

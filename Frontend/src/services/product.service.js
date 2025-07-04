@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = "http://localhost:3005";
+const backendUrl = "http://10.18.226.131:3005";
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {

@@ -29,7 +29,8 @@
             </span>
           </div>
           <small v-if="password && !passwordValid" class="error-msg">
-            Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+            Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự
+            đặc biệt.
           </small>
         </div>
 
@@ -75,6 +76,7 @@ import "vue3-toastify/dist/index.css";
 
 export default {
   data() {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
     return {
       password: "",
       confirmPassword: "",
@@ -110,9 +112,12 @@ export default {
       }
 
       try {
-        const res = await axios.post("http://localhost:3005/api/auth/verify-reset-token", {
-          token,
-        });
+        const res = await axios.post(
+          `${this.baseUrl}/api/auth/verify-reset-token`,
+          {
+            token,
+          }
+        );
 
         this.isTokenValid = res.data.valid;
       } catch (error) {
@@ -127,10 +132,13 @@ export default {
 
       const token = this.$route.query.token;
       try {
-        const res = await axios.post("http://localhost:3005/api/auth/reset-password", {
-          token,
-          password: this.password,
-        });
+        const res = await axios.post(
+          `${this.baseUrl}/api/auth/reset-password`,
+          {
+            token,
+            password: this.password,
+          }
+        );
 
         if (res.data.success) {
           toast.success("Đặt lại mật khẩu thành công!");
@@ -317,4 +325,4 @@ small {
     font-size: 0.9rem;
   }
 }
-</style> 
+</style>

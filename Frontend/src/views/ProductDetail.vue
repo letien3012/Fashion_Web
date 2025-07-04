@@ -486,10 +486,12 @@ export default {
           // Xử lý ảnh chính và album
           const mainImage = productData.image.startsWith("http")
             ? productData.image
-            : `http://localhost:3005${productData.image}`;
+            : `${import.meta.env.VITE_API_BASE_URL}${productData.image}`;
 
           const albumImages = (productData.album || []).map((img) =>
-            img.startsWith("http") ? img : `http://localhost:3005${img}`
+            img.startsWith("http")
+              ? img
+              : `${import.meta.env.VITE_API_BASE_URL}${img}`
           );
 
           // Lấy danh sách attribute IDs từ variants
@@ -518,7 +520,7 @@ export default {
               ...variant,
               image: variant.image.startsWith("http")
                 ? variant.image
-                : `http://localhost:3005${variant.image}`,
+                : `${import.meta.env.VITE_API_BASE_URL}${variant.image}`,
             })),
             attributes1: Array.from(attribute1Ids),
             attributes2: Array.from(attribute2Ids),
@@ -828,7 +830,7 @@ export default {
           // Xử lý ảnh variant
           const variantImage = variant.image.startsWith("http")
             ? variant.image
-            : `http://localhost:3005${variant.image}`;
+            : `${import.meta.env.VITE_API_BASE_URL}${variant.image}`;
           // Kết hợp ảnh variant với album ảnh
           const variantImages = [
             variantImage,
@@ -1172,8 +1174,9 @@ export default {
 .main-image {
   width: 100%;
   height: 500px;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 0.5rem;
+  background: #fff;
 }
 
 .thumbnail-container {

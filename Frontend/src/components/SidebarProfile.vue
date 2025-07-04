@@ -69,6 +69,7 @@ import { productService } from "../services/product.service";
 import { customerService } from "../services/customer.service";
 
 const router = useRouter();
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const customer = ref({
   fullname: "",
@@ -121,15 +122,12 @@ const fetchCustomerProfile = async () => {
       return;
     }
 
-    const response = await axios.get(
-      "http://localhost:3005/api/customers/profile",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await axios.get(`${baseUrl}/api/customers/profile`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+    });
 
     if (response.data) {
       customer.value = {
@@ -242,7 +240,7 @@ const getimageUrl = (image) => {
 
   // Nếu là ảnh local từ thư mục images
   if (image.startsWith("/images/")) {
-    return `http://localhost:3005${image}`;
+    return `${baseUrl}${image}`;
   }
 
   return "/default-image.png";

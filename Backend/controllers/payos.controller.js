@@ -11,9 +11,9 @@ const PAYOS_CHECKSUM_KEY =
   process.env.PAYOS_CHECKSUM_KEY || "your_checksum_key";
 const PAYOS_API_URL =
   process.env.PAYOS_API_URL || "https://api-merchant.payos.vn";
-const PAYOS_RETURN_URL =
+const returnUrl =
   process.env.PAYOS_RETURN_URL || "http://localhost:5173/payos-return";
-const PAYOS_CANCEL_URL =
+const cancelUrl =
   process.env.PAYOS_CANCEL_URL || "http://localhost:5173/payos-cancel";
 
 const payos = new PayOS(
@@ -42,8 +42,8 @@ exports.createPayment = async (req, res) => {
       orderCode: Number(orderCode),
       amount,
       description,
-      returnUrl: process.env.PAYOS_RETURN_URL,
-      cancelUrl: process.env.PAYOS_CANCEL_URL,
+      returnUrl: returnUrl,
+      cancelUrl: cancelUrl,
       buyerName: customerInfo.name || "Khách hàng",
       items: paymentItems,
     };

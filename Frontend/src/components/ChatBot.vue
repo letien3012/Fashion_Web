@@ -218,7 +218,7 @@ import { nextTick } from "vue";
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // API endpoints
-const API_BASE_URL = "http://localhost:3005/api";
+const API_BASE_URL = "http://10.18.226.131:3005/api";
 const ENDPOINTS = {
   promotions: `${API_BASE_URL}/promotions`,
 };
@@ -303,7 +303,7 @@ export default {
       try {
         // Lấy embedding cho câu hỏi từ backend
         const embeddingRes = await fetch(
-          "http://localhost:3005/api/rag/embedding",
+          "http://10.18.226.131:3005/api/rag/embedding",
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -318,7 +318,7 @@ export default {
         let relatedProducts = [];
         try {
           const retrieveRes = await fetch(
-            "http://localhost:3005/api/rag/retrieve",
+            "http://10.18.226.131:3005/api/rag/retrieve",
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -387,13 +387,13 @@ export default {
       if (msg.includes("khuyến mãi") || msg.includes("voucher")) {
         return { intent: "promotion", entity: {} };
       }
-      if (msg.match(/\d+(k|tr|nghìn|triệu|vnd|₫)/) || msg.includes("giá")) {
-        // Có giá trị giá
-        return {
-          intent: "search_product_by_price",
-          entity: { priceInfo: this.extractPriceInfo(msg) },
-        };
-      }
+      // if (msg.match(/\d+(k|tr|nghìn|triệu|vnd|₫)/) || msg.includes("giá")) {
+      //   // Có giá trị giá
+      //   return {
+      //     intent: "search_product_by_price",
+      //     entity: { priceInfo: this.extractPriceInfo(msg) },
+      //   };
+      // }
       if (
         msg.includes("size") ||
         msg.includes("màu") ||
@@ -530,7 +530,7 @@ export default {
         console.log("Using full URL:", imagePath);
         return imagePath;
       }
-      const fullUrl = `http://localhost:3005${imagePath}`;
+      const fullUrl = `http://10.18.226.131:3005${imagePath}`;
       return fullUrl;
     },
     handleImageError(e) {
@@ -852,7 +852,7 @@ export default {
               return {
                 _id: product._id || "",
                 name: product.name || "",
-                image: `http://localhost:3005${product.similarImagePath}`,
+                image: `http://10.18.226.131:3005${product.similarImagePath}`,
                 album: (product.album || []).map((img) =>
                   this.getImageUrl(img)
                 ),

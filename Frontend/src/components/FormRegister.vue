@@ -50,7 +50,8 @@ import { useRouter } from "vue-router";
 export default {
   setup() {
     const router = useRouter();
-    return { router };
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    return { router, baseUrl };
   },
   data() {
     return {
@@ -70,16 +71,13 @@ export default {
 
       try {
         // Bước 1: Kiểm tra email đã đăng ký chưa
-        const checkRes = await fetch(
-          "http://localhost:3005/api/auth/check-email",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ email: this.email }),
-          }
-        );
+        const checkRes = await fetch(`${this.baseUrl}/api/auth/check-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ email: this.email }),
+        });
 
         const checkData = await checkRes.json();
         if (checkRes.ok) {
@@ -91,23 +89,20 @@ export default {
           }
 
           // Bước 2: Gửi mã OTP nếu email chưa được đăng ký
-          const response = await fetch(
-            "http://localhost:3005/api/mail/send-code",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ email: this.email }),
-            }
-          );
+          const response = await fetch(`${this.baseUrl}/api/mail/send-code`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ email: this.email }),
+          });
 
           const data = await response.json();
           if (response.ok) {
             // Chuyển hướng đến trang xác thực với email trong query params
-            this.$router.push({ 
+            this.$router.push({
               name: "VerificationOtp",
-              query: { email: this.email }
+              query: { email: this.email },
             });
             toast.success("Mã xác thực đã được gửi đến email của bạn.");
           } else {
@@ -123,7 +118,7 @@ export default {
     },
 
     loginWithGoogle() {
-      const googleAuthURL = "http://localhost:3005/api/auth/google";
+      const googleAuthURL = `${this.baseUrl}/api/auth/google`;
 
       const popup = window.open(
         googleAuthURL,
@@ -133,7 +128,7 @@ export default {
 
       // Nghe kết quả từ popup gửi về
       window.addEventListener("message", (event) => {
-        if (event.origin !== "http://localhost:3005") return;
+        if (event.origin !== this.baseUrl) return;
 
         const { token, user } = event.data;
         console.log("Received data from Google login:", { token, user });
@@ -141,7 +136,7 @@ export default {
         if (token) {
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(user));
-          
+
           toast.success("Đăng nhập thành công!");
           this.router.push("/");
         } else {
@@ -152,7 +147,7 @@ export default {
     },
 
     loginWithFacebook() {
-      const facebookAuthURL = "http://localhost:3005/api/auth/facebook";
+      const facebookAuthURL = `${this.baseUrl}/api/auth/facebook`;
 
       const popup = window.open(
         facebookAuthURL,
@@ -162,7 +157,7 @@ export default {
 
       // Nghe kết quả từ popup gửi về
       window.addEventListener("message", (event) => {
-        if (event.origin !== "http://localhost:3005") return;
+        if (event.origin !== this.baseUrl) return;
 
         const { token, user } = event.data;
 
@@ -199,7 +194,7 @@ export default {
     width: 95vw;
     max-width: 95vw;
     margin-top: 20px;
-  
+
     border-radius: 10px;
   }
 }
@@ -207,7 +202,6 @@ export default {
 @media (min-width: 769px) {
   .form-container {
     margin-top: 150px;
-   
   }
 }
 

@@ -82,7 +82,8 @@ export default {
   },
   setup() {
     const router = useRouter();
-    return { router };
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    return { router, baseUrl };
   },
   data() {
     return {
@@ -95,7 +96,7 @@ export default {
   methods: {
     async handleSubmit() {
       try {
-        const response = await fetch("http://localhost:3005/api/auth/login", {
+        const response = await fetch(`${this.baseUrl}/api/auth/login`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -111,7 +112,7 @@ export default {
         if (data.success) {
           localStorage.setItem("token", data.token);
           localStorage.setItem("user", JSON.stringify(data.user));
-          
+
           toast.success("Đăng nhập thành công!");
           this.router.push("/");
         } else {
@@ -123,7 +124,7 @@ export default {
       }
     },
     loginWithGoogle() {
-      const googleAuthURL = "http://localhost:3005/api/auth/google";
+      const googleAuthURL = `${this.baseUrl}/api/auth/google`;
 
       const popup = window.open(
         googleAuthURL,
@@ -133,7 +134,7 @@ export default {
 
       // Nghe kết quả từ popup gửi về
       window.addEventListener("message", (event) => {
-        if (event.origin !== "http://localhost:3005") return;
+        if (event.origin !== this.baseUrl) return;
 
         const { token, user } = event.data;
         console.log("Received data from Google login:", { token, user });
@@ -141,7 +142,6 @@ export default {
         if (token) {
           localStorage.setItem("token", token);
           localStorage.setItem("user", JSON.stringify(user));
-          
 
           toast.success("Đăng nhập thành công!");
           this.router.push("/");
@@ -152,7 +152,7 @@ export default {
       });
     },
     loginWithFacebook() {
-      const facebookAuthURL = "http://localhost:3005/api/auth/facebook";
+      const facebookAuthURL = `${this.baseUrl}/api/auth/facebook`;
 
       const popup = window.open(
         facebookAuthURL,
@@ -162,7 +162,7 @@ export default {
 
       // Nghe kết quả từ popup gửi về
       window.addEventListener("message", (event) => {
-        if (event.origin !== "http://localhost:3005") return;
+        if (event.origin !== this.baseUrl) return;
 
         const { token, user } = event.data;
 
@@ -181,7 +181,6 @@ export default {
 
 <style scoped>
 .form-container {
- 
   margin-bottom: 100px;
   padding: 32px 28px;
   border-radius: 16px;
@@ -220,7 +219,8 @@ export default {
     font-size: 14px;
   }
 
-  .btn.login, .btn.signup {
+  .btn.login,
+  .btn.signup {
     padding: 8px;
     font-size: 14px;
   }
@@ -256,7 +256,8 @@ export default {
     font-size: 12px;
   }
 
-  .btn.login, .btn.signup {
+  .btn.login,
+  .btn.signup {
     padding: 6px;
     font-size: 13px;
   }

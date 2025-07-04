@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = "http://localhost:3005";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
@@ -19,6 +19,7 @@ const imageSearchService = {
         `${backendUrl}/api/imageService/upload`,
         { base64Image, folder }
       );
+      console.log("Image uploaded successfully:", response.data);
       return response.data;
     } catch (error) {
       console.error("Error uploading image:", error);
@@ -86,7 +87,7 @@ const imageSearchService = {
       }
 
       // Extract product IDs from similar images
-      const productIds = similarImages.map(img => img.productId);
+      const productIds = similarImages.map((img) => img.productId);
 
       // Get product details
       const products = await Promise.all(
@@ -96,10 +97,10 @@ const imageSearchService = {
               `${backendUrl}/api/products/${productId}`
             );
             const product = response.data.data;
-            
+
             // Get default variant
             const defaultVariant = product.variants?.[0] || {};
-            
+
             // Get promotions if variant exists
             let salePrice = null;
             let discountPercentage = null;
@@ -113,11 +114,12 @@ const imageSearchService = {
                   p.discount > max.discount ? p : max
                 );
                 discountPercentage = bestPromotion.discount;
-                salePrice = Math.round(
-                  (defaultVariant.price -
-                    (defaultVariant.price * bestPromotion.discount) / 100) *
-                    100
-                ) / 100;
+                salePrice =
+                  Math.round(
+                    (defaultVariant.price -
+                      (defaultVariant.price * bestPromotion.discount) / 100) *
+                      100
+                  ) / 100;
               }
             }
 
@@ -136,7 +138,9 @@ const imageSearchService = {
               description: product.description || "",
               content: product.content || "",
               view_count: product.view_count || 0,
-              similarity: similarImages.find(img => img.productId === product._id)?.similarity || 0
+              similarity:
+                similarImages.find((img) => img.productId === product._id)
+                  ?.similarity || 0,
             };
           } catch (error) {
             console.error(`Error fetching product ${productId}:`, error);
@@ -146,11 +150,11 @@ const imageSearchService = {
       );
 
       // Filter out any failed product fetches
-      const validProducts = products.filter(product => product !== null);
+      const validProducts = products.filter((product) => product !== null);
 
       return {
         similarImages,
-        products: validProducts
+        products: validProducts,
       };
     } catch (error) {
       console.error("Error processing search results:", error);
@@ -178,8 +182,12 @@ const imageSearchService = {
             return false;
           }
 
-          const startDate = promotion.start_date ? new Date(promotion.start_date) : null;
-          const endDate = promotion.end_date ? new Date(promotion.end_date) : null;
+          const startDate = promotion.start_date
+            ? new Date(promotion.start_date)
+            : null;
+          const endDate = promotion.end_date
+            ? new Date(promotion.end_date)
+            : null;
 
           if (startDate && startDate > now) return false;
           if (endDate && endDate < now) return false;
@@ -190,7 +198,9 @@ const imageSearchService = {
 
           return promotion.productId.some((item) => {
             if (!item.productId || !item.variantId) return false;
-            return item.productId._id === productId && item.variantId === variantId;
+            return (
+              item.productId._id === productId && item.variantId === variantId
+            );
           });
         });
       }
@@ -199,7 +209,7 @@ const imageSearchService = {
       console.error("Error fetching product promotions:", error);
       return [];
     }
-  }
+  },
 };
 
 export { imageSearchService };

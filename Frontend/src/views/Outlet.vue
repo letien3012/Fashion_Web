@@ -109,7 +109,7 @@ export default {
       itemsPerPage: 20,
       sortBy: "discount-desc",
       products: [],
-      baseUrl: "http://localhost:3005",
+      baseUrl: import.meta.env.VITE_API_BASE_URL,
     };
   },
   computed: {

@@ -15,7 +15,7 @@
               :src="
                 product.productId.image.startsWith('http')
                   ? product.productId.image
-                  : `http://localhost:3005/${product.productId.image}`
+                  : `${baseUrl}/${product.productId.image}`
               "
               class="item-image"
             />
@@ -134,6 +134,7 @@ const images = ref([]);
 const imagePreviews = ref([]);
 const submitting = ref(false);
 const fileInput = ref(null);
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const isValid = computed(() => {
   return rating.value > 0 && content.value.trim().length > 0;

@@ -16,10 +16,7 @@
           class="cart-item"
         >
           <img
-            :src="
-              'http://localhost:3005/' +
-              (item.variant.image || item.productId.image)
-            "
+            :src="`${baseUrl}/` + (item.variant.image || item.productId.image)"
             alt="Ảnh sản phẩm"
             class="item-img"
           />
@@ -73,6 +70,8 @@
 
 <script setup>
 import { defineProps, computed } from "vue";
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
 const props = defineProps({
   visible: Boolean,
   cart: {

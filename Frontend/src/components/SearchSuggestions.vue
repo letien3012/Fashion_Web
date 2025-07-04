@@ -23,7 +23,7 @@
 </template>
 
 <script>
-const backendUrl = "http://localhost:3005";
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 export default {
   name: "SearchSuggestions",
@@ -46,7 +46,7 @@ export default {
     getImageUrl(imagePath) {
       if (!imagePath) return "/images/placeholder.jpg";
       if (imagePath.startsWith("http")) return imagePath;
-      return `${backendUrl}/${imagePath.replace(/^\/+|\/+$/g, "")}`;
+      return `${baseUrl}/${imagePath.replace(/^\/+|\/+$/g, "")}`;
     },
     handleImageError(e) {
       console.error("Image load error:", e);

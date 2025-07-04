@@ -1,7 +1,7 @@
 import axios from "axios";
 import authService from "./auth.service";
 
-const API_URL = "http://localhost:3005/api/carts";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/carts`;
 
 export const cartService = {
   async addToCart(cartItem) {

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3005/api";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api`;
 
 export const orderService = {
   async getCustomerOrders() {
@@ -121,7 +121,7 @@ export const orderService = {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Vui lòng đăng nhập");
       const response = await axios.put(
-        `http://localhost:3005/api/orders/${orderCode}/online-detail`,
+        `${API_URL}/orders/${orderCode}/online-detail`,
         { online_method_detail: detail },
         {
           headers: {
@@ -141,7 +141,7 @@ export const orderService = {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Vui lòng đăng nhập");
       const response = await axios.put(
-        `http://localhost:3005/api/orders/${orderCode}/status-by-code`,
+        `${API_URL}/orders/${orderCode}/status-by-code`,
         { status },
         {
           headers: {

@@ -1,7 +1,7 @@
 // PayPal service cho frontend
 import axios from "axios";
 
-const API_URL = "http://localhost:3005/api/paypal";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/paypal`;
 
 export const paypalService = {
   async createOrder(orderData) {

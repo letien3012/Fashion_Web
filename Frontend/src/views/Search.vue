@@ -87,7 +87,7 @@ export default {
     getImageUrl(image) {
       if (!image) return "/images/placeholder.jpg";
       if (image.startsWith("http")) return image;
-      return `http://localhost:3005/${image}`;
+      return `${import.meta.env.VITE_API_BASE_URL}/${image}`;
     },
     async searchProducts() {
       if (!this.keyword.trim()) {

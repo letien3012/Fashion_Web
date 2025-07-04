@@ -61,11 +61,12 @@
           <div v-if="showResults" class="search-results-section">
             <div v-if="!isSearching && !searchError" class="search-results">
               <div class="results-header">
-                <p>
-                  Tìm thấy {{ similarProducts.length }} sản phẩm tương tự
-                </p>
+                <p>Tìm thấy {{ similarProducts.length }} sản phẩm tương tự</p>
               </div>
-              <div v-if="similarProducts && similarProducts.length > 0" class="products-grid">
+              <div
+                v-if="similarProducts && similarProducts.length > 0"
+                class="products-grid"
+              >
                 <ProductItem
                   v-for="product in similarProducts"
                   :key="product._id"
@@ -103,10 +104,17 @@
 </template>
 
 <script setup>
-import { ref, nextTick, defineProps, defineEmits, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  nextTick,
+  defineProps,
+  defineEmits,
+  onMounted,
+  onBeforeUnmount,
+} from "vue";
 import { imageSearchService } from "../services/imageSearch.service";
 import { productService } from "../services/product.service";
-import ProductItem from './ProductItem.vue';
+import ProductItem from "./ProductItem.vue";
 
 const props = defineProps({
   visible: {
@@ -116,6 +124,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close"]);
+
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const boxes = ref([]);
 const imageUrl = ref(null);
@@ -164,9 +174,7 @@ const onFileChange = async (e) => {
   }
 
   const imgTest = new window.Image();
-  imgTest.onload = () => {
-   
-  };
+  imgTest.onload = () => {};
   imgTest.src = URL.createObjectURL(file);
 
   try {
@@ -180,12 +188,12 @@ const onFileChange = async (e) => {
     // Step 1: Upload image
     const uploadRes = await imageSearchService.uploadImage(base64Image);
     const uploadedImagePath = uploadRes.imagePath;
-  
+
     // Step 2: Detect objects in uploaded image
     const detectRes = await imageSearchService.detectObjects(uploadedImagePath);
 
     const tempBoxes = detectRes.boxes;
-    imageUrl.value = `http://localhost:3005${uploadedImagePath}`;
+    imageUrl.value = `${baseUrl}${uploadedImagePath}`;
     imagePath.value = uploadedImagePath;
 
     await nextTick();
@@ -205,7 +213,7 @@ const onFileChange = async (e) => {
             const areaB = b.width * b.height;
             return areaB - areaA;
           });
-          
+
           // Tìm sản phẩm tương tự từ box lớn nhất
           searchFromBox(sortedBoxes[0], 0);
         }
@@ -224,7 +232,7 @@ const searchFromBox = async (box, index) => {
   showResults.value = false;
   searchError.value = null;
   selectedBoxIndex.value = index;
-  
+
   try {
     // Step 1: Crop the image
     const cropPayload = {
@@ -236,11 +244,18 @@ const searchFromBox = async (box, index) => {
     };
 
     const cropRes = await imageSearchService.cropImage(cropPayload);
-    
-    // Step 2: Find similar images using base64 directly
-    const searchRes = await imageSearchService.findSimilarImages(cropRes.image_base64, 8);
 
-    if (searchRes.success && searchRes.products && searchRes.products.length > 0) {
+    // Step 2: Find similar images using base64 directly
+    const searchRes = await imageSearchService.findSimilarImages(
+      cropRes.image_base64,
+      8
+    );
+
+    if (
+      searchRes.success &&
+      searchRes.products &&
+      searchRes.products.length > 0
+    ) {
       // Xử lý thông tin sản phẩm và khuyến mãi
       const processedProducts = await Promise.all(
         searchRes.products.map(async (product) => {
@@ -258,18 +273,19 @@ const searchFromBox = async (box, index) => {
                 p.discount > max.discount ? p : max
               );
               discountPercentage = bestPromotion.discount;
-              salePrice = Math.round(
-                (defaultVariant.price -
-                  (defaultVariant.price * bestPromotion.discount) / 100) *
-                  100
-              ) / 100;
+              salePrice =
+                Math.round(
+                  (defaultVariant.price -
+                    (defaultVariant.price * bestPromotion.discount) / 100) *
+                    100
+                ) / 100;
             }
           }
 
           return {
             _id: product._id || "",
             name: product.name || "",
-            image: `http://localhost:3005${product.similarImagePath}`,
+            image: `${baseUrl}${product.similarImagePath}`,
             album: (product.album || []).map((img) => getImageUrl(img)),
             price: defaultVariant.price || 0,
             salePrice,
@@ -282,7 +298,7 @@ const searchFromBox = async (box, index) => {
             content: product.content || "",
             view_count: product.view_count || 0,
             similarity: product.similarity || 0,
-            similarityPercentage: product.similarityPercentage || "0%"
+            similarityPercentage: product.similarityPercentage || "0%",
           };
         })
       );
@@ -357,7 +373,7 @@ const boxStyle = (box) => {
     outline: "2.5px solid #fff",
     boxSizing: "border-box",
     zIndex: 11,
-    pointerEvents: "none"
+    pointerEvents: "none",
   };
 };
 
@@ -380,21 +396,23 @@ const dotStyle = (box) => {
     pointerEvents: "auto",
     cursor: "pointer",
     boxShadow: "0 0 0 4px #4ea1ff55, 0 2px 8px rgba(0,0,0,0.10)",
-    transition: "box-shadow 0.2s, transform 0.15s"
+    transition: "box-shadow 0.2s, transform 0.15s",
   };
 };
 
 const getImageUrl = (image) => {
   if (!image) return "/images/placeholder.jpg";
   if (image.startsWith("http")) return image;
-  return `http://localhost:3005/${image}`;
+  return `${baseUrl}${image}`;
 };
 
 const processProducts = async (products) => {
   try {
     // Lọc sản phẩm chưa publish
-    const publishedProducts = products.filter(product => product.publish === true);
-    
+    const publishedProducts = products.filter(
+      (product) => product.publish === true
+    );
+
     // Duyệt từng sản phẩm để lấy promotion
     const productsWithPromotions = await Promise.all(
       publishedProducts.map(async (product) => {
@@ -411,17 +429,20 @@ const processProducts = async (products) => {
               p.discount > max.discount ? p : max
             );
             discountPercentage = bestPromotion.discount;
-            salePrice = Math.round(
-              (defaultVariant.price -
-                (defaultVariant.price * bestPromotion.discount) / 100) *
-                100
-            ) / 100;
+            salePrice =
+              Math.round(
+                (defaultVariant.price -
+                  (defaultVariant.price * bestPromotion.discount) / 100) *
+                  100
+              ) / 100;
           }
         }
         return {
           _id: product._id || "",
           name: product.name || "",
-          image: product.similarImagePath ? `http://localhost:3005${product.similarImagePath}` : getImageUrl(product.image),
+          image: product.similarImagePath
+            ? `${baseUrl}${product.similarImagePath}`
+            : getImageUrl(product.image),
           album: (product.album || []).map((img) => getImageUrl(img)),
           price: defaultVariant.price || 0,
           salePrice,
@@ -434,7 +455,7 @@ const processProducts = async (products) => {
           content: product.content || "",
           view_count: product.view_count || 0,
           similarity: product.similarity || 0,
-          similarityPercentage: product.similarityPercentage || "0%"
+          similarityPercentage: product.similarityPercentage || "0%",
         };
       })
     );
@@ -451,7 +472,7 @@ const onDotClick = async (box, index) => {
   similarProducts.value = [];
   showResults.value = false;
   searchError.value = null;
-  
+
   try {
     // Step 1: Crop the image
     const cropPayload = {
@@ -464,9 +485,12 @@ const onDotClick = async (box, index) => {
 
     const cropRes = await imageSearchService.cropImage(cropPayload);
     croppedImage.value = cropRes.image_base64;
-    
+
     // Step 2: Find similar images using base64 directly
-    const searchRes = await imageSearchService.findSimilarImages(cropRes.image_base64, 8);
+    const searchRes = await imageSearchService.findSimilarImages(
+      cropRes.image_base64,
+      8
+    );
 
     if (searchRes.success) {
       // Xử lý thông tin sản phẩm và khuyến mãi
@@ -486,18 +510,19 @@ const onDotClick = async (box, index) => {
                 p.discount > max.discount ? p : max
               );
               discountPercentage = bestPromotion.discount;
-              salePrice = Math.round(
-                (defaultVariant.price -
-                  (defaultVariant.price * bestPromotion.discount) / 100) *
-                  100
-              ) / 100;
+              salePrice =
+                Math.round(
+                  (defaultVariant.price -
+                    (defaultVariant.price * bestPromotion.discount) / 100) *
+                    100
+                ) / 100;
             }
           }
 
           return {
             _id: product._id || "",
             name: product.name || "",
-            image: `http://localhost:3005${product.similarImagePath}`,
+            image: `${baseUrl}${product.similarImagePath}`,
             album: (product.album || []).map((img) => getImageUrl(img)),
             price: defaultVariant.price || 0,
             salePrice,
@@ -510,7 +535,7 @@ const onDotClick = async (box, index) => {
             content: product.content || "",
             view_count: product.view_count || 0,
             similarity: product.similarity || 0,
-            similarityPercentage: product.similarityPercentage || "0%"
+            similarityPercentage: product.similarityPercentage || "0%",
           };
         })
       );
@@ -536,7 +561,7 @@ const onDrop = (e) => {
 const handleImageLoad = (event, result, index) => {
   result.loaded = true;
   result.error = false;
-  event.target.classList.add('image-loaded');
+  event.target.classList.add("image-loaded");
 };
 
 const handleImageError = (event, result, index) => {
@@ -544,53 +569,52 @@ const handleImageError = (event, result, index) => {
   result.error = true;
   console.error("Image load error:", {
     url: result.displayUrl,
-    originalPath: result.originalPath
+    originalPath: result.originalPath,
   });
-  event.target.classList.add('image-error');
+  event.target.classList.add("image-error");
 };
 
 // Update the openOriginalImage method
 const openOriginalImage = (url) => {
-  
   // Create a temporary link element
-  const link = document.createElement('a');
+  const link = document.createElement("a");
   link.href = url;
-  link.target = '_blank';
-  link.rel = 'noopener noreferrer';
-  
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+
   // Add a click event listener to handle the response
   link.onclick = (e) => {
     e.preventDefault();
-    
+
     // Try to fetch the image first to check if it's accessible
     fetch(url)
-      .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
+      .then((response) => {
+        if (!response.ok) throw new Error("Network response was not ok");
         // Get content type from response
-        const contentType = response.headers.get('content-type');
+        const contentType = response.headers.get("content-type");
         return response.blob();
       })
-      .then(blob => {
+      .then((blob) => {
         // Create object URL from the blob with the correct type
         const objectUrl = URL.createObjectURL(blob);
-        
+
         // Open in new tab
-        const newWindow = window.open(objectUrl, '_blank');
+        const newWindow = window.open(objectUrl, "_blank");
         if (!newWindow) {
           // If popup blocked, try to open in same window
           window.location.href = objectUrl;
         }
-        
+
         // Clean up the object URL after a delay
         setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
       })
-      .catch(error => {
-        console.error('Error fetching image:', error);
+      .catch((error) => {
+        console.error("Error fetching image:", error);
         // Fallback: try to open the original URL directly
-        window.open(url, '_blank');
+        window.open(url, "_blank");
       });
   };
-  
+
   // Trigger the click
   link.click();
 };
@@ -606,11 +630,11 @@ const handleBeforeUnload = async (e) => {
 };
 
 onMounted(() => {
-  window.addEventListener('beforeunload', handleBeforeUnload);
+  window.addEventListener("beforeunload", handleBeforeUnload);
 });
 
 onBeforeUnmount(() => {
-  window.removeEventListener('beforeunload', handleBeforeUnload);
+  window.removeEventListener("beforeunload", handleBeforeUnload);
 });
 </script>
 
@@ -736,7 +760,7 @@ onBeforeUnmount(() => {
   height: 400px;
   background: #fff;
   border-radius: 12px;
-  box-shadow: 0 4px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.18);
   border: 8px solid #fff;
   position: relative;
   overflow: hidden;
@@ -779,7 +803,7 @@ onBeforeUnmount(() => {
 
 .dot:hover {
   transform: scale(1.3);
-  box-shadow: 0 0 0 8px #4ea1ff99, 0 2px 12px rgba(0,0,0,0.18);
+  box-shadow: 0 0 0 8px #4ea1ff99, 0 2px 12px rgba(0, 0, 0, 0.18);
 }
 
 .search-results {
@@ -860,7 +884,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255,255,255,0.95);
+  background: rgba(255, 255, 255, 0.95);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -880,8 +904,12 @@ onBeforeUnmount(() => {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 768px) {

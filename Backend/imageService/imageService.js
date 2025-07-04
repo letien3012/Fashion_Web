@@ -23,7 +23,9 @@ const ImageFeature = mongoose.model("ImageFeature", imageFeatureSchema);
 // Gọi FastAPI detect, trả về boxes
 async function detectOnly(imageUrl) {
   try {
-    const response = await axios.post("http://localhost:9000/detect", {
+    const imageServiceUrl =
+      process.env.IMAGE_SERVICE_URL || "http://10.18.226.131:9000";
+    const response = await axios.post(`${imageServiceUrl}/detect`, {
       image_url: imageUrl,
     });
 
@@ -37,7 +39,9 @@ async function detectOnly(imageUrl) {
 // Gọi FastAPI crop, trả về crops
 async function cropOnly(imageUrl, boxes) {
   try {
-    const response = await axios.post("http://localhost:9000/crop", {
+    const imageServiceUrl =
+      process.env.IMAGE_SERVICE_URL || "http://10.18.226.131:9000";
+    const response = await axios.post(`${imageServiceUrl}/crop`, {
       image_url: imageUrl,
       boxes: boxes,
     });
@@ -84,7 +88,7 @@ async function saveImageFeatures(features, originalImage, productId, label) {
   try {
     // Bỏ localhost:3005 nếu có trong originalImage
     const cleanOriginalImage = originalImage.replace(
-      "http://localhost:3005",
+      process.env.BACKEND_URL || "http://10.18.226.131:3005",
       ""
     );
 
@@ -162,7 +166,7 @@ async function findSimilarImages(base64Image, limit = 5) {
     // Lọc: chỉ giữ bản similarity cao nhất cho mỗi productId và có similarity > 0.6
     const bestByProduct = {};
     similarities.forEach((sim) => {
-      if (sim.similarity > 0.55) {
+      if (sim.similarity > 0.65) {
         const productId = sim.productId.toString(); // Convert ObjectId to string for consistent comparison
         if (
           !bestByProduct[productId] ||
@@ -197,7 +201,7 @@ async function deleteImageFeaturesByPaths(imagePaths) {
   try {
     // Bỏ tiền tố localhost:3005 nếu có trong từng path
     const cleanPaths = imagePaths.map((p) =>
-      p.replace("http://localhost:3005", "")
+      p.replace(process.env.BACKEND_URL || "http://10.18.226.131:3005", "")
     );
     const result = await ImageFeature.deleteMany({
       originalImage: { $in: cleanPaths },

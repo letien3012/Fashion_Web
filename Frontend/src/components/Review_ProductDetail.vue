@@ -87,7 +87,7 @@
           <img
             :src="
               review.customerId?.image
-                ? `http://localhost:3005${review.customerId.image}`
+                ? `${baseUrl}${review.customerId.image}`
                 : defaultAvatar
             "
             class="user-avatar"
@@ -118,7 +118,7 @@
             <img
               v-for="(image, imgIdx) in review.images"
               :key="imgIdx"
-              :src="`http://localhost:3005${image}`"
+              :src="`${baseUrl}${image}`"
               alt="Review Image"
               class="review-image"
             />
@@ -153,10 +153,12 @@ export default {
     totalReviews: { type: Number, default: 0 },
   },
   data() {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
     return {
       userAvatar: defaultAvatar, // Default avatar path
       currentFilter: "all",
       displayCount: 5,
+      baseUrl,
     };
   },
   computed: {

@@ -21,7 +21,8 @@
             </span>
           </div>
           <small v-if="password && !passwordValid" class="error-msg">
-            Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự đặc biệt.
+            Mật khẩu cần ít nhất 8 ký tự, gồm chữ hoa, chữ thường, số và ký tự
+            đặc biệt.
           </small>
         </div>
 
@@ -34,8 +35,13 @@
               v-model="confirmPassword"
               placeholder="Xác nhận mật khẩu"
             />
-            <span class="toggle-password" @click="showConfirmPassword = !showConfirmPassword">
-              <i :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            <span
+              class="toggle-password"
+              @click="showConfirmPassword = !showConfirmPassword"
+            >
+              <i
+                :class="showConfirmPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"
+              ></i>
             </span>
           </div>
           <small v-if="confirmPassword && !passwordsMatch" class="error-msg">
@@ -43,7 +49,11 @@
           </small>
         </div>
 
-        <button type="submit" :disabled="!canSubmit" :class="['submit-btn', { active: canSubmit }]">
+        <button
+          type="submit"
+          :disabled="!canSubmit"
+          :class="['submit-btn', { active: canSubmit }]"
+        >
           Hoàn thành
         </button>
       </form>
@@ -90,7 +100,8 @@ export default {
       }
 
       try {
-        const res = await axios.post("http://localhost:3005/api/auth/signup", {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL;
+        const res = await axios.post(`${baseUrl}/api/auth/signup`, {
           email: this.email,
           password: this.password,
           fullname: "Người dùng mới",
@@ -117,7 +128,7 @@ export default {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
- 
+
   padding: 20px;
 }
 
@@ -229,11 +240,11 @@ input:focus {
   .form-container {
     padding: 24px;
   }
-  
+
   .form-header h2 {
     font-size: 20px;
   }
-  
+
   input {
     padding: 10px 14px;
   }

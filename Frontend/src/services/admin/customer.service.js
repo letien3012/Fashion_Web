@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = "http://localhost:3000";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token-admin");
   return {

@@ -215,7 +215,7 @@
                       :src="
                         product.productId.image.startsWith('http')
                           ? product.productId.image
-                          : `http://localhost:3005/${product.productId.image}`
+                          : `${baseUrl}/${product.productId.image}`
                       "
                       class="product-image"
                     />
@@ -412,6 +412,8 @@ const orderTabs = [
 const currentTab = ref("all");
 const searchQuery = ref("");
 
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
+
 const filteredOrders = computed(() => {
   let result = orders.value;
   if (currentTab.value !== "all") {
@@ -495,7 +497,7 @@ onMounted(async () => {
                 productId: {
                   _id: product._id,
                   name: product.name,
-                  image: `http://localhost:3005/${product.image}`,
+                  image: `${baseUrl}/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
                   isUnavailable,
                 },
@@ -636,7 +638,7 @@ const confirmCancelOrder = async () => {
                 productId: {
                   _id: product._id,
                   name: product.name,
-                  image: `http://localhost:3005/${product.image}`,
+                  image: `${baseUrl}/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
                   isUnavailable:
                     !!product.deletedAt || product.publish === false,
@@ -805,7 +807,7 @@ const handleReviewSubmitted = async () => {
                 productId: {
                   _id: product._id,
                   name: product.name,
-                  image: `http://localhost:3005/${product.image}`,
+                  image: `${baseUrl}/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
                   isUnavailable:
                     !!product.deletedAt || product.publish === false,
@@ -941,7 +943,7 @@ const submitReturnRequest = async () => {
                 productId: {
                   _id: product._id,
                   name: product.name,
-                  image: `http://localhost:3005/${product.image}`,
+                  image: `${baseUrl}/${product.image}`,
                   variant: item.variants[0]?.sku || "Default",
                   isUnavailable:
                     !!product.deletedAt || product.publish === false,

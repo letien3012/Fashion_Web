@@ -153,7 +153,7 @@ export default {
   data() {
     return {
       currentSlide: 0,
-      baseUrl: "http://localhost:3005",
+      baseUrl: "http://10.18.226.131:3005",
       banners: [],
       categories: [],
       newArrivals: [],

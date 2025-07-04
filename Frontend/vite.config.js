@@ -10,19 +10,38 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  // server: {
+  //   proxy: {
+  //     // Proxy /api requests to backend
+  //     "/api": {
+  //       target: "http://0.0.0.0:3005",
+  //       changeOrigin: true,
+  //     },
+  //     // Proxy /uploads requests to backend
+  //     "/uploads": {
+  //       target: "http://0.0.0.0:3005",
+  //       changeOrigin: true,
+  //       rewrite: (path) => path,
+  //     },
+  //   },
+  // },
+
   server: {
+    host: "0.0.0.0",
+    port: 5173,
+    allowedHosts: "all",
     proxy: {
-      // Proxy /api requests to backend
       "/api": {
-        target: "http://localhost:3005",
+        target: "http://10.18.226.131:3005", // IP của máy đang chạy Node.js
         changeOrigin: true,
+        secure: false,
       },
-      // Proxy /uploads requests to backend
       "/uploads": {
-        target: "http://localhost:3005",
+        target: "http://10.18.226.131:3005",
         changeOrigin: true,
-        rewrite: (path) => path
-      }
-    }
-  }
+        secure: false,
+        rewrite: (path) => path,
+      },
+    },
+  },
 });

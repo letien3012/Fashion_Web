@@ -21,10 +21,9 @@
                     <label>Họ và Tên</label>
                     <input
                       type="text"
-                      v-model="userInfo.name"
+                      v-model="userInfo.fullname"
                       placeholder="Nhập họ và tên"
                       class="form-control"
-                      disabled
                     />
                   </div>
                   <div class="col-md-6">
@@ -126,7 +125,7 @@ onMounted(async () => {
   try {
     const user = JSON.parse(userStr);
     userInfo.value = {
-      name: user.name || user.fullname || "",
+      fullname: user.fullname || "",
       email: user.email || "",
       phone: user.phone || "",
       address: user.address || "",
@@ -163,7 +162,7 @@ const updateProfile = async () => {
     const userStr = localStorage.getItem("user");
     if (userStr) {
       const user = JSON.parse(userStr);
-      user.fullname = userInfo.value.name;
+      user.fullname = userInfo.value.fullname;
       user.phone = userInfo.value.phone;
       user.address = userInfo.value.address;
       user.ward_code = userInfo.value.ward_code;

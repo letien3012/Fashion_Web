@@ -101,7 +101,8 @@
                 <div class="item-image">
                   <img
                     :src="
-                      'http://localhost:3005/' +
+                      baseUrl +
+                      '/' +
                       (item.variant.image || item.productId.image)
                     "
                     :alt="item.productId.name"
@@ -313,6 +314,8 @@ const hasRemovedItems = ref(false);
 const appliedVoucher = ref(null);
 const availableVouchers = ref([]);
 const loadingVouchers = ref(true);
+
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const flattenedCartItems = computed(() => {
   return cartItems.value.flatMap((item) =>

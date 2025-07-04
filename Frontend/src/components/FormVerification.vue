@@ -29,8 +29,8 @@
 </template>
 
 <script>
-import { toast } from 'vue3-toastify';
-import 'vue3-toastify/dist/index.css';
+import { toast } from "vue3-toastify";
+import "vue3-toastify/dist/index.css";
 
 export default {
   data() {
@@ -43,7 +43,7 @@ export default {
   computed: {
     email() {
       return this.$route.query.email;
-    }
+    },
   },
   mounted() {
     this.startCountdown();
@@ -65,7 +65,8 @@ export default {
     resendOtp() {
       if (this.countdown > 0) return;
 
-      fetch("http://localhost:3005/api/mail/send-code", {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL;
+      fetch(`${baseUrl}/api/mail/send-code`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -190,12 +191,13 @@ export default {
         return;
       }
 
+      const baseUrl = import.meta.env.VITE_API_BASE_URL;
       const payload = {
         email: this.email,
         code: code,
       };
 
-      fetch("http://localhost:3005/api/verify", {
+      fetch(`${baseUrl}/api/verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -209,9 +211,9 @@ export default {
         })
         .then((data) => {
           if (data.success) {
-            this.$router.push({ 
+            this.$router.push({
               name: "CreatePW",
-              query: { email: this.email }
+              query: { email: this.email },
             });
           } else {
             toast.error(`❌ ${data.message}`);

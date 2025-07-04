@@ -35,9 +35,13 @@ const downloadAndProcessImage = async (
     if (productId) {
       try {
         await axios.post(
-          "http://localhost:3005/api/imageService/extract-features",
+          `${
+            process.env.BACKEND_URL || "http://localhost:3005"
+          }/api/imageService/extract-features`,
           {
-            imagePath: `http://localhost:3005${savedPath}`,
+            imagePath: `${
+              process.env.BACKEND_URL || "http://localhost:3005"
+            }${savedPath}`,
             productId: productId,
           }
         );
@@ -109,17 +113,22 @@ const downloadMultipleAndConvertToBase64 = async (imageUrls) => {
 // Hàm gọi YOLO service để tạo embedding
 const createTextEmbedding = async (text) => {
   try {
-    const response = await axios.post('http://localhost:9000/vectorize-text', {
-      text: text
+    const imageServiceUrl =
+      process.env.IMAGE_SERVICE_URL || "http://localhost:9000";
+    const response = await axios.post(`${imageServiceUrl}/vectorize-text`, {
+      text: text,
     });
-    
+
     if (response.data && response.data.embedding) {
       return response.data.embedding;
     } else {
-      throw new Error('Invalid response from YOLO service');
+      throw new Error("Invalid response from YOLO service");
     }
   } catch (error) {
-    console.error('Error calling YOLO service for text embedding:', error.message);
+    console.error(
+      "Error calling YOLO service for text embedding:",
+      error.message
+    );
     throw new Error(`Failed to create text embedding: ${error.message}`);
   }
 };
@@ -138,7 +147,6 @@ exports.add = async (req, res) => {
       attributeCatalogueIds,
       variants,
     } = req.body;
-
 
     // Kiểm tra các trường bắt buộc
     if (!code || !name || !catalogueId) {
@@ -187,37 +195,38 @@ exports.add = async (req, res) => {
           v.attributeId2 || v.attributeId2 === "" ? v.attributeId2 : undefined,
       }));
     }
-    
+
     const product = new Product(req.body);
     const id = await product.save();
-    
+
     // Tạo chuỗi thông tin sản phẩm để embedding
     try {
       const embeddingText = await Product.getEmbeddingText(id);
-      
+
       // Gọi YOLO service để tạo embedding
       try {
         const textEmbedding = await createTextEmbedding(embeddingText);
-        
+
         // Lưu embedding vector vào database
         await ProductEmbedding.findOneAndUpdate(
           { product: id },
           {
             product: id,
             embedding: textEmbedding,
-            sourceText: embeddingText
+            sourceText: embeddingText,
           },
           { upsert: true, new: true }
         );
-        
       } catch (embeddingError) {
-        console.error("❌ Lỗi khi tạo embedding vector:", embeddingError.message);
+        console.error(
+          "❌ Lỗi khi tạo embedding vector:",
+          embeddingError.message
+        );
       }
-      
     } catch (embeddingError) {
       console.error("Lỗi khi tạo chuỗi embedding:", embeddingError.message);
     }
-    
+
     res.status(201).json({
       message: "Product added successfully",
       id,
@@ -353,34 +362,38 @@ exports.update = async (req, res) => {
 
     // Cập nhật thông tin sản phẩm (xử lý ảnh được thực hiện trong model)
     await Product.update(req.params.id, req.body);
-    
+
     // Tạo chuỗi thông tin sản phẩm để embedding sau khi cập nhật
     try {
       const embeddingText = await Product.getEmbeddingText(req.params.id);
-      
+
       // Gọi YOLO service để tạo embedding
       try {
         const textEmbedding = await createTextEmbedding(embeddingText);
-        
+
         // Lưu embedding vector vào database
         await ProductEmbedding.findOneAndUpdate(
           { product: req.params.id },
           {
             product: req.params.id,
             embedding: textEmbedding,
-            sourceText: embeddingText
+            sourceText: embeddingText,
           },
           { upsert: true, new: true }
         );
-        
       } catch (embeddingError) {
-        console.error("❌ Lỗi khi tạo embedding vector:", embeddingError.message);
+        console.error(
+          "❌ Lỗi khi tạo embedding vector:",
+          embeddingError.message
+        );
       }
-      
     } catch (embeddingError) {
-      console.error("Lỗi khi tạo chuỗi embedding sau cập nhật:", embeddingError.message);
+      console.error(
+        "Lỗi khi tạo chuỗi embedding sau cập nhật:",
+        embeddingError.message
+      );
     }
-    
+
     res.status(200).json({ message: "Product updated successfully" });
   } catch (error) {
     console.error("Error updating product:", error);
@@ -846,24 +859,28 @@ exports.importFromExcel = async (req, res) => {
 
           // Tạo embedding cho sản phẩm vừa import
           try {
-            const embeddingText = await Product.getEmbeddingText(newProduct._id);
-            
+            const embeddingText = await Product.getEmbeddingText(
+              newProduct._id
+            );
+
             // Gọi YOLO service để tạo embedding
             const textEmbedding = await createTextEmbedding(embeddingText);
-            
+
             // Lưu embedding vector vào database
             await ProductEmbedding.findOneAndUpdate(
               { product: newProduct._id },
               {
                 product: newProduct._id,
                 embedding: textEmbedding,
-                sourceText: embeddingText
+                sourceText: embeddingText,
               },
               { upsert: true, new: true }
             );
-            
           } catch (embeddingError) {
-            console.error(`❌ Lỗi khi tạo embedding cho sản phẩm ${product.code}:`, embeddingError.message);
+            console.error(
+              `❌ Lỗi khi tạo embedding cho sản phẩm ${product.code}:`,
+              embeddingError.message
+            );
             // Không dừng quá trình import, chỉ log lỗi
           }
 
@@ -1176,7 +1193,7 @@ exports.togglePublish = async (req, res) => {
   try {
     const { id } = req.params;
     console.log(id);
-    
+
     const product = await Product.findById(id);
     if (!product) {
       return res.status(404).json({
@@ -1187,19 +1204,21 @@ exports.togglePublish = async (req, res) => {
     console.log(product);
     // Toggle the publish status
     const newPublishStatus = !product.publish;
-    
+
     // Use findByIdAndUpdate instead of save to avoid duplicate key error
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      { 
+      {
         publish: newPublishStatus,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true }
     );
 
     res.status(200).json({
-      message: `Sản phẩm đã được ${updatedProduct.publish ? 'hiển thị' : 'ẩn'} thành công`,
+      message: `Sản phẩm đã được ${
+        updatedProduct.publish ? "hiển thị" : "ẩn"
+      } thành công`,
       data: {
         _id: updatedProduct._id,
         name: updatedProduct.name,
@@ -1219,7 +1238,7 @@ exports.togglePublish = async (req, res) => {
 exports.bulkTogglePublish = async (req, res) => {
   try {
     const { productIds } = req.body;
-    
+
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
       return res.status(400).json({
         message: "Danh sách sản phẩm không hợp lệ",
@@ -1234,13 +1253,13 @@ exports.bulkTogglePublish = async (req, res) => {
     }
 
     // Toggle publish status for all products
-    const updatePromises = products.map(product => {
+    const updatePromises = products.map((product) => {
       const newPublishStatus = !product.publish;
       return Product.findByIdAndUpdate(
         product._id,
-        { 
+        {
           publish: newPublishStatus,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         { new: true }
       );
@@ -1250,7 +1269,7 @@ exports.bulkTogglePublish = async (req, res) => {
 
     res.status(200).json({
       message: `Đã thay đổi trạng thái ${updatedProducts.length} sản phẩm thành công`,
-      data: updatedProducts.map(p => ({
+      data: updatedProducts.map((p) => ({
         _id: p._id,
         name: p.name,
         publish: p.publish,
@@ -1269,7 +1288,7 @@ exports.bulkTogglePublish = async (req, res) => {
 exports.bulkDelete = async (req, res) => {
   try {
     const { productIds } = req.body;
-    
+
     if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
       return res.status(400).json({
         message: "Danh sách sản phẩm không hợp lệ",
@@ -1284,12 +1303,12 @@ exports.bulkDelete = async (req, res) => {
     }
 
     // Soft delete all products
-    const deletePromises = products.map(product => 
+    const deletePromises = products.map((product) =>
       Product.findByIdAndUpdate(
         product._id,
-        { 
+        {
           deletedAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         },
         { new: true }
       )
@@ -1299,7 +1318,7 @@ exports.bulkDelete = async (req, res) => {
 
     res.status(200).json({
       message: `Đã xóa ${deletedProducts.length} sản phẩm thành công`,
-      data: deletedProducts.map(p => ({
+      data: deletedProducts.map((p) => ({
         _id: p._id,
         name: p.name,
         deletedAt: p.deletedAt,

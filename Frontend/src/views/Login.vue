@@ -33,7 +33,7 @@ export default {
         this.loading = true;
         console.log(loginData);
         const response = await axios.post(
-          "http://localhost:3005/api/customers/login",
+          `${import.meta.env.VITE_API_BASE_URL}/api/customers/login`,
           loginData
         );
 
@@ -58,7 +58,6 @@ export default {
 </script>
 
 <style scoped>
-
 .login-page {
   margin: none;
   border-radius: 15px;
@@ -67,6 +66,5 @@ export default {
   align-items: center;
   height: auto;
   width: 50vw;
-
 }
 </style>

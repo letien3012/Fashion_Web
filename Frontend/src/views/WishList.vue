@@ -115,7 +115,7 @@ const router = useRouter();
 const wishlist = ref([]);
 const loading = ref(false);
 const error = ref(null);
-const baseUrl = "http://localhost:3005";
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 // Pagination state
 const currentPage = ref(1);

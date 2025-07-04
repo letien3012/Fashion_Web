@@ -53,7 +53,7 @@ export default {
       loading: false,
       error: null,
       displayCount: 5,
-      baseUrl: "http://localhost:3005",
+      baseUrl: import.meta.env.VITE_API_BASE_URL,
     };
   },
   computed: {

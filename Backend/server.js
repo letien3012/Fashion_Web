@@ -72,6 +72,8 @@ app.use((err, req, res, next) => {
 
 // Start server
 const PORT = process.env.PORT || 3005;
-app.listen(PORT, () => {
-  console.log(`✅ Server is running on http://localhost:${PORT}`);
+const host = process.env.HOST || "localhost";
+console.log(`✅ Server is running on http://${host}:${PORT}`);
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ Server is running on http://${host}:${PORT}`);
 });

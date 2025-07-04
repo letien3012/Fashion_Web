@@ -190,14 +190,7 @@
                 :key="item.variantId"
                 class="checkout-product"
               >
-                <img
-                  :src="
-                    item.productId.image.startsWith('http')
-                      ? item.productId.image
-                      : `http://localhost:3005/${item.productId.image}`
-                  "
-                  alt=""
-                />
+                <img :src="`${baseUrl}/${item.productId.image}`" alt="" />
                 <div class="product-info">
                   <div class="product-name">{{ item.productId.name }}</div>
                   <div class="product-sku">
@@ -462,6 +455,7 @@ const customer = ref({
   ward_code: "",
 });
 const paymentMethod = ref("COD");
+const baseUrl = import.meta.env.VITE_API_BASE_URL;
 
 const updateLocation = (location) => {
   customer.value.province_code = location?.province_code || "";

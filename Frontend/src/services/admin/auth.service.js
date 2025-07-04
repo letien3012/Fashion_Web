@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = "http://localhost:3005";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
 // Configure axios defaults
 axios.defaults.withCredentials = true;

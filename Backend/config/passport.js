@@ -15,7 +15,9 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:3005/api/auth/google/callback",
+      callbackURL:
+        process.env.GOOGLE_CALLBACK_URL ||
+        `${process.env.BACKEND_URL}/api/auth/google/callback`,
     },
     (accessToken, refreshToken, profile, done) => {
       // Có thể lưu profile vào DB nếu muốn
@@ -29,7 +31,9 @@ passport.use(
     {
       clientID: process.env.FACEBOOK_APP_ID,
       clientSecret: process.env.FACEBOOK_APP_SECRET,
-      callbackURL: "http://localhost:3005/api/auth/facebook/callback",
+      callbackURL:
+        process.env.FACEBOOK_CALLBACK_URL ||
+        `${process.env.BACKEND_URL}/api/auth/facebook/callback`,
       profileFields: ["id", "displayName", "photos", "email"], // rất quan trọng để có email
     },
     (accessToken, refreshToken, profile, done) => {

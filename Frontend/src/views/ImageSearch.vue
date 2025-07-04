@@ -85,7 +85,7 @@ const onFileChange = async (e) => {
 
   try {
     const res = await axios.post(
-      "http://localhost:3005/api/imageService/detect",
+      `${import.meta.env.VITE_API_BASE_URL}/api/imageService/detect`,
       formData,
       {
         headers: { "Content-Type": "multipart/form-data" },
@@ -172,7 +172,7 @@ const onBoxClick = async (box) => {
     console.log(payload);
 
     const res = await axios.post(
-      "http://localhost:3005/api/imageService/crop",
+      `${import.meta.env.VITE_API_BASE_URL}/api/imageService/crop`,
       payload
     );
     croppedImage.value = res.data.image_base64;
@@ -219,7 +219,7 @@ const onImageClick = async (event) => {
     };
 
     const res = await axios.post(
-      "http://localhost:3005/api/imageService/crop",
+      `${import.meta.env.VITE_API_BASE_URL}/api/imageService/crop`,
       payload
     );
 
@@ -270,7 +270,7 @@ const onDotClick = async (box, index) => {
     };
     console.log(payload);
     const res = await axios.post(
-      "http://localhost:3005/api/imageService/crop",
+      `${import.meta.env.VITE_API_BASE_URL}/api/imageService/crop`,
       payload
     );
     console.log(res.data);

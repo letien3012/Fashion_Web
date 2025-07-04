@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = "http://localhost:3005";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token-admin");
   return {
@@ -34,19 +34,27 @@ const AdminProductService = {
   },
 
   async togglePublish(id) {
-    return axios.put(`${backendUrl}/api/products/${id}/toggle-publish`, {}, getAuthHeaders());
+    return axios.put(
+      `${backendUrl}/api/products/${id}/toggle-publish`,
+      {},
+      getAuthHeaders()
+    );
   },
 
   async bulkTogglePublish(products) {
-    const productIds = products.map(p => p._id);
-    return axios.put(`${backendUrl}/api/products/bulk-toggle-publish`, { productIds }, getAuthHeaders());
+    const productIds = products.map((p) => p._id);
+    return axios.put(
+      `${backendUrl}/api/products/bulk-toggle-publish`,
+      { productIds },
+      getAuthHeaders()
+    );
   },
 
   async bulkDelete(products) {
-    const productIds = products.map(p => p._id);
-    return axios.delete(`${backendUrl}/api/products/bulk-delete`, { 
+    const productIds = products.map((p) => p._id);
+    return axios.delete(`${backendUrl}/api/products/bulk-delete`, {
       data: { productIds },
-      ...getAuthHeaders()
+      ...getAuthHeaders(),
     });
   },
 };

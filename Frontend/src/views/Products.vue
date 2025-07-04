@@ -218,7 +218,7 @@ export default {
       categories: [],
       products: [],
       allProducts: [],
-      baseUrl: "http://localhost:3005",
+      baseUrl: import.meta.env.VITE_API_BASE_URL,
       currentCategory: null,
     };
   },

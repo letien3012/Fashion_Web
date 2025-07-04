@@ -22,12 +22,18 @@
               </div>
 
               <!-- Step 1: Verify current password (for local accounts) -->
-              <div v-else-if="!isVerified && hasLocalProvider" class="verification-step">
+              <div
+                v-else-if="!isVerified && hasLocalProvider"
+                class="verification-step"
+              >
                 <h4>Xác minh mật khẩu hiện tại</h4>
                 <p class="step-description">
                   Vui lòng nhập mật khẩu hiện tại để tiếp tục đổi mật khẩu
                 </p>
-                <form @submit.prevent="handleVerifyPassword" class="verify-form">
+                <form
+                  @submit.prevent="handleVerifyPassword"
+                  class="verify-form"
+                >
                   <div class="info-item">
                     <label for="verifyPassword">Mật khẩu hiện tại</label>
                     <div class="input-wrapper">
@@ -40,11 +46,15 @@
                       />
                       <span class="toggle" @click="showVerify = !showVerify">
                         <i
-                          :class="showVerify ? 'fas fa-eye-slash' : 'fas fa-eye'"
+                          :class="
+                            showVerify ? 'fas fa-eye-slash' : 'fas fa-eye'
+                          "
                         ></i>
                       </span>
                     </div>
-                    <span v-if="errorVerify" class="error">{{ errorVerify }}</span>
+                    <span v-if="errorVerify" class="error">{{
+                      errorVerify
+                    }}</span>
                   </div>
                   <button class="verify-btn" :disabled="loading">
                     <span v-if="loading" class="spinner"></span>
@@ -55,18 +65,27 @@
               </div>
 
               <!-- Step 1: Email verification (for non-local accounts) -->
-              <div v-else-if="!isVerified && !hasLocalProvider" class="verification-step">
+              <div
+                v-else-if="!isVerified && !hasLocalProvider"
+                class="verification-step"
+              >
                 <h4>Xác minh qua email</h4>
                 <p class="step-description">
-                  Mã xác minh sẽ được gửi đến email: <strong>{{ userEmail }}</strong>
+                  Mã xác minh sẽ được gửi đến email:
+                  <strong>{{ userEmail }}</strong>
                 </p>
-                <form @submit.prevent="handleSendVerificationCode" class="verify-form">
+                <form
+                  @submit.prevent="handleSendVerificationCode"
+                  class="verify-form"
+                >
                   <button class="verify-btn" :disabled="loading">
                     <span v-if="loading" class="spinner"></span>
                     Gửi mã xác minh
                   </button>
                   <span v-if="errorMsg" class="error">{{ errorMsg }}</span>
-                  <span v-if="successMsg" class="success">{{ successMsg }}</span>
+                  <span v-if="successMsg" class="success">{{
+                    successMsg
+                  }}</span>
                 </form>
 
                 <!-- Code input form -->
@@ -85,11 +104,19 @@
                     </div>
                     <span v-if="errorCode" class="error">{{ errorCode }}</span>
                   </div>
-                  <button @click="handleVerifyCode" class="verify-btn" :disabled="loading">
+                  <button
+                    @click="handleVerifyCode"
+                    class="verify-btn"
+                    :disabled="loading"
+                  >
                     <span v-if="loading" class="spinner"></span>
                     Xác minh mã
                   </button>
-                  <button @click="handleResendCode" class="resend-btn" :disabled="loading">
+                  <button
+                    @click="handleResendCode"
+                    class="resend-btn"
+                    :disabled="loading"
+                  >
                     Gửi lại mã
                   </button>
                 </div>
@@ -104,7 +131,12 @@
                   </button>
                 </div>
                 <p class="step-description">
-                  {{ hasLocalProvider ? 'Mật khẩu hiện tại đã được xác minh.' : 'Email đã được xác minh.' }} Vui lòng nhập mật khẩu mới
+                  {{
+                    hasLocalProvider
+                      ? "Mật khẩu hiện tại đã được xác minh."
+                      : "Email đã được xác minh."
+                  }}
+                  Vui lòng nhập mật khẩu mới
                 </p>
                 <form @submit.prevent="handleChangePassword" class="pw-form">
                   <div class="info-grid">
@@ -136,7 +168,10 @@
                           placeholder="Nhập lại mật khẩu mới"
                           required
                         />
-                        <span class="toggle" @click="showConfirm = !showConfirm">
+                        <span
+                          class="toggle"
+                          @click="showConfirm = !showConfirm"
+                        >
                           <i
                             :class="
                               showConfirm ? 'fas fa-eye-slash' : 'fas fa-eye'
@@ -153,7 +188,9 @@
                     <span v-if="loading" class="spinner"></span>
                     Đổi mật khẩu
                   </button>
-                  <span v-if="successMsg" class="success">{{ successMsg }}</span>
+                  <span v-if="successMsg" class="success">{{
+                    successMsg
+                  }}</span>
                   <span v-if="errorMsg" class="error">{{ errorMsg }}</span>
                 </form>
               </div>
@@ -175,7 +212,7 @@ import Footer from "../components/Footer.vue";
 import Chatbot from "../components/Chatbot.vue";
 import SidebarProfile from "../components/SidebarProfile.vue";
 
-const backendUrl = "http://localhost:3005";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
 // Account info
 const hasLocalProvider = ref(false);
@@ -216,14 +253,11 @@ const checkAccountInfo = async () => {
       throw new Error("Không tìm thấy token đăng nhập");
     }
 
-    const response = await axios.get(
-      `${backendUrl}/api/auth/account-info`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
+    const response = await axios.get(`${backendUrl}/api/auth/account-info`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
 
     if (response.data.success) {
       hasLocalProvider.value = response.data.data.hasLocalProvider;
@@ -231,7 +265,8 @@ const checkAccountInfo = async () => {
     }
   } catch (err) {
     console.error("Lỗi kiểm tra thông tin tài khoản:", err);
-    errorMsg.value = "Không thể kiểm tra thông tin tài khoản. Vui lòng thử lại!";
+    errorMsg.value =
+      "Không thể kiểm tra thông tin tài khoản. Vui lòng thử lại!";
   } finally {
     loading.value = false;
   }
@@ -263,7 +298,7 @@ const validateChangePassword = () => {
   errorNew.value = "";
   errorConfirm.value = "";
   let valid = true;
-  
+
   if (!newPassword.value) {
     errorNew.value = "Vui lòng nhập mật khẩu mới";
     valid = false;
@@ -271,19 +306,19 @@ const validateChangePassword = () => {
     errorNew.value = "Mật khẩu mới phải từ 6 ký tự";
     valid = false;
   }
-  
+
   if (confirmPassword.value !== newPassword.value) {
     errorConfirm.value = "Mật khẩu xác nhận không khớp";
     valid = false;
   }
-  
+
   return valid;
 };
 
 const handleVerifyPassword = async () => {
   errorMsg.value = "";
   if (!validateVerification()) return;
-  
+
   loading.value = true;
   try {
     const token = localStorage.getItem("token");
@@ -323,7 +358,7 @@ const handleSendVerificationCode = async () => {
   errorMsg.value = "";
   successMsg.value = "";
   loading.value = true;
-  
+
   try {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -359,7 +394,7 @@ const handleSendVerificationCode = async () => {
 const handleVerifyCode = async () => {
   errorMsg.value = "";
   if (!validateCode()) return;
-  
+
   loading.value = true;
   try {
     const token = localStorage.getItem("token");
@@ -404,7 +439,7 @@ const handleChangePassword = async () => {
   errorMsg.value = "";
   successMsg.value = "";
   if (!validateChangePassword()) return;
-  
+
   loading.value = true;
   try {
     const token = localStorage.getItem("token");
@@ -424,13 +459,13 @@ const handleChangePassword = async () => {
 
     if (response.data.success) {
       successMsg.value = "Đổi mật khẩu thành công!";
-      
+
       // Reset form
       newPassword.value = "";
       confirmPassword.value = "";
       showNew.value = false;
       showConfirm.value = false;
-      
+
       // Reset to verification step after 2 seconds
       setTimeout(() => {
         isVerified.value = false;

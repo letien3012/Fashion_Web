@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const ImageModel = require("./image.model");
 const { extractAndSaveFeatures } = require("../imageService/imageService");
 const axios = require("axios");
-const { decode } = require('html-entities');
+const { decode } = require("html-entities");
 
 const productSchema = new mongoose.Schema({
   code: { type: String, required: true },
@@ -52,14 +52,25 @@ productSchema.pre("save", async function (next) {
     const productId = this._id; // ID is available here for both new and existing docs
 
     // Handle main image
-    if (this.isModified("image") && this.image && this.image.startsWith("data:image")) {
+    if (
+      this.isModified("image") &&
+      this.image &&
+      this.image.startsWith("data:image")
+    ) {
       const savedPath = await ImageModel.saveImage(this.image, "product");
       this.image = savedPath; // Replace base64 with saved path
       // Extract features for the new image
-      await axios.post("http://localhost:3005/api/imageService/extract-features", {
-        imagePath: `http://localhost:3005${savedPath}`,
-        productId: productId,
-      });
+      await axios.post(
+        `${
+          process.env.BACKEND_URL || "http://localhost:3005"
+        }/api/imageService/extract-features`,
+        {
+          imagePath: `${
+            process.env.BACKEND_URL || "http://localhost:3005"
+          }${savedPath}`,
+          productId: productId,
+        }
+      );
     }
 
     // Handle album images
@@ -70,10 +81,17 @@ productSchema.pre("save", async function (next) {
           const savedPath = await ImageModel.saveImage(img, "product");
           processedAlbum.push(savedPath); // Add the new path
           // Extract features for the new image
-          await axios.post("http://localhost:3005/api/imageService/extract-features", {
-            imagePath: `http://localhost:3005${savedPath}`,
-            productId: productId,
-          });
+          await axios.post(
+            `${
+              process.env.BACKEND_URL || "http://localhost:3005"
+            }/api/imageService/extract-features`,
+            {
+              imagePath: `${
+                process.env.BACKEND_URL || "http://localhost:3005"
+              }${savedPath}`,
+              productId: productId,
+            }
+          );
         } else {
           processedAlbum.push(img); // Keep existing URL/path if not a new base64 image
         }
@@ -85,13 +103,23 @@ productSchema.pre("save", async function (next) {
     if (this.isModified("variants")) {
       for (let variant of this.variants) {
         if (variant.image && variant.image.startsWith("data:image")) {
-          const savedPath = await ImageModel.saveImage(variant.image, "product");
+          const savedPath = await ImageModel.saveImage(
+            variant.image,
+            "product"
+          );
           variant.image = savedPath; // Replace base64 with saved path
           // Extract features for the new variant image
-          await axios.post("http://localhost:3005/api/imageService/extract-features", {
-            imagePath: `http://localhost:3005${savedPath}`,
-            productId: productId,
-          });
+          await axios.post(
+            `${
+              process.env.BACKEND_URL || "http://localhost:3005"
+            }/api/imageService/extract-features`,
+            {
+              imagePath: `${
+                process.env.BACKEND_URL || "http://localhost:3005"
+              }${savedPath}`,
+              productId: productId,
+            }
+          );
         }
       }
     }
@@ -246,9 +274,13 @@ Product.prototype.save = async function () {
       this.image = await ImageModel.saveImage(this.image, "product");
       // Trích xuất đặc trưng cho ảnh chính
       await axios.post(
-        "http://localhost:3005/api/imageService/extract-features",
+        `${
+          process.env.BACKEND_URL || "http://localhost:3005"
+        }/api/imageService/extract-features`,
         {
-          imagePath: `http://localhost:3005${this.image}`,
+          imagePath: `${process.env.BACKEND_URL || "http://localhost:3005"}${
+            this.image
+          }`,
           productId: this._id,
         }
       );
@@ -268,9 +300,13 @@ Product.prototype.save = async function () {
         // Trích xuất đặc trưng cho từng ảnh trong album
         for (let i = 0; i < albumPaths.length; i++) {
           await axios.post(
-            "http://localhost:3005/api/imageService/extract-features",
+            `${
+              process.env.BACKEND_URL || "http://localhost:3005"
+            }/api/imageService/extract-features`,
             {
-              imagePath: `http://localhost:3005${albumPaths[i]}`,
+              imagePath: `${
+                process.env.BACKEND_URL || "http://localhost:3005"
+              }${albumPaths[i]}`,
               productId: this._id,
             }
           );
@@ -286,9 +322,13 @@ Product.prototype.save = async function () {
           variant.image = await ImageModel.saveImage(variant.image, "product");
           // Trích xuất đặc trưng cho ảnh variant
           await axios.post(
-            "http://localhost:3005/api/imageService/extract-features",
+            `${
+              process.env.BACKEND_URL || "http://localhost:3005"
+            }/api/imageService/extract-features`,
             {
-              imagePath: `http://localhost:3005${variant.image}`,
+              imagePath: `${
+                process.env.BACKEND_URL || "http://localhost:3005"
+              }${variant.image}`,
               productId: this._id,
             }
           );
@@ -320,9 +360,13 @@ Product.update = async function (id, data) {
       updateData.image = await ImageModel.saveImage(data.image, "product");
       // Trích xuất đặc trưng cho ảnh chính mới
       await axios.post(
-        "http://localhost:3005/api/imageService/extract-features",
+        `${
+          process.env.BACKEND_URL || "http://localhost:3005"
+        }/api/imageService/extract-features`,
         {
-          imagePath: `http://localhost:3005${updateData.image}`,
+          imagePath: `${process.env.BACKEND_URL || "http://localhost:3005"}${
+            updateData.image
+          }`,
           productId: id,
         }
       );
@@ -356,9 +400,13 @@ Product.update = async function (id, data) {
         // Trích xuất đặc trưng cho từng ảnh mới
         for (const newPath of newPaths) {
           await axios.post(
-            "http://localhost:3005/api/imageService/extract-features",
+            `${
+              process.env.BACKEND_URL || "http://localhost:3005"
+            }/api/imageService/extract-features`,
             {
-              imagePath: `http://localhost:3005${newPath}`,
+              imagePath: `${
+                process.env.BACKEND_URL || "http://localhost:3005"
+              }${newPath}`,
               productId: id,
             }
           );
@@ -401,9 +449,13 @@ Product.update = async function (id, data) {
           variant.image = await ImageModel.saveImage(variant.image, "product");
           // Trích xuất đặc trưng cho ảnh variant mới
           await axios.post(
-            "http://localhost:3005/api/imageService/extract-features",
+            `${
+              process.env.BACKEND_URL || "http://localhost:3005"
+            }/api/imageService/extract-features`,
             {
-              imagePath: `http://localhost:3005${variant.image}`,
+              imagePath: `${
+                process.env.BACKEND_URL || "http://localhost:3005"
+              }${variant.image}`,
               productId: id,
             }
           );
@@ -420,7 +472,9 @@ Product.update = async function (id, data) {
     if (deletedMainImage) {
       try {
         await axios.post(
-          "http://localhost:3005/api/imageService/delete-features",
+          `${
+            process.env.BACKEND_URL || "http://localhost:3005"
+          }/api/imageService/delete-features`,
           {
             imagePaths: [deletedMainImage],
           }
@@ -435,7 +489,9 @@ Product.update = async function (id, data) {
     if (deletedAlbumImages.length > 0) {
       try {
         await axios.post(
-          "http://localhost:3005/api/imageService/delete-features",
+          `${
+            process.env.BACKEND_URL || "http://localhost:3005"
+          }/api/imageService/delete-features`,
           {
             imagePaths: deletedAlbumImages,
           }
@@ -450,7 +506,9 @@ Product.update = async function (id, data) {
     if (deletedVariantImages.length > 0) {
       try {
         await axios.post(
-          "http://localhost:3005/api/imageService/delete-features",
+          `${
+            process.env.BACKEND_URL || "http://localhost:3005"
+          }/api/imageService/delete-features`,
           {
             imagePaths: deletedVariantImages,
           }
@@ -723,13 +781,13 @@ Product.search = async function (keyword) {
 Product.getEmbeddingText = async function (productId) {
   try {
     const product = await this.findById(productId)
-      .populate('catalogueId')
-      .populate('attributeCatalogueIds')
-      .populate('variants.attributeId1')
-      .populate('variants.attributeId2')
-      .populate('variants.attributeId1.attributeCatalogueId')
-      .populate('variants.attributeId2.attributeCatalogueId');
-    
+      .populate("catalogueId")
+      .populate("attributeCatalogueIds")
+      .populate("variants.attributeId1")
+      .populate("variants.attributeId2")
+      .populate("variants.attributeId1.attributeCatalogueId")
+      .populate("variants.attributeId2.attributeCatalogueId");
+
     if (!product) {
       throw new Error("Product not found");
     }
@@ -737,26 +795,29 @@ Product.getEmbeddingText = async function (productId) {
     // Hàm xử lý HTML tags và entities
     const stripHtmlTags = (html) => {
       if (!html) return "";
-      
+
       // Decode HTML entities trước
       let decodedText = decode(html);
-      
+
       // Loại bỏ HTML tags và normalize spaces
-      return decodedText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      return decodedText
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
     };
 
     let embeddingText = "";
-    
+
     // Thêm tên sản phẩm
     if (product.name) {
       embeddingText += `Sản phẩm: ${product.name}. `;
     }
-    
+
     // Thêm mô tả
     if (product.description) {
       embeddingText += `Mô tả: ${product.description}. `;
     }
-    
+
     // Thêm nội dung (đã xử lý HTML)
     if (product.content) {
       const cleanContent = stripHtmlTags(product.content);
@@ -764,51 +825,66 @@ Product.getEmbeddingText = async function (productId) {
         embeddingText += `Thông tin chi tiết: ${cleanContent}. `;
       }
     }
-    
+
     // Thêm tên catalogue
     if (product.catalogueId && product.catalogueId.name) {
       embeddingText += `Danh mục: ${product.catalogueId.name}. `;
     }
-    
+
     // Thêm thông tin các biến thể
     if (product.variants && product.variants.length > 0) {
       embeddingText += `Các biến thể sản phẩm: `;
       for (let i = 0; i < product.variants.length; i++) {
         const variant = product.variants[i];
         let variantInfo = "";
-        
+
         // Thêm thuộc tính 1 với tên catalogue
         if (variant.attributeId1 && variant.attributeId1.name) {
-          
           // Thử lấy tên catalogue từ attributeCatalogueIds của product
-          let catalogueName1 = '';
-          if (product.attributeCatalogueIds && product.attributeCatalogueIds.length > 0) {
-            const attr1 = await mongoose.model('Attribute').findById(variant.attributeId1._id).populate('attributeCatalogueId');
-            catalogueName1 = attr1?.attributeCatalogueId?.name || '';
+          let catalogueName1 = "";
+          if (
+            product.attributeCatalogueIds &&
+            product.attributeCatalogueIds.length > 0
+          ) {
+            const attr1 = await mongoose
+              .model("Attribute")
+              .findById(variant.attributeId1._id)
+              .populate("attributeCatalogueId");
+            catalogueName1 = attr1?.attributeCatalogueId?.name || "";
           }
-          
-          variantInfo += catalogueName1 ? `${catalogueName1} ${variant.attributeId1.name}` : variant.attributeId1.name;
+
+          variantInfo += catalogueName1
+            ? `${catalogueName1} ${variant.attributeId1.name}`
+            : variant.attributeId1.name;
         }
-        
+
         // Thêm thuộc tính 2 với tên catalogue
         if (variant.attributeId2 && variant.attributeId2.name) {
-          if (variantInfo) variantInfo += ` `;        
+          if (variantInfo) variantInfo += ` `;
           // Thử lấy tên catalogue từ attributeCatalogueIds của product
-          let catalogueName2 = '';
-          if (product.attributeCatalogueIds && product.attributeCatalogueIds.length > 0) {
-            const attr2 = await mongoose.model('Attribute').findById(variant.attributeId2._id).populate('attributeCatalogueId');
-            catalogueName2 = attr2?.attributeCatalogueId?.name || '';
+          let catalogueName2 = "";
+          if (
+            product.attributeCatalogueIds &&
+            product.attributeCatalogueIds.length > 0
+          ) {
+            const attr2 = await mongoose
+              .model("Attribute")
+              .findById(variant.attributeId2._id)
+              .populate("attributeCatalogueId");
+            catalogueName2 = attr2?.attributeCatalogueId?.name || "";
           }
-          
-          variantInfo += catalogueName2 ? `${catalogueName2}${variant.attributeId2.name}` : variant.attributeId2.name;
+
+          variantInfo += catalogueName2
+            ? `${catalogueName2}${variant.attributeId2.name}`
+            : variant.attributeId2.name;
         }
-        
+
         // Thêm giá
         if (variant.price) {
           if (variantInfo) variantInfo += ` `;
-          variantInfo += `giá ${variant.price.toLocaleString('vi-VN')} VNĐ`;
+          variantInfo += `giá ${variant.price.toLocaleString("vi-VN")} VNĐ`;
         }
-        
+
         if (variantInfo) {
           embeddingText += variantInfo;
           if (i < product.variants.length - 1) {
@@ -819,7 +895,7 @@ Product.getEmbeddingText = async function (productId) {
         }
       }
     }
-    
+
     return embeddingText.trim();
   } catch (error) {
     throw new Error(`Error getting embedding text: ${error.message}`);
@@ -830,39 +906,42 @@ Product.getEmbeddingText = async function (productId) {
 Product.getMultipleEmbeddingTexts = async function (productIds) {
   try {
     const products = await this.find({ _id: { $in: productIds } })
-      .populate('catalogueId')
-      .populate('attributeCatalogueIds')
-      .populate('variants.attributeId1')
-      .populate('variants.attributeId2')
-      .populate('variants.attributeId1.attributeCatalogueId')
-      .populate('variants.attributeId2.attributeCatalogueId');
-    
+      .populate("catalogueId")
+      .populate("attributeCatalogueIds")
+      .populate("variants.attributeId1")
+      .populate("variants.attributeId2")
+      .populate("variants.attributeId1.attributeCatalogueId")
+      .populate("variants.attributeId2.attributeCatalogueId");
+
     // Hàm xử lý HTML tags và entities
     const stripHtmlTags = (html) => {
       if (!html) return "";
-      
+
       // Decode HTML entities trước
       let decodedText = decode(html);
-      
+
       // Loại bỏ HTML tags và normalize spaces
-      return decodedText.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      return decodedText
+        .replace(/<[^>]*>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
     };
 
     const embeddingTexts = {};
-    
+
     for (const product of products) {
       let embeddingText = "";
-      
+
       // Thêm tên sản phẩm
       if (product.name) {
         embeddingText += `Sản phẩm: ${product.name}. `;
       }
-      
+
       // Thêm mô tả
       if (product.description) {
         embeddingText += `Mô tả: ${product.description}. `;
       }
-      
+
       // Thêm nội dung (đã xử lý HTML)
       if (product.content) {
         const cleanContent = stripHtmlTags(product.content);
@@ -870,38 +949,44 @@ Product.getMultipleEmbeddingTexts = async function (productIds) {
           embeddingText += `Thông tin chi tiết: ${cleanContent}. `;
         }
       }
-      
+
       // Thêm tên catalogue
       if (product.catalogueId && product.catalogueId.name) {
         embeddingText += `Danh mục: ${product.catalogueId.name}. `;
       }
-      
+
       // Thêm thông tin các biến thể
       if (product.variants && product.variants.length > 0) {
         embeddingText += `Các biến thể sản phẩm: `;
         for (let i = 0; i < product.variants.length; i++) {
           const variant = product.variants[i];
           let variantInfo = "";
-  
+
           // Thêm thuộc tính 1 với tên catalogue
           if (variant.attributeId1 && variant.attributeId1.name) {
-            const catalogueName1 = variant.attributeId1.attributeCatalogueId?.name || '';
-            variantInfo += catalogueName1 ? `${catalogueName1} ${variant.attributeId1.name}` : variant.attributeId1.name;
+            const catalogueName1 =
+              variant.attributeId1.attributeCatalogueId?.name || "";
+            variantInfo += catalogueName1
+              ? `${catalogueName1} ${variant.attributeId1.name}`
+              : variant.attributeId1.name;
           }
-          
+
           // Thêm thuộc tính 2 với tên catalogue
           if (variant.attributeId2 && variant.attributeId2.name) {
             if (variantInfo) variantInfo += ` `;
-            const catalogueName2 = variant.attributeId2.attributeCatalogueId?.name || '';
-            variantInfo += catalogueName2 ? `${catalogueName2} ${variant.attributeId2.name}` : variant.attributeId2.name;
+            const catalogueName2 =
+              variant.attributeId2.attributeCatalogueId?.name || "";
+            variantInfo += catalogueName2
+              ? `${catalogueName2} ${variant.attributeId2.name}`
+              : variant.attributeId2.name;
           }
-          
+
           // Thêm giá
           if (variant.price) {
             if (variantInfo) variantInfo += ` `;
-            variantInfo += `giá ${variant.price.toLocaleString('vi-VN')} VNĐ`;
+            variantInfo += `giá ${variant.price.toLocaleString("vi-VN")} VNĐ`;
           }
-          
+
           if (variantInfo) {
             embeddingText += variantInfo;
             if (i < product.variants.length - 1) {
@@ -912,10 +997,10 @@ Product.getMultipleEmbeddingTexts = async function (productIds) {
           }
         }
       }
-      
+
       embeddingTexts[product._id.toString()] = embeddingText.trim();
     }
-    
+
     return embeddingTexts;
   } catch (error) {
     throw new Error(`Error getting multiple embedding texts: ${error.message}`);
