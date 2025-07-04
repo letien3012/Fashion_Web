@@ -325,7 +325,7 @@ import { ref, onMounted, watch, computed } from "vue";
 import axios from "axios";
 import { toast } from "vue3-toastify";
 
-const backendUrl = "http://localhost:3005";
+const backendUrl = import.meta.env.VITE_API_URL;
 
 export default {
   name: "PromotionForm",

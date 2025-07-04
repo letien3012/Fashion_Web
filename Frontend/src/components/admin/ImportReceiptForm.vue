@@ -310,7 +310,7 @@ export default {
   },
   emits: ["close", "saved"],
   setup(props, { emit }) {
-    const backendUrl = "http://localhost:3005";
+    const backendUrl = import.meta.env.VITE_API_URL;
     const token = localStorage.getItem("token-admin");
     const suppliers = ref([]);
     const products = ref([]);

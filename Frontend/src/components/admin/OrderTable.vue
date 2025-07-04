@@ -365,7 +365,7 @@ export default {
     },
     getImageUrl(imagePath) {
       if (!imagePath) return "";
-      return `http://localhost:3005${imagePath}`;
+      return `${import.meta.env.VITE_API_URL}${imagePath}`;
     },
     handleProcessReturn(orderId) {
       this.selectedOrder = this.orders.find((order) => order._id === orderId);

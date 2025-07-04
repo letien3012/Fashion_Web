@@ -109,7 +109,7 @@ export default {
     const fetchCustomers = async () => {
       try {
         loading.value = true;
-        const response = await axios.get("http://localhost:3005/api/customers");
+        const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/api/customers`);
         customers.value = response.data.data;
       } catch (error) {
         console.error("Error fetching customers:", error);
@@ -225,7 +225,7 @@ export default {
     const handleSubmit = async (formData) => {
       try {
         await axios.put(
-          `http://localhost:3005/api/customers/update-status/${formData.id}`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/customers/update-status/${formData.id}`,
           { status: formData.status }
         );
         toast.success("Cập nhật trạng thái khách hàng thành công");
@@ -260,7 +260,7 @@ export default {
             loading.value = true;
             console.log("Deleting customer with ID:", customer.id);
             await axios.delete(
-              `http://localhost:3005/api/customers/${customer.id}`
+              `${import.meta.env.VITE_API_BASE_URL}/api/customers/${customer.id}`
             );
             return true;
           } catch (error) {

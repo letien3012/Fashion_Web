@@ -41,7 +41,7 @@ export default {
     if (employee && token) {
       this.employeeName = employee.fullname;
       this.employeeImage = employee.image
-        ? `http://localhost:3005/${employee.image}`
+        ? `${import.meta.env.VITE_API_BASE_URL}/${employee.image}`
         : "";
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     }

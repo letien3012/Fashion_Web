@@ -35,13 +35,9 @@ const downloadAndProcessImage = async (
     if (productId) {
       try {
         await axios.post(
-          `${
-            process.env.BACKEND_URL || "http://localhost:3005"
-          }/api/imageService/extract-features`,
+          `${process.env.BACKEND_URL}/api/imageService/extract-features`,
           {
-            imagePath: `${
-              process.env.BACKEND_URL || "http://localhost:3005"
-            }${savedPath}`,
+            imagePath: `${process.env.BACKEND_URL}${savedPath}`,
             productId: productId,
           }
         );
@@ -113,8 +109,7 @@ const downloadMultipleAndConvertToBase64 = async (imageUrls) => {
 // Hàm gọi YOLO service để tạo embedding
 const createTextEmbedding = async (text) => {
   try {
-    const imageServiceUrl =
-      process.env.IMAGE_SERVICE_URL || "http://localhost:9000";
+    const imageServiceUrl = process.env.IMAGE_SERVICE_URL;
     const response = await axios.post(`${imageServiceUrl}/vectorize-text`, {
       text: text,
     });

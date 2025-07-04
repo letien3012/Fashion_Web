@@ -35,11 +35,8 @@ exports.createOrder = async (req, res) => {
         },
       ],
       application_context: {
-        return_url:
-          process.env.PAYPAL_RETURN_URL ||
-          "http://localhost:5173/paypal-return",
-        cancel_url:
-          process.env.PAYPAL_CANCEL_URL || "http://localhost:5173/checkout",
+        return_url: process.env.PAYPAL_RETURN_URL,
+        cancel_url: process.env.PAYPAL_CANCEL_URL,
       },
     });
     const order = await client.execute(request);

@@ -145,7 +145,7 @@ export default {
 
       try {
         const response = await axios.post(
-          `${this.baseUrl}/api/imageService/extract-features`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/imageService/extract-features`,
           formData,
           {
             headers: {

@@ -66,7 +66,7 @@ export default {
   },
   emits: ["edit", "delete"],
   setup(props, { emit }) {
-    const backendUrl = "http://localhost:3005";
+    const backendUrl = import.meta.env.VITE_API_URL;
 
     const startIndex = computed(() => {
       return (props.currentPage - 1) * props.itemsPerPage;

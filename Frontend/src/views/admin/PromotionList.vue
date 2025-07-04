@@ -115,7 +115,7 @@ export default {
     const selectedPromotion = ref(null);
     const currentPage = ref(1);
     const itemsPerPage = 10;
-    const backendUrl = "http://localhost:3005";
+    const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
     const filteredPromotions = computed(() => {
       let filtered = promotions.value;

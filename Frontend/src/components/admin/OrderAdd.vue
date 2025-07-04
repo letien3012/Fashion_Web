@@ -378,7 +378,7 @@ const handleSubmit = async () => {
   // Lấy employeeId từ localStorage
   const employee = JSON.parse(localStorage.getItem("employee") || "{}");
   try {
-    await axios.post("http://localhost:3005/api/orders/admin", {
+    await axios.post(`${import.meta.env.VITE_API_URL}/api/orders/admin`, {
       customerInfo: {
         customerId: null,
         name: customerInfo.name,
@@ -410,8 +410,8 @@ const fetchProductsAndStock = async () => {
   isLoadingProducts.value = true;
   try {
     const [productRes, consignmentRes] = await Promise.all([
-      axios.get("http://localhost:3005/api/products"),
-      axios.get("http://localhost:3005/api/consignments"),
+      axios.get(`${import.meta.env.VITE_API_URL}/api/products`),
+      axios.get(`${import.meta.env.VITE_API_URL}/api/consignments`),
     ]);
     products.value = productRes.data.data || [];
     // Build consignment map

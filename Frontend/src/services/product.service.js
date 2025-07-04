@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = "http://10.18.226.131:3005";
+const backendUrl = import.meta.env.VITE_API_BASE_URL;
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {

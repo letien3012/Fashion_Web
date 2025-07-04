@@ -79,7 +79,7 @@
           <td>
             <div class="product-image">
               <img
-                :src="`http://localhost:3005${product.image}`"
+                :src="`${import.meta.env.VITE_API_URL}${product.image}`"
                 :alt="product.name"
                 class="product-thumbnail"
               />

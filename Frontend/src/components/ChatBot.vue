@@ -218,7 +218,7 @@ import { nextTick } from "vue";
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // API endpoints
-const API_BASE_URL = "http://10.18.226.131:3005/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL + "/api";
 const ENDPOINTS = {
   promotions: `${API_BASE_URL}/promotions`,
 };
@@ -303,7 +303,7 @@ export default {
       try {
         // Lấy embedding cho câu hỏi từ backend
         const embeddingRes = await fetch(
-          "http://10.18.226.131:3005/api/rag/embedding",
+          `${API_BASE_URL}/rag/embedding`,
           {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -318,7 +318,7 @@ export default {
         let relatedProducts = [];
         try {
           const retrieveRes = await fetch(
-            "http://10.18.226.131:3005/api/rag/retrieve",
+            `${API_BASE_URL}/rag/retrieve`,
             {
               method: "POST",
               headers: { "Content-Type": "application/json" },

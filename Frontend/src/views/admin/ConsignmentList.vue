@@ -126,7 +126,7 @@ export default {
       try {
         loading.value = true;
         const response = await axios.get(
-          "http://localhost:3005/api/consignments"
+          `${import.meta.env.VITE_API_BASE_URL}/api/consignments`
         );
         consignments.value = response.data.data;
       } catch (error) {
@@ -139,7 +139,9 @@ export default {
 
     const fetchProducts = async () => {
       try {
-        const response = await axios.get("http://localhost:3005/api/products");
+        const response = await axios.get(
+          `${import.meta.env.VITE_API_BASE_URL}/api/products`
+        );
         products.value = response.data.data;
       } catch (error) {
         console.error("Error fetching products:", error);
@@ -275,7 +277,7 @@ export default {
         const publishStatus =
           formData.publish === true || formData.publish === "true";
         await axios.put(
-          `http://localhost:3005/api/consignments/${formData._id}/publish`,
+          `${import.meta.env.VITE_API_BASE_URL}/api/consignments/${formData._id}/publish`,
           { publish: publishStatus }
         );
         toast.success("Cập nhật trạng thái lô hàng thành công");

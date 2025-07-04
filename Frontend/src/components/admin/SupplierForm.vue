@@ -89,7 +89,7 @@ export default {
     });
 
     const errors = ref({});
-    const backendUrl = "http://localhost:3005";
+    const backendUrl = import.meta.env.VITE_API_URL;
 
     onMounted(() => {
       if (props.supplier) {

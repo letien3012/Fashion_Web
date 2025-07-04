@@ -344,7 +344,7 @@ export default {
       .toISOString()
       .split("T")[0];
     return {
-      backendUrl: "http://localhost:3005",
+      backendUrl: import.meta.env.VITE_API_BASE_URL,
       employeeName: "",
       salesChart: null,
       productsChart: null,

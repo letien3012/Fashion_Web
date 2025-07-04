@@ -16,13 +16,12 @@ require("./config/passport");
 const app = express();
 
 // CORS options
+const corsOrigins = process.env.FRONTEND_URL
+  ? process.env.FRONTEND_URL.split(",")
+  : ["http://localhost:5173"];
+
 const corsOptions = {
-  origin: [
-    "http://10.18.226.131:8080",
-    "http://localhos:3005",
-    "http://10.18.226.131:5173",
-    "http://10.18.226.131:3000",
-  ],
+  origin: corsOrigins,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
   allowedHeaders: [
     "Content-Type",

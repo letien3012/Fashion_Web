@@ -32,12 +32,12 @@ export default defineConfig({
     allowedHosts: "all",
     proxy: {
       "/api": {
-        target: "http://10.18.226.131:3005", // IP của máy đang chạy Node.js
+        target: process.env.VITE_API_BASE_URL || "http://localhost:3005", // Dùng biến môi trường
         changeOrigin: true,
         secure: false,
       },
       "/uploads": {
-        target: "http://10.18.226.131:3005",
+        target: process.env.VITE_API_BASE_URL || "http://localhost:3005", // Dùng biến môi trường
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path,

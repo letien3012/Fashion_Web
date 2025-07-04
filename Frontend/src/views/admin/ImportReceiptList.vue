@@ -69,7 +69,7 @@ export default {
     const importReceipts = ref([]);
     const searchQuery = ref("");
     const statusFilter = ref("");
-    const backendUrl = "http://localhost:3005";
+    const backendUrl = import.meta.env.VITE_API_BASE_URL;
 
     const filteredReceipts = computed(() => {
       let filtered = importReceipts.value;

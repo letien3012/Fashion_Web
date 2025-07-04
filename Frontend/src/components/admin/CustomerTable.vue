@@ -76,7 +76,7 @@ export default {
     getImageUrl(image) {
       if (!image) return "../../assets/images/avatar_default.jpg";
       if (image.startsWith("http")) return image;
-      if (image.startsWith("/images")) return `http://localhost:3005${image}`;
+      if (image.startsWith("/images")) return `${import.meta.env.VITE_API_URL}${image}`;
       return image;
     },
     handleDelete(customer) {

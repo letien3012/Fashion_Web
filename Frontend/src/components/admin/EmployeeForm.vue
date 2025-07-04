@@ -95,7 +95,7 @@
             v-if="isEditing && formData.image && !previewImage"
           >
             <img
-              :src="`http://localhost:3005${formData.image}`"
+              :src="`${import.meta.env.VITE_API_URL}${formData.image}`"
               alt="Current"
             />
             <small>Ảnh hiện tại</small>

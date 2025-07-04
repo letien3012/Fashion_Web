@@ -138,7 +138,7 @@ export default {
     },
     backendUrl: {
       type: String,
-      default: "http://localhost:3005",
+      default: import.meta.env.VITE_API_URL,
     },
   },
   emits: ["close", "submit"],

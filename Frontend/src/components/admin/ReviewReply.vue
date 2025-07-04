@@ -44,9 +44,9 @@
                 class="image-item"
               >
                 <img
-                  :src="'http://localhost:3005/' + image"
+                  :src="`${import.meta.env.VITE_API_URL}/${image}`"
                   :alt="'Review image ' + (index + 1)"
-                  @click="openImage('http://localhost:3005/' + image)"
+                  @click="openImage(`${import.meta.env.VITE_API_URL}/${image}`)"
                 />
               </div>
             </div>

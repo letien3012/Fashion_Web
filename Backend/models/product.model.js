@@ -61,13 +61,9 @@ productSchema.pre("save", async function (next) {
       this.image = savedPath; // Replace base64 with saved path
       // Extract features for the new image
       await axios.post(
-        `${
-          process.env.BACKEND_URL || "http://localhost:3005"
-        }/api/imageService/extract-features`,
+        `${process.env.BACKEND_URL}/api/imageService/extract-features`,
         {
-          imagePath: `${
-            process.env.BACKEND_URL || "http://localhost:3005"
-          }${savedPath}`,
+          imagePath: `${process.env.BACKEND_URL}${savedPath}`,
           productId: productId,
         }
       );
@@ -82,13 +78,9 @@ productSchema.pre("save", async function (next) {
           processedAlbum.push(savedPath); // Add the new path
           // Extract features for the new image
           await axios.post(
-            `${
-              process.env.BACKEND_URL || "http://localhost:3005"
-            }/api/imageService/extract-features`,
+            `${process.env.BACKEND_URL}/api/imageService/extract-features`,
             {
-              imagePath: `${
-                process.env.BACKEND_URL || "http://localhost:3005"
-              }${savedPath}`,
+              imagePath: `${process.env.BACKEND_URL}${savedPath}`,
               productId: productId,
             }
           );
@@ -110,13 +102,9 @@ productSchema.pre("save", async function (next) {
           variant.image = savedPath; // Replace base64 with saved path
           // Extract features for the new variant image
           await axios.post(
-            `${
-              process.env.BACKEND_URL || "http://localhost:3005"
-            }/api/imageService/extract-features`,
+            `${process.env.BACKEND_URL}/api/imageService/extract-features`,
             {
-              imagePath: `${
-                process.env.BACKEND_URL || "http://localhost:3005"
-              }${savedPath}`,
+              imagePath: `${process.env.BACKEND_URL}${savedPath}`,
               productId: productId,
             }
           );
@@ -274,13 +262,9 @@ Product.prototype.save = async function () {
       this.image = await ImageModel.saveImage(this.image, "product");
       // Trích xuất đặc trưng cho ảnh chính
       await axios.post(
-        `${
-          process.env.BACKEND_URL || "http://localhost:3005"
-        }/api/imageService/extract-features`,
+        `${process.env.BACKEND_URL}/api/imageService/extract-features`,
         {
-          imagePath: `${process.env.BACKEND_URL || "http://localhost:3005"}${
-            this.image
-          }`,
+          imagePath: `${process.env.BACKEND_URL}${this.image}`,
           productId: this._id,
         }
       );
@@ -300,13 +284,9 @@ Product.prototype.save = async function () {
         // Trích xuất đặc trưng cho từng ảnh trong album
         for (let i = 0; i < albumPaths.length; i++) {
           await axios.post(
-            `${
-              process.env.BACKEND_URL || "http://localhost:3005"
-            }/api/imageService/extract-features`,
+            `${process.env.BACKEND_URL}/api/imageService/extract-features`,
             {
-              imagePath: `${
-                process.env.BACKEND_URL || "http://localhost:3005"
-              }${albumPaths[i]}`,
+              imagePath: `${process.env.BACKEND_URL}${albumPaths[i]}`,
               productId: this._id,
             }
           );
@@ -322,13 +302,9 @@ Product.prototype.save = async function () {
           variant.image = await ImageModel.saveImage(variant.image, "product");
           // Trích xuất đặc trưng cho ảnh variant
           await axios.post(
-            `${
-              process.env.BACKEND_URL || "http://localhost:3005"
-            }/api/imageService/extract-features`,
+            `${process.env.BACKEND_URL}/api/imageService/extract-features`,
             {
-              imagePath: `${
-                process.env.BACKEND_URL || "http://localhost:3005"
-              }${variant.image}`,
+              imagePath: `${process.env.BACKEND_URL}${variant.image}`,
               productId: this._id,
             }
           );
@@ -360,13 +336,9 @@ Product.update = async function (id, data) {
       updateData.image = await ImageModel.saveImage(data.image, "product");
       // Trích xuất đặc trưng cho ảnh chính mới
       await axios.post(
-        `${
-          process.env.BACKEND_URL || "http://localhost:3005"
-        }/api/imageService/extract-features`,
+        `${process.env.BACKEND_URL}/api/imageService/extract-features`,
         {
-          imagePath: `${process.env.BACKEND_URL || "http://localhost:3005"}${
-            updateData.image
-          }`,
+          imagePath: `${process.env.BACKEND_URL}${updateData.image}`,
           productId: id,
         }
       );
@@ -400,13 +372,9 @@ Product.update = async function (id, data) {
         // Trích xuất đặc trưng cho từng ảnh mới
         for (const newPath of newPaths) {
           await axios.post(
-            `${
-              process.env.BACKEND_URL || "http://localhost:3005"
-            }/api/imageService/extract-features`,
+            `${process.env.BACKEND_URL}/api/imageService/extract-features`,
             {
-              imagePath: `${
-                process.env.BACKEND_URL || "http://localhost:3005"
-              }${newPath}`,
+              imagePath: `${process.env.BACKEND_URL}${newPath}`,
               productId: id,
             }
           );
@@ -449,13 +417,9 @@ Product.update = async function (id, data) {
           variant.image = await ImageModel.saveImage(variant.image, "product");
           // Trích xuất đặc trưng cho ảnh variant mới
           await axios.post(
-            `${
-              process.env.BACKEND_URL || "http://localhost:3005"
-            }/api/imageService/extract-features`,
+            `${process.env.BACKEND_URL}/api/imageService/extract-features`,
             {
-              imagePath: `${
-                process.env.BACKEND_URL || "http://localhost:3005"
-              }${variant.image}`,
+              imagePath: `${process.env.BACKEND_URL}${variant.image}`,
               productId: id,
             }
           );
@@ -472,9 +436,7 @@ Product.update = async function (id, data) {
     if (deletedMainImage) {
       try {
         await axios.post(
-          `${
-            process.env.BACKEND_URL || "http://localhost:3005"
-          }/api/imageService/delete-features`,
+          `${process.env.BACKEND_URL}/api/imageService/delete-features`,
           {
             imagePaths: [deletedMainImage],
           }
@@ -489,9 +451,7 @@ Product.update = async function (id, data) {
     if (deletedAlbumImages.length > 0) {
       try {
         await axios.post(
-          `${
-            process.env.BACKEND_URL || "http://localhost:3005"
-          }/api/imageService/delete-features`,
+          `${process.env.BACKEND_URL}/api/imageService/delete-features`,
           {
             imagePaths: deletedAlbumImages,
           }
@@ -506,9 +466,7 @@ Product.update = async function (id, data) {
     if (deletedVariantImages.length > 0) {
       try {
         await axios.post(
-          `${
-            process.env.BACKEND_URL || "http://localhost:3005"
-          }/api/imageService/delete-features`,
+          `${process.env.BACKEND_URL}/api/imageService/delete-features`,
           {
             imagePaths: deletedVariantImages,
           }

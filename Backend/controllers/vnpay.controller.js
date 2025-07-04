@@ -7,8 +7,7 @@ const vnp_TmnCode = process.env.VNP_TMNCODE || "VNPAYCODE";
 const vnp_HashSecret = process.env.VNP_HASHSECRET || "VNPAYSECRET";
 const vnp_Url =
   process.env.VNP_URL || "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-const vnp_ReturnUrl =
-  process.env.VNP_RETURNURL || "http://localhost:5173/vnpay-return";
+const vnp_ReturnUrl = process.env.VNP_RETURNURL;
 
 exports.createPayment = async (req, res) => {
   try {
@@ -42,7 +41,7 @@ exports.createPayment = async (req, res) => {
     if (ipAddr && ipAddr.includes("::ffff:")) {
       ipAddr = ipAddr.replace("::ffff:", "");
     }
-    if (!ipAddr) ipAddr = "127.0.0.1";
+    if (!ipAddr) ipAddr = process.env.DEFAULT_CLIENT_IP || "127.0.0.1";
 
     // Build params
     let vnp_Params = {};

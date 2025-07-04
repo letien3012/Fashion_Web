@@ -23,8 +23,7 @@ const ImageFeature = mongoose.model("ImageFeature", imageFeatureSchema);
 // Gọi FastAPI detect, trả về boxes
 async function detectOnly(imageUrl) {
   try {
-    const imageServiceUrl =
-      process.env.IMAGE_SERVICE_URL || "http://10.18.226.131:9000";
+    const imageServiceUrl = process.env.IMAGE_SERVICE_URL;
     const response = await axios.post(`${imageServiceUrl}/detect`, {
       image_url: imageUrl,
     });
@@ -39,8 +38,7 @@ async function detectOnly(imageUrl) {
 // Gọi FastAPI crop, trả về crops
 async function cropOnly(imageUrl, boxes) {
   try {
-    const imageServiceUrl =
-      process.env.IMAGE_SERVICE_URL || "http://10.18.226.131:9000";
+    const imageServiceUrl = process.env.IMAGE_SERVICE_URL;
     const response = await axios.post(`${imageServiceUrl}/crop`, {
       image_url: imageUrl,
       boxes: boxes,
@@ -58,7 +56,7 @@ async function extractFeatures(imageData) {
     // Kiểm tra nếu là base64
     if (imageData.startsWith("data:image") || imageData.includes(",")) {
       const response = await axios.post(
-        "http://localhost:9000/extract-features",
+        `${process.env.IMAGE_SERVICE_URL}/extract-features`,
         {
           image_url: imageData,
         }
@@ -67,7 +65,7 @@ async function extractFeatures(imageData) {
     } else {
       // Xử lý URL hoặc file path
       const response = await axios.post(
-        "http://localhost:9000/extract-features",
+        `${process.env.IMAGE_SERVICE_URL}/extract-features`,
         {
           image_url: imageData,
         }
@@ -88,7 +86,7 @@ async function saveImageFeatures(features, originalImage, productId, label) {
   try {
     // Bỏ localhost:3005 nếu có trong originalImage
     const cleanOriginalImage = originalImage.replace(
-      process.env.BACKEND_URL || "http://10.18.226.131:3005",
+      process.env.BACKEND_URL,
       ""
     );
 
@@ -201,7 +199,7 @@ async function deleteImageFeaturesByPaths(imagePaths) {
   try {
     // Bỏ tiền tố localhost:3005 nếu có trong từng path
     const cleanPaths = imagePaths.map((p) =>
-      p.replace(process.env.BACKEND_URL || "http://10.18.226.131:3005", "")
+      p.replace(process.env.BACKEND_URL, "")
     );
     const result = await ImageFeature.deleteMany({
       originalImage: { $in: cleanPaths },

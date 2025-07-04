@@ -59,7 +59,7 @@
               <img
                 :src="
                   employee.image
-                    ? `http://localhost:3005${employee.image}`
+                    ? `${import.meta.env.VITE_API_URL}${employee.image}`
                     : '/default-avatar.png'
                 "
                 alt="Avatar"

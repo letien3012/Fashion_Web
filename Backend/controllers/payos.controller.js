@@ -11,10 +11,8 @@ const PAYOS_CHECKSUM_KEY =
   process.env.PAYOS_CHECKSUM_KEY || "your_checksum_key";
 const PAYOS_API_URL =
   process.env.PAYOS_API_URL || "https://api-merchant.payos.vn";
-const returnUrl =
-  process.env.PAYOS_RETURN_URL || "http://localhost:5173/payos-return";
-const cancelUrl =
-  process.env.PAYOS_CANCEL_URL || "http://localhost:5173/payos-cancel";
+const returnUrl = process.env.PAYOS_RETURN_URL;
+const cancelUrl = process.env.PAYOS_CANCEL_URL;
 
 const payos = new PayOS(
   process.env.PAYOS_CLIENT_ID,

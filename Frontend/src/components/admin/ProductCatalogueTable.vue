@@ -18,7 +18,7 @@
               <img
                 :src="
                   catalogue.icon
-                    ? `http://localhost:3005${catalogue.icon}`
+                    ? `${import.meta.env.VITE_API_URL}${catalogue.icon}`
                     : '/default-catalogue-icon.jpg'
                 "
                 :alt="catalogue.name"

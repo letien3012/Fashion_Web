@@ -121,7 +121,7 @@ export default {
         image: null,
         publish: true,
       },
-      backendUrl: "http://localhost:3005",
+      backendUrl: import.meta.env.VITE_API_BASE_URL,
       searchQuery: "",
       filterType: "",
       filterStatus: "",

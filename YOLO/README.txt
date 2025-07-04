@@ -48,7 +48,8 @@ pip install -r requirements.txt
 Use Uvicorn to launch the FastAPI service:
 
 ```bash
-uvicorn yolo_service:app --port 9000
+uvicorn yolo_service:app --host 0.0.0.0 --port 9000
+
 ```
 
 The service will be available at: [http://localhost:9000](http://localhost:9000)

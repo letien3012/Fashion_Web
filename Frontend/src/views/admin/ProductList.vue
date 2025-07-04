@@ -274,7 +274,7 @@ export default {
       loading: false,
       showForm: false,
       selectedProduct: null,
-      backendUrl: "http://localhost:3005",
+      backendUrl: import.meta.env.VITE_API_BASE_URL,
       searchQuery: "",
       selectedCatalogue: "",
       statusFilter: "",

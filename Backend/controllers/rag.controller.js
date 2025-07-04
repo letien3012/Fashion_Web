@@ -8,8 +8,8 @@ ragController.embedding = async (req, res) => {
     const { question } = req.body;
     if (!question) return res.status(400).json({ message: "Missing question" });
     // Gọi YOLO service để lấy embedding thực tế
-    const imageServiceUrl =
-      process.env.IMAGE_SERVICE_URL || "http://localhost:9000";
+    const imageServiceUrl = process.env.IMAGE_SERVICE_URL;
+    console.log(imageServiceUrl);
     const response = await axios.post(`${imageServiceUrl}/vectorize-text`, {
       text: question,
     });

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "http://localhost:3005/api/payos";
+const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api/payos`;
 
 export const payosService = {
   async createPayment(orderData) {

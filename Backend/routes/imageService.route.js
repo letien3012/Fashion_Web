@@ -72,7 +72,7 @@ router.post("/detect", async (req, res) => {
     return res.status(400).json({ error: "Image not found or path invalid" });
   }
   try {
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:3005";
+    const backendUrl = process.env.BACKEND_URL;
     const boxes = await detectOnly(`${backendUrl}${imagePath}`);
     res.json({ boxes, imagePath });
   } catch (err) {
@@ -94,7 +94,7 @@ router.post("/crop", async (req, res) => {
   };
 
   try {
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:3005";
+    const backendUrl = process.env.BACKEND_URL;
     const result = await cropOnly(`${backendUrl}${imagePath}`, [box]);
     res.json(result[0] || {});
     // Trả về crop đầu tiên
@@ -113,7 +113,7 @@ router.post("/extract-features", async (req, res) => {
 
   try {
     // 1. Detect các vật thể trong ảnh
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:3005";
+    const backendUrl = process.env.BACKEND_URL;
     const boxes = await detectOnly(`${backendUrl}${imagePath}`);
     let features = [];
     if (!boxes || boxes.length === 0) {
@@ -194,7 +194,7 @@ router.post("/find-similar", async (req, res) => {
       : `data:image/jpeg;base64,${base64Image}`;
 
     // Tìm ảnh tương tự
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:3005";
+    const backendUrl = process.env.BACKEND_URL;
     const similarImages = await findSimilarImages(formattedBase64, limit || 5);
 
     if (!similarImages || similarImages.length === 0) {
@@ -248,7 +248,7 @@ router.post("/extract-and-compare", async (req, res) => {
 
   try {
     // Trích xuất và lưu đặc trưng
-    const backendUrl = process.env.BACKEND_URL || "http://localhost:3005";
+    const backendUrl = process.env.BACKEND_URL;
     const extractResult = await extractAndSaveFeatures(imagePath);
 
     // Tìm ảnh tương tự
