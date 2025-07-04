@@ -310,7 +310,7 @@ export default {
   },
   emits: ["close", "saved"],
   setup(props, { emit }) {
-    const backendUrl = import.meta.env.VITE_API_URL;
+    const backendUrl = import.meta.env.VITE_API_BASE_URL;
     const token = localStorage.getItem("token-admin");
     const suppliers = ref([]);
     const products = ref([]);
@@ -406,6 +406,7 @@ export default {
     const fetchSuppliers = async () => {
       try {
         loading.value = true;
+        console.log(backendUrl);
         const response = await axios.get(`${backendUrl}/api/suppliers`, {
           headers: { Authorization: `Bearer ${token}` },
         });

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api`;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const customerService = {
   async updateProfile(profileData) {
@@ -11,7 +11,7 @@ export const customerService = {
       }
 
       const response = await axios.put(
-        `${API_URL}/customers/profile`,
+        `${BASE_URL}/api/customers/profile`,
         profileData,
         {
           headers: {
@@ -50,7 +50,7 @@ export const customerService = {
       });
 
       const response = await axios.post(
-        `${API_URL}/customers/upload-image`,
+        `${BASE_URL}/api/customers/upload-image`,
         { image: base64Image },
         {
           headers: {
@@ -80,7 +80,7 @@ export const customerService = {
         throw new Error("Vui lòng đăng nhập để lấy thông tin khách hàng");
       }
 
-      const response = await axios.get(`${API_URL}/customers/${customerId}`, {
+      const response = await axios.get(`${BASE_URL}/api/customers/${customerId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -106,7 +106,7 @@ export const customerService = {
         );
       }
 
-      const response = await axios.get(`${API_URL}/customers/wishlist`, {
+      const response = await axios.get(`${BASE_URL}/api/customers/wishlist`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",

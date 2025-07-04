@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
@@ -11,12 +11,12 @@ const getAuthHeaders = () => {
 };
 
 const imageSearchService = {
-  backendUrl,
+  BASE_URL,
 
   async uploadImage(base64Image, folder = "detect") {
     try {
       const response = await axios.post(
-        `${backendUrl}/api/imageService/upload`,
+        `${BASE_URL}/api/imageService/upload`,
         { base64Image, folder }
       );
       console.log("Image uploaded successfully:", response.data);
@@ -30,7 +30,7 @@ const imageSearchService = {
   async detectObjects(imagePath) {
     try {
       const response = await axios.post(
-        `${backendUrl}/api/imageService/detect`,
+        `${BASE_URL}/api/imageService/detect`,
         { imagePath }
       );
       return response.data;
@@ -43,7 +43,7 @@ const imageSearchService = {
   async cropImage(cropData) {
     try {
       const response = await axios.post(
-        `${backendUrl}/api/imageService/crop`,
+        `${BASE_URL}/api/imageService/crop`,
         cropData
       );
       return response.data;

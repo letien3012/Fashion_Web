@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = `${import.meta.env.VITE_API_BASE_URL}/api`;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 export const orderService = {
   async getCustomerOrders() {
@@ -10,7 +10,7 @@ export const orderService = {
         return [];
       }
 
-      const response = await axios.get(`${API_URL}/orders/customer`, {
+      const response = await axios.get(`${BASE_URL}/api/orders/customer`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -35,7 +35,7 @@ export const orderService = {
         throw new Error("Vui lòng đăng nhập để xem chi tiết đơn hàng");
       }
 
-      const response = await axios.get(`${API_URL}/orders/${orderId}`, {
+      const response = await axios.get(`${BASE_URL}/api/orders/${orderId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -55,7 +55,7 @@ export const orderService = {
         throw new Error("Vui lòng đăng nhập để đặt hàng");
       }
 
-      const response = await axios.post(`${API_URL}/orders`, orderData, {
+      const response = await axios.post(`${BASE_URL}/api/orders`, orderData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -76,7 +76,7 @@ export const orderService = {
       }
 
       const response = await axios.put(
-        `${API_URL}/orders/${orderId}/cancel`,
+        `${BASE_URL}/api/orders/${orderId}/cancel`,
         { note },
         {
           headers: {
@@ -100,7 +100,7 @@ export const orderService = {
       }
 
       const response = await axios.post(
-        `${API_URL}/orders/${orderId}/return`,
+        `${BASE_URL}/api/orders/${orderId}/return`,
         data,
         {
           headers: {
@@ -121,7 +121,7 @@ export const orderService = {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Vui lòng đăng nhập");
       const response = await axios.put(
-        `${API_URL}/orders/${orderCode}/online-detail`,
+        `${BASE_URL}/api/orders/${orderCode}/online-detail`,
         { online_method_detail: detail },
         {
           headers: {
@@ -141,7 +141,7 @@ export const orderService = {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("Vui lòng đăng nhập");
       const response = await axios.put(
-        `${API_URL}/orders/${orderCode}/status-by-code`,
+        `${BASE_URL}/api/orders/${orderCode}/status-by-code`,
         { status },
         {
           headers: {

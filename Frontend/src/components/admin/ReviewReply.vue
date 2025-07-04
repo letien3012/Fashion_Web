@@ -44,9 +44,10 @@
                 class="image-item"
               >
                 <img
-                  :src="`${import.meta.env.VITE_API_URL}/${image}`"
+                  :src="`${apiUrl}/${image}`"
                   :alt="'Review image ' + (index + 1)"
-                  @click="openImage(`${import.meta.env.VITE_API_URL}/${image}`)"
+                  @click="openImage(`${apiUrl}/${image}`)"
+                  @error="onImageError($event)"
                 />
               </div>
             </div>
@@ -133,6 +134,8 @@ export default {
     const loading = ref(false);
     const showImagePreview = ref(false);
     const currentImage = ref("");
+    const apiUrl = import.meta.env.VITE_API_BASE_URL;
+    const fallbackImage = require('@/assets/images/no-image.png'); // Adjust path if needed
 
     const openImage = (image) => {
       currentImage.value = image;
@@ -142,6 +145,10 @@ export default {
     const closeImagePreview = () => {
       showImagePreview.value = false;
       currentImage.value = "";
+    };
+
+    const onImageError = (event) => {
+      event.target.src = fallbackImage;
     };
 
     const templateReply = `Cảm ơn anh/chị rất nhiều vì đã tin tưởng và lựa chọn sản phẩm của chúng tôi!
@@ -191,6 +198,9 @@ Chúc anh/chị một ngày vui vẻ và nhiều sức khỏe ❤️`;
       showImagePreview,
       currentImage,
       closeImagePreview,
+      apiUrl,
+      fallbackImage,
+      onImageError,
     };
   },
 };

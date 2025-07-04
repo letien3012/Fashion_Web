@@ -521,16 +521,13 @@ export default {
       return [];
     },
     getImageUrl(imagePath) {
-      console.log("Original image path:", imagePath);
       if (!imagePath) {
-        console.log("No image path provided");
         return "";
       }
       if (imagePath.startsWith("http")) {
-        console.log("Using full URL:", imagePath);
         return imagePath;
       }
-      const fullUrl = `http://10.18.226.131:3005${imagePath}`;
+      const fullUrl = `${import.meta.env.VITE_API_BASE_URL}${imagePath}`;
       return fullUrl;
     },
     handleImageError(e) {

@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = `${import.meta.env.VITE_API_BASE_URL}/api`;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
@@ -11,12 +11,12 @@ const getAuthHeaders = () => {
 };
 
 const reviewService = {
-  backendUrl,
+  backendUrl: BASE_URL,
 
   // Add a new review
   async addReview(formData) {
     try {
-      const response = await axios.post(`${backendUrl}/reviews/add`, formData, {
+      const response = await axios.post(`${BASE_URL}/api/reviews/add`, formData, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
         },
@@ -32,7 +32,7 @@ const reviewService = {
   async getAllReviews() {
     try {
       const response = await axios.get(
-        `${backendUrl}/reviews`,
+        `${BASE_URL}/api/reviews`,
         getAuthHeaders()
       );
       return response.data;
@@ -46,7 +46,7 @@ const reviewService = {
   async getReviewById(id) {
     try {
       const response = await axios.get(
-        `${backendUrl}/reviews/${id}`,
+        `${BASE_URL}/api/reviews/${id}`,
         getAuthHeaders()
       );
       return response.data;
@@ -60,7 +60,7 @@ const reviewService = {
   async getReviewsByProduct(productId, page = 1, limit = 1000) {
     try {
       const response = await axios.get(
-        `${backendUrl}/reviews/product/${productId}?page=${page}&limit=${limit}`,
+        `${BASE_URL}/api/reviews/product/${productId}?page=${page}&limit=${limit}`,
         getAuthHeaders()
       );
       return response.data;
@@ -74,7 +74,7 @@ const reviewService = {
   async getReviewsByCustomer(customerId) {
     try {
       const response = await axios.get(
-        `${backendUrl}/reviews/customer/${customerId}`,
+        `${BASE_URL}/api/reviews/customer/${customerId}`,
         getAuthHeaders()
       );
       return response.data;
@@ -88,7 +88,7 @@ const reviewService = {
   async updateReview(id, data) {
     try {
       const response = await axios.put(
-        `${backendUrl}/reviews/update/${id}`,
+        `${BASE_URL}/api/reviews/update/${id}`,
         data,
         getAuthHeaders()
       );
@@ -103,7 +103,7 @@ const reviewService = {
   async deleteReview(id) {
     try {
       const response = await axios.delete(
-        `${backendUrl}/reviews/delete/${id}`,
+        `${BASE_URL}/api/reviews/delete/${id}`,
         getAuthHeaders()
       );
       return response.data;
@@ -117,7 +117,7 @@ const reviewService = {
   async addReply(reviewId, replyData) {
     try {
       const response = await axios.post(
-        `${backendUrl}/reviews/${reviewId}/reply`,
+        `${BASE_URL}/api/reviews/${reviewId}/reply`,
         replyData,
         getAuthHeaders()
       );

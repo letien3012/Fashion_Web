@@ -18,11 +18,12 @@
               <img
                 :src="
                   catalogue.icon
-                    ? `${import.meta.env.VITE_API_URL}${catalogue.icon}`
-                    : '/default-catalogue-icon.jpg'
+                    ? `${apiUrl}${catalogue.icon}`
+                    : fallbackIcon
                 "
                 :alt="catalogue.name"
                 class="catalogue-icon"
+                @error="onIconError($event)"
               />
               <span class="name">{{ catalogue.name }}</span>
             </div>
@@ -73,6 +74,9 @@ export default {
         return catalogue.deleteReason || "Không thể xóa danh mục này";
       }
       return "Xóa danh mục";
+    },
+    onIconError(event) {
+      event.target.src = this.fallbackIcon;
     },
   },
 };

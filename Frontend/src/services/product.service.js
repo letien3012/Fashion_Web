@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const backendUrl = import.meta.env.VITE_API_BASE_URL;
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const getAuthHeaders = () => {
   const token = localStorage.getItem("token");
   return {
@@ -11,11 +11,11 @@ const getAuthHeaders = () => {
 };
 
 const productService = {
-  backendUrl,
+  BASE_URL,
 
   async getNewArrivals() {
     try {
-      const response = await axios.get(`${backendUrl}/api/products`, {
+      const response = await axios.get(`${BASE_URL}/api/products`, {
         params: { sort: "createdAt", order: "desc" },
         ...getAuthHeaders(),
       });
@@ -29,7 +29,7 @@ const productService = {
   async getProductsByCategory(categoryId, options = {}) {
     try {
       const response = await axios.get(
-        `${backendUrl}/api/products/category/${categoryId}`,
+        `${BASE_URL}/api/products/category/${categoryId}`,
         {
           params: {
             exclude: options.exclude,
@@ -46,7 +46,7 @@ const productService = {
 
   async getProductById(id) {
     try {
-      const response = await axios.get(`${backendUrl}/api/products/${id}`);
+      const response = await axios.get(`${BASE_URL}/api/products/${id}`);
       console.log("Product response:", response); // Debug log
       if (response.data && response.data.data) {
         return response.data;
@@ -64,7 +64,7 @@ const productService = {
   async getProductVariants(productId, size, color) {
     try {
       const response = await axios.get(
-        `${backendUrl}/api/products/${productId}/variants`,
+        `${BASE_URL}/api/products/${productId}/variants`,
         {
           params: { size, color },
         }
@@ -78,7 +78,7 @@ const productService = {
   async getProductVariantDetails(productId, size, color) {
     try {
       const response = await axios.get(
-        `${backendUrl}/api/products/${productId}/variant-details`,
+        `${BASE_URL}/api/products/${productId}/variant-details`,
         {
           params: { size, color },
         }
@@ -99,7 +99,7 @@ const productService = {
 
   async searchProducts(query) {
     try {
-      const response = await axios.get(`${backendUrl}/api/products/search`, {
+      const response = await axios.get(`${BASE_URL}/api/products/search`, {
         params: { keyword: query },
       });
       return response.data;
@@ -111,7 +111,7 @@ const productService = {
 
   async getProductPromotions(productId, variantId) {
     try {
-      const response = await axios.get(`${backendUrl}/api/promotions/active`);
+      const response = await axios.get(`${BASE_URL}/api/promotions/active`);
       if (response.data && response.data.data) {
         const promotions = response.data.data;
         const now = new Date();
@@ -201,7 +201,7 @@ const productService = {
   async getVariantConsignment(variantId) {
     try {
       const response = await axios.get(
-        `${backendUrl}/api/variants/${variantId}/consignment`,
+        `${BASE_URL}/api/variants/${variantId}/consignment`,
         getAuthHeaders()
       );
       return response.data;
@@ -213,7 +213,7 @@ const productService = {
   async getVariantStock(productId, variantId) {
     try {
       const response = await axios.get(
-        `${backendUrl}/api/consignments/product/${productId}/variant/${variantId}/stock`
+        `${BASE_URL}/api/consignments/product/${productId}/variant/${variantId}/stock`
       );
       return response.data;
     } catch (error) {
@@ -224,7 +224,7 @@ const productService = {
 
   async getAttributeById(id) {
     try {
-      const response = await axios.get(`${backendUrl}/api/attributes/${id}`);
+      const response = await axios.get(`${BASE_URL}/api/attributes/${id}`);
       return response.data;
     } catch (error) {
       throw error;
@@ -234,7 +234,7 @@ const productService = {
   async getAttributeCatalogueById(id) {
     try {
       const response = await axios.get(
-        `${backendUrl}/api/attributeCatalogues/${id}`
+        `${BASE_URL}/api/attributeCatalogues/${id}`
       );
       return response.data;
     } catch (error) {
@@ -263,7 +263,7 @@ const productService = {
   getBestSelling: async (limit = 8) => {
     try {
       const response = await axios.get(
-        `${backendUrl}/api/products/best-selling?limit=${limit}`
+        `${BASE_URL}/api/products/best-selling?limit=${limit}`
       );
       return response.data;
     } catch (error) {
